@@ -56,6 +56,16 @@ public class UIPanelRoot : MonoBehaviour
     private RectTransform _pickerContent;
     private AssignMode _pickerMode;
 
+    [Header("Agent Picker Prefab (new)")]
+    [SerializeField] private AgentPickerView agentPickerPrefab;
+
+    private AgentPickerView _agentPicker;
+
+
+
+
+
+
     // ===========================================================================
 
     private string _currentNodeId;
@@ -88,8 +98,13 @@ public class UIPanelRoot : MonoBehaviour
 
 
         ResetUI();
-        EnsureAgentPickerCreated();
+        EnsureAgentPickerPrefab();
+
+
+
     }
+
+
 
     private void OnEnable()
     {
@@ -392,6 +407,7 @@ public class UIPanelRoot : MonoBehaviour
         if (eventPanel) eventPanel.gameObject.SetActive(false);
         if (newsPanel) newsPanel.Hide();
         if (nodePanel) nodePanel.SetActive(false);
+        if (_agentPicker) _agentPicker.Hide();
 
         _currentNodeId = null;
         SetModalTop(null);
@@ -402,27 +418,31 @@ public class UIPanelRoot : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_currentNodeId)) return;
 
-        if (!useAgentPicker)
+        EnsureAgentPickerPrefab();
+        if (_agentPicker)
         {
-            AssignInvestigate("A1");
+            OpenAgentPicker(AgentPickerView.Mode.Investigate);
             return;
         }
 
-        ShowAgentPicker(AssignMode.Investigate);
+        // 兜底：旧逻辑
+        AssignInvestigate("A1");
     }
 
     public void OnContain()
     {
         if (string.IsNullOrEmpty(_currentNodeId)) return;
 
-        if (!useAgentPicker)
+        EnsureAgentPickerPrefab();
+        if (_agentPicker)
         {
-            AssignContain("A1");
+            OpenAgentPicker(AgentPickerView.Mode.Contain);
             return;
         }
 
-        ShowAgentPicker(AssignMode.Contain);
+        AssignContain("A1");
     }
+
 
     // 旧兼容：如果你场景里还保留了 A1/A2/A3 按钮（目前是 Inactive）:contentReference[oaicite:3]{index=3}
     public void AssignInvestigate_A1() => AssignInvestigate("A1");
@@ -432,6 +452,58 @@ public class UIPanelRoot : MonoBehaviour
     public void AssignContain_A1() => AssignContain("A1");
     public void AssignContain_A2() => AssignContain("A2");
     public void AssignContain_A3() => AssignContain("A3");
+
+    void OpenAgentPicker(AgentPickerView.Mode mode)
+    {
+        if (!_agentPicker) return;
+
+        // 这里先用 State.Agents。你当前 GameState 里有 Agents 列表。:contentReference[oaicite:4]{index=4}
+        var agents = GameController.I != null ? GameController.I.State.Agents : new List<Core.AgentState>();
+
+        // preSelected：先用当前节点 AssignedAgentId（现结构单人），后续你加多选字段再改成列表
+        var n = GameController.I.GetNode(_currentNodeId);
+        var pre = new List<string>();
+        if (n != null && !string.IsNullOrEmpty(n.AssignedAgentId)) pre.Add(n.AssignedAgentId);
+
+        bool IsBusyOtherNode(string agentId)
+        {
+            // 现阶段：用 NodeState.AssignedAgentId 判忙（单人）。后面做多人任务时这里会升级。
+            foreach (var node in GameController.I.State.Nodes)
+            {
+                if (node == null) continue;
+                if (node.Id == _currentNodeId) continue;
+                if (node.AssignedAgentId == agentId &&
+                    (node.Status == Core.NodeStatus.Investigating || node.Status == Core.NodeStatus.Containing))
+                    return true;
+            }
+            return false;
+        }
+
+        _agentPicker.Show(
+            mode: mode,
+            nodeId: _currentNodeId,
+            agents: agents,
+            preSelected: pre,
+            isBusyOtherNode: IsBusyOtherNode,
+            onConfirm: (selectedIds) =>
+            {
+                // 重要：你现在 NodeState 只支持单人，所以这里先取第一个，保证不破现有 Sim/进度逻辑
+                var pick = selectedIds != null && selectedIds.Count > 0 ? selectedIds[0] : null;
+                if (string.IsNullOrEmpty(pick)) return;
+
+                if (mode == AgentPickerView.Mode.Investigate) AssignInvestigate(pick);
+                else AssignContain(pick);
+            },
+            onCancel: () =>
+            {
+                // 取消：什么都不做
+            });
+
+        // Picker 作为 top modal
+        SetModalTop((RectTransform)_agentPicker.transform);
+    }
+
+
 
     void AssignInvestigate(string agentId)
     {
@@ -448,133 +520,26 @@ public class UIPanelRoot : MonoBehaviour
     }
 
     // ===================== Agent Picker Impl (simple, stable) =====================
-    void EnsureAgentPickerCreated()
+
+    void EnsureAgentPickerPrefab()
     {
-        if (_agentPickerRoot != null) return;
+        if (_agentPicker) return;
+        if (!agentPickerPrefab)
+        {
+            Debug.LogWarning("[UIPanelRoot] agentPickerPrefab not bound; fallback to old picker.", this);
+            return;
+        }
 
-        var parent = nodePanel ? nodePanel.transform : transform;
-
-        _agentPickerRoot = new GameObject("AgentPicker",
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image));
-
-        _agentPickerRoot.transform.SetParent(parent, false);
-        _agentPickerRoot.SetActive(false);
-
-        var rootRT = (RectTransform)_agentPickerRoot.transform;
-        rootRT.anchorMin = new Vector2(0.5f, 0.5f);
-        rootRT.anchorMax = new Vector2(0.5f, 0.5f);
-        rootRT.pivot = new Vector2(0.5f, 0.5f);
-        rootRT.sizeDelta = pickerSize;
-        rootRT.anchoredPosition = Vector2.zero;
-
-        var bg = _agentPickerRoot.GetComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0.92f);
-        bg.raycastTarget = true;
-
-        // Title
-        var titleGO = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        titleGO.transform.SetParent(_agentPickerRoot.transform, false);
-        var titleRT = (RectTransform)titleGO.transform;
-        titleRT.anchorMin = new Vector2(0f, 1f);
-        titleRT.anchorMax = new Vector2(1f, 1f);
-        titleRT.pivot = new Vector2(0.5f, 1f);
-        titleRT.sizeDelta = new Vector2(0f, 80f);
-        titleRT.anchoredPosition = new Vector2(0f, -10f);
-
-        _pickerTitle = titleGO.GetComponent<TextMeshProUGUI>();
-        _pickerTitle.fontSize = 42;
-        _pickerTitle.alignment = TextAlignmentOptions.Center;
-
-        // Close button
-        var closeGO = new GameObject("Close", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        closeGO.transform.SetParent(_agentPickerRoot.transform, false);
-        var closeRT = (RectTransform)closeGO.transform;
-        closeRT.anchorMin = new Vector2(1f, 1f);
-        closeRT.anchorMax = new Vector2(1f, 1f);
-        closeRT.pivot = new Vector2(1f, 1f);
-        closeRT.sizeDelta = new Vector2(80f, 80f);
-        closeRT.anchoredPosition = new Vector2(-10f, -10f);
-
-        closeGO.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
-        closeGO.GetComponent<Button>().onClick.AddListener(HideAgentPicker);
-
-        var closeTxtGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        closeTxtGO.transform.SetParent(closeGO.transform, false);
-        var closeTxtRT = (RectTransform)closeTxtGO.transform;
-        closeTxtRT.anchorMin = Vector2.zero;
-        closeTxtRT.anchorMax = Vector2.one;
-        closeTxtRT.sizeDelta = Vector2.zero;
-
-        var closeTxt = closeTxtGO.GetComponent<TextMeshProUGUI>();
-        closeTxt.text = "X";
-        closeTxt.fontSize = 40;
-        closeTxt.alignment = TextAlignmentOptions.Center;
-
-        // Scroll View
-        var scrollGO = new GameObject("Scroll", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ScrollRect));
-        scrollGO.transform.SetParent(_agentPickerRoot.transform, false);
-
-        var scrollRT = (RectTransform)scrollGO.transform;
-        scrollRT.anchorMin = new Vector2(0f, 0f);
-        scrollRT.anchorMax = new Vector2(1f, 1f);
-        scrollRT.offsetMin = new Vector2(20f, 20f);
-        scrollRT.offsetMax = new Vector2(-20f, -110f);
-
-        scrollGO.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.04f);
-
-        _pickerScroll = scrollGO.GetComponent<ScrollRect>();
-        _pickerScroll.horizontal = false;
-        _pickerScroll.movementType = ScrollRect.MovementType.Clamped;
-        _pickerScroll.scrollSensitivity = 30;
-
-        // Viewport
-        var vpGO = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Mask));
-        vpGO.transform.SetParent(scrollGO.transform, false);
-        var vpRT = (RectTransform)vpGO.transform;
-        vpRT.anchorMin = Vector2.zero;
-        vpRT.anchorMax = Vector2.one;
-        vpRT.sizeDelta = Vector2.zero;
-
-        vpGO.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.02f);
-        vpGO.GetComponent<Mask>().showMaskGraphic = false;
-
-        _pickerScroll.viewport = vpRT;
-
-        // Content
-        var contentGO = new GameObject("Content",
-            typeof(RectTransform),
-            typeof(VerticalLayoutGroup),
-            typeof(ContentSizeFitter));
-
-        contentGO.transform.SetParent(vpGO.transform, false);
-        _pickerContent = (RectTransform)contentGO.transform;
-        _pickerContent.anchorMin = new Vector2(0f, 1f);
-        _pickerContent.anchorMax = new Vector2(1f, 1f);
-        _pickerContent.pivot = new Vector2(0.5f, 1f);
-        _pickerContent.anchoredPosition = Vector2.zero;
-        _pickerContent.sizeDelta = new Vector2(0f, 0f);
-
-        var vlg = contentGO.GetComponent<VerticalLayoutGroup>();
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.spacing = 12f;
-        vlg.padding = new RectOffset(12, 12, 12, 12);
-        vlg.childControlHeight = true;
-        vlg.childControlWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childForceExpandWidth = true;
-
-        var csf = contentGO.GetComponent<ContentSizeFitter>();
-        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        _pickerScroll.content = _pickerContent;
+        // 放到 nodePanel 同级（或放到 UIPanelRoot 下都行；建议放 Canvas 的 Panels 容器下）
+        var parent = nodePanel ? nodePanel.transform.parent : transform;
+        _agentPicker = Instantiate(agentPickerPrefab, parent);
+        _agentPicker.gameObject.SetActive(false);
     }
+
+
 
     void ShowAgentPicker(AssignMode mode)
     {
-        EnsureAgentPickerCreated();
         _pickerMode = mode;
 
         if (_pickerTitle)
