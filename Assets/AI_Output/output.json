@@ -1,5 +1,5 @@
 {
-    "batch_id": "export_button_onclick_02",
+    "batch_id": "ms0_confirm_ui_objects_and_buttons",
     "results": [
         {
             "id": 1,
@@ -14,11 +14,43 @@
             "status": "success",
             "error": "",
             "changed": false,
+            "resolved_target": "",
+            "data": "Panel [RectTransform,CanvasRenderer,Image]\r\n--End Day [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--NewsBT [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Text (TMP) (1) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Text (TMP) (2) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n"
+        },
+        {
+            "id": 11,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "",
+            "data": "Panel [RectTransform,CanvasRenderer,Image]\r\n--TItle [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Status [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--InvestigateBT [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--ContainBT [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--CloseBT [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--progressText [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Assign A1 (Inactive) [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Assign A2 (Inactive) [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n--Assign A3 (Inactive) [RectTransform,CanvasRenderer,Image,Button]\r\n----Text (TMP) [RectTransform,CanvasRenderer,TextMeshProUGUI]\r\n"
+        },
+        {
+            "id": 20,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "End Day",
+            "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): End Day\nm_OnClick (Generic): Unk"
+        },
+        {
+            "id": 21,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "NewsBT",
+            "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): NewsBT\nm_OnClick (Generic): Unk"
+        },
+        {
+            "id": 22,
+            "status": "success",
+            "error": "",
+            "changed": false,
             "resolved_target": "InvestigateBT",
             "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): InvestigateBT\nm_OnClick (Generic): Unk"
         },
         {
-            "id": 11,
+            "id": 23,
             "status": "success",
             "error": "",
             "changed": false,
@@ -26,12 +58,20 @@
             "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): ContainBT\nm_OnClick (Generic): Unk"
         },
         {
-            "id": 12,
-            "status": "error",
-            "error": "Child 'CloseBT' not found under 'Panel'",
+            "id": 30,
+            "status": "success",
+            "error": "",
             "changed": false,
-            "resolved_target": "",
-            "data": ""
+            "resolved_target": "Panels",
+            "data": "m_Script (ObjectReference): UIPanelRoot\ndim (ObjectReference): Dim\nnodePanel (ObjectReference): NodePanel\nnodeTitle (ObjectReference): TItle\nnodeStatus (ObjectReference): Status\nprogressText (ObjectReference): progressText\neventPanel (ObjectReference): EventPanel\nnewsPanel (ObjectReference): NewsPanel\nconfirmDialog (ObjectReference): null\nwithdrawButton (ObjectReference): null\nwithdrawButtonLabel (ObjectReference): null\nuseAgentPicker (Boolean): True\nfallbackAgentIds (Generic): Unk\npickerSize (Vector2): Unk"
+        },
+        {
+            "id": 99,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "CloseBT",
+            "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): CloseBT\nm_OnClick (Generic): Unk"
         }
     ]
 }

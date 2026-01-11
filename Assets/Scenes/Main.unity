@@ -925,19 +925,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 370805730}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: AssignInvestigate_A1
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &370805730
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1058,19 +1046,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 387951940}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: CloseNews
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &387951940
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1122,7 +1098,7 @@ GameObject:
   - component: {fileID: 395692586}
   - component: {fileID: 395692585}
   m_Layer: 5
-  m_Name: CLoseBT
+  m_Name: CloseBT
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1191,19 +1167,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 395692586}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: CloseNode
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &395692586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1324,19 +1288,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 411406778}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: OnInvestigate
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &411406778
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2116,19 +2068,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 758111031}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1370836101}
-        m_TargetAssemblyTypeName: HUD, Assembly-CSharp
-        m_MethodName: OnEndDayClicked
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &758111031
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2658,6 +2598,9 @@ MonoBehaviour:
   nodeTitle: {fileID: 849600650}
   nodeStatus: {fileID: 163373753}
   progressText: {fileID: 1863723948}
+  investigateButton: {fileID: 0}
+  containButton: {fileID: 0}
+  closeNodeButton: {fileID: 0}
   eventPanel: {fileID: 144136117}
   newsPanel: {fileID: 510746472}
   confirmDialog: {fileID: 0}
@@ -3076,19 +3019,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1132905147}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: AssignInvestigate_A2
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1132905147
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3414,6 +3345,9 @@ MonoBehaviour:
   dayText: {fileID: 321094969}
   moneyText: {fileID: 277495880}
   panicText: {fileID: 1918515929}
+  debugText: {fileID: 0}
+  endDayButton: {fileID: 0}
+  newsButton: {fileID: 0}
 --- !u!1 &1382755683
 GameObject:
   m_ObjectHideFlags: 0
@@ -3784,19 +3718,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1530322857}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: OpenNews
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1530322857
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3917,19 +3839,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1539840215}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: OnContain
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1539840215
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4050,19 +3960,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1554742352}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 817316639}
-        m_TargetAssemblyTypeName: UIPanelRoot, Assembly-CSharp
-        m_MethodName: AssignInvestigate_A3
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1554742352
 MonoBehaviour:
   m_ObjectHideFlags: 0
