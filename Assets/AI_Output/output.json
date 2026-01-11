@@ -1,0 +1,37 @@
+{
+    "batch_id": "export_button_onclick_02",
+    "results": [
+        {
+            "id": 1,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "",
+            "data": "Scene opened."
+        },
+        {
+            "id": 10,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "InvestigateBT",
+            "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): InvestigateBT\nm_OnClick (Generic): Unk"
+        },
+        {
+            "id": 11,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "ContainBT",
+            "data": "m_Script (ObjectReference): Button\nm_Navigation (Generic): Unk\nm_Transition (Enum): ColorTint\nm_Colors (Generic): Unk\nm_SpriteState (Generic): Unk\nm_AnimationTriggers (Generic): Unk\nm_Interactable (Boolean): True\nm_TargetGraphic (ObjectReference): ContainBT\nm_OnClick (Generic): Unk"
+        },
+        {
+            "id": 12,
+            "status": "error",
+            "error": "Child 'CloseBT' not found under 'Panel'",
+            "changed": false,
+            "resolved_target": "",
+            "data": ""
+        }
+    ]
+}

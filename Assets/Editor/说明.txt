@@ -1,0 +1,82 @@
+AIBridge 使用说明（增强版 - 含侦查能力）
+0) 核心思维：先侦查，后行动
+不要盲目猜测路径或属性名。
+如果不确定层级 -> 先发 GetHierarchy。
+如果不确定属性名 -> 先发 InspectComponent。
+如果不确定文件在哪 -> 先发 FindAssets。
+
+1) 输入输出
+输入：JSON { "batch_id": "...", "dryRun": bool, "commands": [] }
+输出：JSON { "results": [ { "status", "data", "error", ... } ] }
+
+2) 关键命令集（完整版）
+
+--- A. 侦查/读取类 (无副作用，推荐修改前使用) ---
+GetHierarchy: 
+  param1 = "Scene" (当前场景) 或 "Prefab:/..." (已打开的Prefab) 或 具体路径
+  *作用：返回节点树结构及挂载的组件名，用于确认路径。*
+
+InspectComponent:
+  param1 = 目标路径 (如 "Scene:/Canvas/Title")
+  param2 = 组件类型 (如 "UnityEngine.UI.Text")
+  *作用：返回该组件所有 SerializedProperty 及其当前值。用于确认属性名 (如 m_Text)。*
+
+FindAssets:
+  param1 = 搜索过滤器 (如 "t:Prefab Player")
+  *作用：返回匹配的资源路径列表。*
+
+ReadScript:
+  param1 = 路径, param2 = startLine, param3 = endLine
+
+--- B. 修改/写入类 (需严格遵守路径规则) ---
+OpenPrefab: param1 = "Assets/.../file.prefab"
+SavePrefab: param1 = "" (保存当前)
+OpenScene:  param1 = "Assets/.../file.unity"
+SaveScene:  (无参数)
+
+SetProperty:
+  param1: 目标路径 (Prefab:/... 或 Scene:/...)
+  param2: 组件类型
+  param3: 属性路径 (m_Color, m_IsActive)
+  param4: 值 (字符串形式)
+
+3) 路径定位规则 (严格)
+Prefab模式: 必须以 "Prefab:/" 开头，且**不包含**根节点名。
+  示例: 根节点叫 Hero，子节点 Sword。路径应为 "Prefab:/Hand/Sword" (不要写 Hero)。
+Scene模式: 必须以 "Scene:/" 开头，从根节点写起。
+  示例: "Scene:/Canvas/Panel/Button"
+
+4) 操作流范式
+
+【场景 1：完全未知的修改】
+第 1 轮交互 (侦查):
+{
+  "batch_id": "investigate_01",
+  "dryRun": true,
+  "commands": [
+    { "id": 1, "action": "OpenScene", "param1": "Assets/Scenes/Main.unity" },
+    { "id": 2, "action": "GetHierarchy", "param1": "Scene" } 
+  ]
+}
+--> AI 分析返回的 Hierarchy，找到确切路径 "Scene:/UI/LoginPanel"。
+
+第 2 轮交互 (确认属性):
+{
+  "batch_id": "investigate_02",
+  "dryRun": true,
+  "commands": [
+     { "id": 1, "action": "InspectComponent", "param1": "Scene:/UI/LoginPanel", "param2": "UnityEngine.CanvasGroup" }
+  ]
+}
+--> AI 看到属性叫 "m_Alpha"，当前值 1.0。
+
+第 3 轮交互 (执行修改):
+{
+  "batch_id": "apply_change",
+  "dryRun": false,
+  "commands": [
+    { "id": 1, "action": "OpenScene", "param1": "Assets/Scenes/Main.unity" },
+    { "id": 2, "action": "SetProperty", "param1": "Scene:/UI/LoginPanel", "param2": "UnityEngine.CanvasGroup", "param3": "m_Alpha", "param4": "0.0" },
+    { "id": 3, "action": "SaveScene" }
+  ]
+}

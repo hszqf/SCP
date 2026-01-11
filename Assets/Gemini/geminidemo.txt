@@ -1,0 +1,1648 @@
+import React, { useState, useEffect, useMemo, Component } from 'react';
+import { 
+  MapPin, FileText, Newspaper, Users, Clock, AlertTriangle, 
+  Shield, Eye, Zap, Activity, ChevronRight, ChevronLeft, Brain, 
+  Skull, CheckCircle, Lock, X, Crosshair, Search, BookOpen, Target,
+  Briefcase, AlertOctagon, Plus, FileSearch, Dna,
+  FlaskConical, Radio, Heart, Coins, RefreshCw, UserPlus, Menu, Ghost, Cpu,
+  Info, Trees, Factory, Building2, Landmark, Church
+} from 'lucide-react';
+
+// --- 0. 错误边界 (防止白屏) ---
+class ErrorBoundary extends Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-red-900 text-white h-screen flex flex-col items-center justify-center text-center">
+          <AlertTriangle size={64} className="mb-4" />
+          <h1 className="text-2xl font-bold mb-2">系统严重错误</h1>
+          <p className="mb-4">终端发生崩溃，请尝试刷新。</p>
+          <pre className="bg-black/50 p-4 rounded text-left text-xs overflow-auto max-w-full text-wrap mb-4">
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-white text-red-900 font-bold rounded hover:bg-zinc-200">重启终端</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// --- 1. 核心类型定义 ---
+
+type Attribute = 'perception' | 'resistance' | 'operation' | 'power';
+type AnomalyTheme = 'BIO' | 'TECH' | 'PSIONIC' | 'PHYSICAL' | 'OCCULT';
+
+interface Agent {
+  id: string;
+  name: string;
+  level: number;
+  xp: number;
+  maxXp: number;
+  freePoints: number; 
+  status: 'idle' | 'assigned' | 'hospitalized' | 'dead' | 'admin'; 
+  assignedNodeId?: string;
+  hp: number;
+  maxHp: number;
+  san: number;
+  maxSan: number;
+  attributes: {
+    perception: number; 
+    resistance: number; 
+    operation: number;  
+    power: number;      
+  };
+  unlockedTalents: string[]; 
+  class: string;
+  hireCost?: number; 
+}
+
+interface Rumor {
+  id: string;
+  title: string;
+  description: string;
+  credibility: number; 
+  source: string; 
+}
+
+interface Trait {
+  id: string;
+  name: string;
+  description: string;
+  counterAttr: Attribute; 
+}
+
+interface DecisionOption {
+  label: string;
+  desc: string;
+  reqAttr?: Attribute; 
+  baseThreshold?: number; 
+  action: (node: GameNode, agents: Agent[], success: boolean) => { report: string, progress: number, dmg?: number };
+}
+
+interface PendingEvent {
+  id: string;
+  type: 'investigation' | 'containment'; 
+  theme: AnomalyTheme | 'GENERIC'; 
+  title: string;
+  description: string;
+  options: DecisionOption[];
+}
+
+interface SCPReport {
+  code: string;
+  class: 'Safe' | 'Euclid' | 'Keter';
+  theme: AnomalyTheme;
+  description: string;
+  procedures: string;
+}
+
+interface GameNode {
+  id: string;
+  name: string;
+  type: 'city' | 'wilderness';
+  flavor: 'industrial' | 'financial' | 'slum' | 'religious' | 'wild';
+  x: number;
+  y: number;
+  status: 'calm' | 'investigating' | 'locked' | 'containing' | 'secured';
+  
+  hasAnomaly: boolean; 
+  anomalyTheme?: AnomalyTheme;
+  anomalyLevel: number; 
+
+  pendingEvent?: PendingEvent;
+  investigationProgress: number;
+  containmentProgress: number;
+  
+  description: string; 
+  activeRumors: Rumor[]; 
+  discoveredTraits: Trait[]; 
+  anomalyName?: string;
+  scpReport?: SCPReport; 
+  difficulty: number;
+
+  adminAgentId?: string; 
+}
+
+interface Report {
+  id: string;
+  day: number;
+  nodeName: string;
+  type: 'success' | 'failure' | 'info' | 'danger';
+  content: string;
+  relatedNodeId?: string; 
+}
+
+interface NewsItem {
+  id: string;
+  title: string;
+  content: string[]; 
+  relatedNodeId?: string;
+  type: 'headline' | 'society' | 'ad' | 'politics' | 'gossip'; 
+}
+
+interface FloatingText {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  className: string; 
+}
+
+interface TalentNode {
+  id: string;
+  name: string;
+  desc: string;
+  cost: number;
+  effect: (agent: Agent) => Agent; 
+  reqLevel?: number;
+}
+
+interface TalentSystem {
+  id: string;
+  name: string;
+  icon: React.ElementType; 
+  nodes: TalentNode[];
+}
+
+interface FixedEvent {
+  day: number;
+  branches: {
+    low: { t: string, c: string[] }; 
+    mid: { t: string, c: string[] }; 
+    high: { t: string, c: string[] }; 
+  };
+}
+
+// --- 2. 静态数据与配置 (GLOBAL SCOPE) ---
+
+const TALENT_TREE: TalentSystem[] = [
+  {
+    id: 'visual', name: '视觉', icon: Eye,
+    nodes: [
+      { id: 'v1', name: '广谱成像', desc: '感知 +2', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, perception: a.attributes.perception + 2}}) },
+      { id: 'v2', name: '微观透视', desc: '感知 +3, 作业 +1', cost: 2, effect: (a) => ({...a, attributes: {...a.attributes, perception: a.attributes.perception + 3, operation: a.attributes.operation + 1}}) },
+      { id: 'v3', name: '动态捕捉', desc: '武力 +2, 感知 +2', cost: 2, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 2, perception: a.attributes.perception + 2}}) },
+      { id: 'v4', name: '相位捕捉', desc: '感知 +5', cost: 3, effect: (a) => ({...a, attributes: {...a.attributes, perception: a.attributes.perception + 5}}) },
+    ]
+  },
+  {
+    id: 'derm', name: '皮囊', icon: Shield,
+    nodes: [
+      { id: 'd1', name: '硬化角质', desc: '耐受 +2', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, resistance: a.attributes.resistance + 2}}) },
+      { id: 'd2', name: '光学迷彩', desc: '作业 +3', cost: 2, effect: (a) => ({...a, attributes: {...a.attributes, operation: a.attributes.operation + 3}}) },
+      { id: 'd3', name: '绝缘凝胶', desc: '耐受 +3', cost: 2, effect: (a) => ({...a, attributes: {...a.attributes, resistance: a.attributes.resistance + 3}}) },
+      { id: 'd4', name: '泰坦甲壳', desc: '耐受 +6, 生命 +30', cost: 3, effect: (a) => ({...a, maxHp: a.maxHp + 30, hp: a.hp + 30, attributes: {...a.attributes, resistance: a.attributes.resistance + 6}}) },
+    ]
+  },
+  {
+    id: 'resp', name: '呼吸', icon: Radio,
+    nodes: [
+      { id: 'r1', name: '过滤鳃', desc: '耐受 +2', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, resistance: a.attributes.resistance + 2}}) },
+      { id: 'r2', name: '共鸣腔', desc: '武力 +3', cost: 2, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 3}}) },
+    ]
+  },
+  {
+    id: 'circ', name: '循环', icon: Heart,
+    nodes: [
+      { id: 'c1', name: '强酸血', desc: '武力 +2', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 2}}) },
+      { id: 'c2', name: '液压泵', desc: '武力 +5, 耐受 +2', cost: 3, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 5, resistance: a.attributes.resistance + 2}}) },
+    ]
+  },
+  {
+    id: 'nerv', name: '神经', icon: Brain,
+    nodes: [
+      { id: 'n1', name: '反射强化', desc: '作业 +2', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, operation: a.attributes.operation + 2}}) },
+      { id: 'n2', name: '蜂巢思维', desc: '感知 +4, 作业 +2', cost: 3, effect: (a) => ({...a, attributes: {...a.attributes, perception: a.attributes.perception + 4, operation: a.attributes.operation + 2}}) },
+    ]
+  },
+  {
+    id: 'limb', name: '肢体', icon: Target,
+    nodes: [
+      { id: 'l1', name: '多肢', desc: '作业 +2, 武力 +1', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, operation: a.attributes.operation + 2, power: a.attributes.power + 1}}) },
+      { id: 'l2', name: '骨刃异化', desc: '武力 +5', cost: 3, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 5}}) },
+    ]
+  },
+  {
+    id: 'endo', name: '内分泌', icon: FlaskConical,
+    nodes: [
+      { id: 'e1', name: '肾上腺泵', desc: '武力 +2, 耐受 -1', cost: 1, effect: (a) => ({...a, attributes: {...a.attributes, power: a.attributes.power + 2, resistance: a.attributes.resistance - 1}}) },
+      { id: 'e2', name: '极速代谢', desc: '耐受 +4, 生命 +20', cost: 3, effect: (a) => ({...a, maxHp: a.maxHp + 20, hp: a.hp + 20, attributes: {...a.attributes, resistance: a.attributes.resistance + 4}}) },
+    ]
+  }
+];
+
+const FIXED_EVENTS: FixedEvent[] = [
+  {
+    day: 3,
+    branches: {
+      low: { t: "联合政府通过特别拨款", c: ["议会一致通过了对收容局的追加预算案。"] },
+      mid: { t: "议会激辩收容局权限", c: ["反对派质疑行动透明度。"] },
+      high: { t: "总统宣布紧急状态", c: ["面对失控局势，收容局获得战时指挥权。"] }
+    }
+  },
+  {
+    day: 10,
+    branches: {
+      low: { t: "诺亚科学奖颁奖典礼", c: ["新材料学取得突破。"] },
+      mid: { t: "多地爆发反常气候", c: ["六月飞雪与红色暴雨。"] },
+      high: { t: "北方城市失联", c: ["卫星图显示北方大片区域陷入黑暗。"] }
+    }
+  }
+];
+
+const LORE_DB: Record<string, {t: string, sub?: string, c: string[]}[]> = {
+  gossip: [
+    { t: "著名歌剧女星与其保镖当街互殴", sub: "谁动了那块奶酪？", c: ["（娱乐版）昨日清晨，金港最繁华的第五大道上演了一出闹剧。备受瞩目的女高音歌唱家“夜莺”小姐，竟与其贴身保镖在一家法式烘焙坊门口大打出手。"] },
+    { t: "男子声称自己爱上了烤面包机", sub: "一场跨越物种的旷世绝恋", c: ["“它的热度是真实的。”该男子深情地抚摸着家电生锈的外壳。心理专家指出这可能是受到了某种认知干扰。"] },
+    { t: "流浪猫选美大赛爆出受贿丑闻", sub: "三花猫“奥利奥”被取消资格", c: ["原本呼声最高的冠军候选人——一只名为“奥利奥”的三花猫，被发现在赛前向主裁判（一只独眼斗牛犬）私下赠送了三条新鲜的死鱼。"] },
+    { t: "震惊！市长假发被大风吹跑", c: ["这一幕被数十名市民拍下。市长办公室随后发布声明称，那是“一种新型的、可分离式的头部保暖装置”，并非假发。"] },
+    { t: "社论：为什么现在的年轻人不爱穿裤子？", c: ["保守派评论员痛斥这是“对传统的亵渎”，而支持者则认为这是对全球变暖的合理应对。"] }
+  ],
+  industrial: [
+    { t: "铁堡工人公会宣布无限期大罢工", sub: "烟雾中的怒吼", c: ["（铁堡特派员 报道）昨日凌晨，随着最后一声汽笛的沉寂，这座诺亚大陆最大的工业心脏停止了跳动。工会领袖哈尔在集会上怒吼：“看看你们的肺！那里面不仅有煤灰，还有那些‘东西’留下的粘液！”"] },
+    { t: "工厂午餐肉罐头吃出工业螺丝", c: ["食品安全局今日收到超过两百起投诉。面对公众质疑，该公司发言人竟表示：“这正说明我们的生产线高度自动化，且产品绝对‘含铁丰富’。”"] },
+    { t: "废弃矿井深夜传来歌声", c: ["铁堡第14号废弃矿井已被封锁多年，但最近巡逻的保安报告称，深夜能听到井下传来类似唱诗班的歌声。"] }
+  ],
+  financial: [
+    { t: "金港交易所午夜熔断：幽灵算法？", sub: "数亿资产瞬间蒸发", c: ["昨日午夜，金港证券交易所的超级计算机组突然在没有人工指令的情况下启动。技术人员在事后审查日志时，发现交易代码中混杂着大量乱码，组成了一首古老的童谣。"] },
+    { t: "富豪争相购买“末日地堡”", c: ["随着全球恐慌指数的攀升，金港的高端房地产市场迎来井喷。带有独立空气循环系统和武装警卫的地下掩体供不应求。"] }
+  ],
+  slum: [
+    { t: "寒鸦城第7区水源污染事件", c: ["为了争夺仅存的一块净水装置，‘锈钉’帮与‘野火’帮在昨夜爆发了激烈的巷战。然而黎明时分，人们发现两个帮派的成员都倒在了血泊中，伤口疑似猛禽撕裂。"] },
+    { t: "下水道不仅有老鼠，还有低语", c: ["寒鸦城的地下世界最近并不太平。多名流浪汉报告称，在深夜的下水道深处听到了清晰的人声低语：“它在叫我的名字。”"] }
+  ],
+  religious: [
+    { t: "圣所大主教已连续一周未公开露面", sub: "大教堂深夜传出诡异诵经声", c: ["自上周的‘血月’弥撒后，备受尊敬的大主教便闭门谢客。有路过的信徒表示，深夜的大教堂内传出的声音听起来更像是惨叫而非祈祷。"] },
+    { t: "百根蜡烛离奇同时熄灭", c: ["昨日正午，圣所的一间主祈祷室内发生了令人费解的一幕。一阵带有硫磺味的阴风凭空出现，将祭坛上的两百根长明蜡烛在同一秒内全部吹灭。"] }
+  ],
+  politics: [
+    { t: "北方联邦宣布无限期边境封锁", c: ["为了遏制所谓的‘未知流感’，北方联邦总统昨晚签署了第77号行政令。边境墙已全面通电。有逃难者称，北方并非爆发了流感，而是某种能让死人复生的瘟疫。"] }
+  ],
+  ads: [
+    { t: "“无梦酣睡剂” —— 即使末日也要睡个好觉", c: ["还在为那些不可名状的噩梦困扰吗？试试收容局编外实验室研发的‘无梦酣睡剂’！副作用：可能导致轻微失忆。(广告)"] },
+    { t: "高价回收奇怪物品", c: ["会说话的镜子？永远倒不完的水壶？我们统统高价收购！联系人：K先生。(广告)"] },
+    { t: "招聘：夜间清理员", c: ["工作地点：寒鸦城地下管网。薪资：日结，高得离谱。要求：无嗅觉者优先。(广告)"] }
+  ],
+  wild: [
+    { t: "沼泽探险队全员失踪", c: ["最后一则无线电通讯只是一段长达3分钟的尖叫。搜救队在沼泽边缘发现了几双摆放整齐的登山靴。"] },
+    { t: "旧日废墟夜间发出绿光", c: ["附近的拾荒者声称，每到午夜，废墟深处就会发出幽幽的绿光，光芒中似乎有人影在舞动。"] }
+  ]
+};
+
+const INITIAL_NODES: GameNode[] = [
+  { 
+    id: 'city_central', name: '中央特区', type: 'city', flavor: 'financial', x: 50, y: 50, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 1,
+    description: "诺亚大陆的行政与金融中心。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'city_iron', name: '铁堡', type: 'city', flavor: 'industrial', x: 80, y: 30, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 2,
+    description: "终年被烟雾笼罩的重工业都市。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'city_gold', name: '金港', type: 'city', flavor: 'financial', x: 20, y: 60, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 2,
+    description: "贸易与罪恶的自由港。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'city_crow', name: '寒鸦城', type: 'city', flavor: 'slum', x: 80, y: 80, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 3,
+    description: "巨大的贫民窟集合体。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'city_sanctuary', name: '圣所', type: 'city', flavor: 'religious', x: 20, y: 20, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 3,
+    description: "宗教圣地，保存着古代禁忌知识。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'wild_swamp', name: '黑水沼泽', type: 'wilderness', flavor: 'wild', x: 35, y: 75, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 2,
+    description: "一片从未被完全探明的原始沼泽。", activeRumors: [], discoveredTraits: []
+  },
+  { 
+    id: 'wild_ruins', name: '旧日废墟', type: 'wilderness', flavor: 'wild', x: 65, y: 20, status: 'calm', hasAnomaly: false, anomalyLevel: 0, investigationProgress: 0, containmentProgress: 0, difficulty: 4,
+    description: "旧时代的城市遗址，辐射值极高。", activeRumors: [], discoveredTraits: []
+  },
+];
+
+const INITIAL_AGENTS: Agent[] = [
+  {
+    id: 'a1', name: '艾伦', level: 1, xp: 0, maxXp: 100, freePoints: 0, status: 'idle', hp: 100, maxHp: 100, san: 100, maxSan: 100, class: '调查员',
+    attributes: { perception: 8, resistance: 4, operation: 5, power: 3 }, unlockedTalents: []
+  }
+];
+
+// --- 3. 辅助函数 (GLOBAL SCOPE) ---
+
+const getRandomLore = (flavor: string): NewsItem => {
+  let pool = LORE_DB.gossip;
+  if (flavor in LORE_DB) {
+      pool = LORE_DB[flavor as keyof typeof LORE_DB];
+  }
+  
+  if (Math.random() > 0.7 && pool !== LORE_DB.gossip) {
+     // keep flavor pool
+  } else if (Math.random() > 0.8) {
+      pool = Math.random() > 0.5 ? LORE_DB.politics : LORE_DB.ads;
+  } else {
+      if (Math.random() > 0.5) pool = LORE_DB.gossip;
+  }
+
+  // Double Check
+  if (!pool || pool.length === 0) pool = LORE_DB.gossip;
+
+  const item = pool[Math.floor(Math.random() * pool.length)];
+  return {
+    id: `lore_${Date.now()}_${Math.random()}`,
+    title: item.t,
+    content: item.c,
+    type: 'society'
+  };
+};
+
+const generateSCPReport = (flavor: string, theme?: AnomalyTheme): SCPReport => {
+  const codes = Math.floor(Math.random() * 900) + 100;
+  let desc = "", proc = "";
+  
+  if (theme === 'BIO') {
+    desc = "项目表现为一种能够快速增殖的血肉组织，能够同化接触到的任何有机体。";
+    proc = "使用火焰喷射器进行常规清理。收容间需保持负压。";
+  } else if (theme === 'TECH') {
+    desc = "一台具有自我意识的古老大型机，能够通过电缆操纵周围的机械设备。";
+    proc = "切断所有外部网络连接。使用法拉第笼屏蔽。";
+  } else if (theme === 'PSIONIC') {
+    desc = "一个不可见的模因实体，通过听觉传播，导致受害者产生强烈的自毁冲动。";
+    proc = "所有人员需佩戴降噪耳机。";
+  } else if (theme === 'OCCULT') {
+    desc = "一本用未知语言书写的书，书页会自动翻动，周围常伴有低语声。";
+    proc = "禁止阅读。由盲人D级人员进行运输。";
+  } else {
+    desc = "一个反物理的光球，会随机改变周围的重力方向。";
+    proc = "收容于强磁场束缚装置中。";
+  }
+
+  return { code: `SCP-${codes}`, class: 'Euclid', theme: theme || 'PHYSICAL', description: desc, procedures: proc };
+};
+
+const generateRecruits = (day: number): Agent[] => {
+  const names = ["新兵 A", "老兵 B", "专家 C", "特工 D", "代号 E", "沃克", "陈", "萨沙"];
+  const classes = ["调查员", "重装护卫", "技术专家", "潜行者", "战地医师"];
+  
+  return Array(3).fill(null).map((_, i) => {
+    let level = 1;
+    if (day > 10 && Math.random() > 0.7) level = 2;
+    if (day > 30 && Math.random() > 0.8) level = 3;
+
+    const cls = classes[Math.floor(Math.random() * classes.length)];
+    const baseAttr = { perception: 2, resistance: 2, operation: 2, power: 2 };
+    
+    if(cls === "调查员") baseAttr.perception += 4;
+    if(cls === "重装护卫") baseAttr.resistance += 4;
+    
+    for(let l=1; l<level; l++) {
+       baseAttr.perception += 1; baseAttr.resistance += 1; baseAttr.operation += 1; baseAttr.power += 1;
+    }
+
+    const totalStats = Object.values(baseAttr).reduce((a, b) => a + b, 0);
+    const cost = 100 + (level * 100) + (totalStats * 10);
+
+    return {
+      id: `recruit_${day}_${i}_${Math.random()}`,
+      name: names[Math.floor(Math.random() * names.length)],
+      level: level, xp: 0, maxXp: 100 * level, freePoints: 0, status: 'idle', 
+      hp: 80 + (level * 10), maxHp: 80 + (level * 10),
+      san: 80, maxSan: 80,
+      attributes: baseAttr,
+      class: cls,
+      unlockedTalents: [],
+      hireCost: cost
+    };
+  });
+};
+
+const generateObstacleEvent = (node: GameNode): PendingEvent => {
+  const isInvestigation = node.status === 'investigating';
+  const hasAnomaly = node.hasAnomaly;
+  const theme = node.anomalyTheme || 'PHYSICAL'; 
+
+  if (isInvestigation) {
+    if (!hasAnomaly) {
+      return {
+        id: `evt_fake_${Date.now()}`, type: 'investigation', theme: 'GENERIC',
+        title: '调查受阻：治安封锁',
+        description: '当地治安官封锁了区域，拒绝收容局介入。看来这里只是普通的刑事案件？',
+        options: [
+          { label: '出示证件', desc: '利用官方身份交涉。', reqAttr: 'operation', baseThreshold: 10, action: (n, a, s) => s ? { report: "治安官放行，虽然浪费了时间。", progress: 20 } : { report: "交涉失败，被迫潜入。", progress: 10 } },
+          { label: '强行闯入', desc: '撞开路障。', reqAttr: 'power', baseThreshold: 15, action: (n, a, s) => s ? { report: "冲过了封锁线。", progress: 30 } : { report: "车辆受损，人员轻伤。", progress: 15, dmg: 5 } },
+        ]
+      };
+    } else {
+      switch (theme) {
+        case 'BIO':
+          return {
+            id: `evt_bio_${Date.now()}`, type: 'investigation', theme: 'BIO',
+            title: '有机体增殖',
+            description: '通道被某种快速生长的肉质藤蔓堵死了，藤蔓上长满了眼球。',
+            options: [
+              { label: '火焰清理', desc: '烧出一条路。', reqAttr: 'power', baseThreshold: 20, action: (n, a, s) => s ? { report: "火焰开路，藤蔓退缩。", progress: 35 } : { report: "火力不足，藤蔓反击。", progress: 10, dmg: 10 } },
+              { label: '寻找核心', desc: '切断营养供给。', reqAttr: 'perception', baseThreshold: 15, action: (n, a, s) => s ? { report: "精准切除核心节点。", progress: 25 } : { report: "迷失在肉质迷宫中。", progress: 5, dmg: 5 } }
+            ]
+          };
+        case 'PSIONIC':
+          return {
+            id: `evt_psi_${Date.now()}`, type: 'investigation', theme: 'PSIONIC',
+            title: '思维迷宫',
+            description: '队员们发现自己在同一个走廊里走了半小时，这里被认知滤网覆盖了。',
+            options: [
+              { label: '意志对抗', desc: '强行保持理智。', reqAttr: 'resistance', baseThreshold: 20, action: (n, a, s) => s ? { report: "凭借意志力打破幻觉。", progress: 30 } : { report: "全员陷入恐慌。", progress: 0, dmg: 5 } },
+              { label: '逻辑解析', desc: '寻找逻辑漏洞。', reqAttr: 'operation', baseThreshold: 15, action: (n, a, s) => s ? { report: "找到了幻境的死角。", progress: 25 } : { report: "逻辑崩溃，头痛欲裂。", progress: 5, dmg: 5 } }
+            ]
+          };
+        default:
+          return {
+            id: `evt_def_${Date.now()}`, type: 'investigation', theme: 'GENERIC',
+            title: '未知干扰',
+            description: '设备读数异常，前方环境极不稳定。',
+            options: [
+              { label: '谨慎推进', desc: '步步为营。', reqAttr: 'perception', baseThreshold: 15, action: (n, a, s) => s ? { report: "避开了所有陷阱。", progress: 25 } : { report: "依然触发了陷阱。", progress: 10, dmg: 5 } },
+              { label: '快速通过', desc: '赌运气。', action: (n, a, s) => Math.random() > 0.5 ? { report: "运气不错，快速通过。", progress: 40 } : { report: "运气极差，遭遇重创。", progress: 10, dmg: 15 } }
+            ]
+          };
+      }
+    }
+  } else {
+    return {
+      id: `evt_cont_${Date.now()}`, type: 'containment', theme: theme || 'PHYSICAL',
+      title: '收容失效警报',
+      description: '目标正在突破当前的收容层级！',
+      options: [
+        { label: '肉身抗线', desc: '死守大门。', reqAttr: 'resistance', baseThreshold: 20, action: (n, a, s) => s ? { report: "守住了防线。", progress: 20 } : { report: "防线崩溃，全员重伤。", progress: -10, dmg: 20 } },
+        { label: '过载压制', desc: '最大功率输出。', reqAttr: 'power', baseThreshold: 15, action: (n, a, s) => s ? { report: "目标被强行压回。", progress: 30 } : { report: "设备炸毁。", progress: -20, dmg: 10 } },
+        { label: '放弃', desc: '全员撤离。', action: () => ({ report: "任务失败。", progress: -100 }) }
+      ]
+    };
+  }
+};
+
+const getAttrLabel = (attr: Attribute) => {
+  switch (attr) {
+    case 'perception': return '感知';
+    case 'resistance': return '耐受';
+    case 'operation': return '作业';
+    case 'power': return '武力';
+  }
+};
+
+// 安全的图标渲染器 (Fix for JSX in Data)
+const ThemeIcon = ({theme}: {theme: string}) => {
+  switch(theme) {
+    case 'BIO': return <Dna size={16} className="text-rose-500"/>;
+    case 'TECH': return <Zap size={16} className="text-cyan-500"/>;
+    case 'PSIONIC': return <Brain size={16} className="text-purple-500"/>;
+    case 'OCCULT': return <Ghost size={16} className="text-indigo-500"/>;
+    default: return <AlertTriangle size={16} className="text-yellow-500"/>;
+  }
+};
+
+// --- 5. 主组件 ---
+
+export default function AnomalyContainmentApp() {
+  const [day, setDay] = useState(1);
+  const [panic, setPanic] = useState(0);
+  const [money, setMoney] = useState(2500); 
+  const [samples, setSamples] = useState(0);
+  const [gameState, setGameState] = useState<'playing' | 'gameover'>('playing');
+  
+  const [lastRefreshDay, setLastRefreshDay] = useState(0); 
+  const [recruitCandidates, setRecruitCandidates] = useState<Agent[]>([]);
+
+  const [nodes, setNodes] = useState<GameNode[]>(INITIAL_NODES);
+  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  
+  const [activeModal, setActiveModal] = useState<'none' | 'news' | 'roster' | 'reports' | 'node' | 'event' | 'scp_report' | 'talent' | 'recruit'>('none');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [unreadNews, setUnreadNews] = useState(true);
+  const [newsPage, setNewsPage] = useState(0);
+  const [viewingReport, setViewingReport] = useState<SCPReport | null>(null);
+  const [viewingAgent, setViewingAgent] = useState<Agent | null>(null);
+  const [eventResult, setEventResult] = useState<{report: string, dmg?: number} | null>(null);
+  const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
+
+  const [nodeView, setNodeView] = useState<'menu' | 'rumor' | 'target_select' | 'trait' | 'agent' | 'admin_select'>('menu');
+  const [selectedRumorId, setSelectedRumorId] = useState<string | null>(null);
+  const [selectedTraitId, setSelectedTraitId] = useState<string | null>(null);
+  const [selectedAgentsForDispatch, setSelectedAgentsForDispatch] = useState<string[]>([]);
+  const [currentEventNodeId, setCurrentEventNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    generateDailyNews(1, []);
+    setRecruitCandidates(generateRecruits(1)); 
+  }, []);
+
+  const resetGame = () => {
+    setDay(1);
+    setPanic(0);
+    setMoney(2500);
+    setSamples(0);
+    setGameState('playing');
+    setNodes(INITIAL_NODES.map(n => ({...n, hasAnomaly: false, anomalyLevel: 0, status: 'calm'}))); 
+    setAgents([INITIAL_AGENTS[0]]); 
+    setReports([]);
+    generateDailyNews(1, []);
+    setRecruitCandidates(generateRecruits(1));
+    setActiveModal('none');
+  };
+
+  const addFloatingText = (x: number, y: number, text: string, className: string = 'text-white text-lg font-black') => {
+    const id = `ft_${Date.now()}_${Math.random()}`;
+    setFloatingTexts(prev => [...prev, { id, x, y, text, className }]);
+    setTimeout(() => {
+      setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
+    }, 2000);
+  };
+
+  const generateDailyNews = (currentDay: number, eventNews: NewsItem[]) => {
+    const updatedNodes = [...nodes];
+    const dailyNews: NewsItem[] = [];
+    
+    const fixedEvent = FIXED_EVENTS.find(e => e.day === currentDay);
+    if (fixedEvent) {
+      let branch = fixedEvent.branches.low;
+      if (panic >= 30) branch = fixedEvent.branches.mid;
+      if (panic >= 70) branch = fixedEvent.branches.high;
+      dailyNews.push({ id: `fixed_${currentDay}`, title: branch.t, content: branch.c, type: 'headline' });
+    }
+
+    const fillerCount = 8 - dailyNews.length - eventNews.length;
+    for(let i=0; i<fillerCount; i++) {
+       const randomLore = getRandomLore(updatedNodes[Math.floor(Math.random() * updatedNodes.length)].flavor);
+       dailyNews.push({
+         id: `filler_${currentDay}_${i}_${Math.random()}`, 
+         title: randomLore.title,
+         content: randomLore.content,
+         type: Math.random() > 0.8 ? 'ad' : 'society'
+       });
+    }
+
+    setNews([...eventNews, ...dailyNews]);
+    setNodes(updatedNodes);
+    setUnreadNews(true);
+    setNewsPage(0);
+  };
+
+  const handleUnlockTalent = (agentId: string, node: TalentNode) => {
+    setAgents(prev => prev.map(a => {
+      if (a.id === agentId && a.freePoints >= node.cost && !a.unlockedTalents.includes(node.id)) {
+        let updatedAgent = { 
+          ...a, 
+          freePoints: a.freePoints - node.cost,
+          unlockedTalents: [...a.unlockedTalents, node.id]
+        };
+        updatedAgent = node.effect(updatedAgent);
+        setViewingAgent(updatedAgent); 
+        return updatedAgent;
+      }
+      return a;
+    }));
+  };
+
+  const handleRefreshRecruits = () => {
+    const isFree = day > lastRefreshDay;
+    if (!isFree && money < 50) return; 
+
+    if (!isFree) setMoney(m => m - 50);
+    setLastRefreshDay(day);
+    setRecruitCandidates(generateRecruits(day));
+  };
+
+  const handleHireAgent = (candidate: Agent) => {
+    if (money >= (candidate.hireCost || 0)) {
+      setMoney(m => m - (candidate.hireCost || 0));
+      setAgents(prev => [...prev, candidate]);
+      setRecruitCandidates(prev => prev.filter(c => c.id !== candidate.id));
+    }
+  };
+
+  const handleAssignAdmin = (agentId: string) => {
+    if (!selectedNodeId) return;
+    const node = getSelectedNode();
+    let updatedAgents = agents.map(a => {
+      if (a.id === node?.adminAgentId) return { ...a, status: 'idle' as const, assignedNodeId: undefined };
+      return a;
+    });
+    updatedAgents = updatedAgents.map(a => {
+      if (a.id === agentId) return { ...a, status: 'admin' as const, assignedNodeId: selectedNodeId };
+      return a;
+    });
+    const updatedNodes = nodes.map(n => n.id === selectedNodeId ? { ...n, adminAgentId: agentId } : n);
+    setAgents(updatedAgents);
+    setNodes(updatedNodes);
+    setNodeView('menu');
+  };
+
+  const handleEndDay = () => {
+    if (panic >= 100) {
+      setGameState('gameover');
+      return;
+    }
+
+    let newReports: Report[] = [];
+    let eventNews: NewsItem[] = [];
+    let dailyPanicIncrease = 0;
+    
+    const updatedAgents = [...agents];
+    const updatedNodes = [...nodes];
+
+    // 0. 异常自然生成逻辑 (Cause)
+    updatedNodes.forEach(node => {
+        if (node.status === 'calm' && !node.hasAnomaly) {
+            // 每天有 15% 概率在平静节点生成新异常
+            if (Math.random() < 0.15) {
+                node.hasAnomaly = true;
+                node.anomalyLevel = 10;
+                // 注意：这里不生成新闻，新闻在 generateDailyNews 中根据状态生成
+            }
+        }
+    });
+
+    updatedNodes.forEach(node => {
+      // 1. 异常生长逻辑 & 恐慌
+      if (node.hasAnomaly && node.status !== 'secured') {
+        let growth = node.status === 'calm' ? 3 : 5;
+        node.anomalyLevel = Math.min(100, node.anomalyLevel + growth);
+        dailyPanicIncrease += Math.floor(node.anomalyLevel / 15); 
+
+        if (node.status === 'calm' && node.anomalyLevel >= 80) {
+          node.status = 'locked';
+          const themes: AnomalyTheme[] = ['BIO', 'TECH', 'PSIONIC', 'PHYSICAL', 'OCCULT'];
+          const theme = themes[Math.floor(Math.random() * themes.length)];
+          node.anomalyTheme = theme;
+          node.anomalyName = `SCP-${Math.floor(Math.random()*900)+100}`;
+          node.scpReport = generateSCPReport(node.flavor, theme); 
+          
+          newReports.push({ 
+            id: `rep_${day}_${node.id}_burst`, day, nodeName: node.name, type: 'danger', 
+            content: `警告！潜伏的 ${theme} 类异常爆发！恐慌指数激增！`,
+          });
+          eventNews.push({ id: `news_${day+1}_burst_${node.id}`, title: `【突发】${node.name}大规模异常爆发`, content: [`未被及时收容的异常冲破了伪装。`], type: 'headline', relatedNodeId: node.id });
+          dailyPanicIncrease += 10; 
+        }
+      }
+
+      // 2. 已收容管理
+      if (node.status === 'secured') {
+        const admin = updatedAgents.find(a => a.id === node.adminAgentId);
+        if (admin) {
+          const bonus = admin.attributes.operation * 15;
+          setMoney(m => m + 50 + bonus);
+          if (admin.attributes.resistance < 8) { 
+             admin.hp -= 5;
+             admin.san -= 5;
+          }
+        } else {
+          setMoney(m => m + 10);
+          dailyPanicIncrease += 2; 
+        }
+      }
+
+      // 3. 派遣结算
+      const assignedAgents = updatedAgents.filter(a => a.assignedNodeId === node.id && a.status === 'assigned');
+      if (assignedAgents.length > 0) {
+        if (node.pendingEvent) return; 
+
+        const totalPerception = assignedAgents.reduce((sum, a) => sum + a.attributes.perception, 0);
+        const totalPower = assignedAgents.reduce((sum, a) => sum + a.attributes.power, 0);
+        const totalOperation = assignedAgents.reduce((sum, a) => sum + a.attributes.operation, 0);
+
+        // 调查
+        if (node.status === 'investigating') {
+          if (Math.random() < 0.25) { 
+            node.pendingEvent = generateObstacleEvent(node);
+            addFloatingText(node.x, node.y, "!", "text-yellow-500 text-3xl font-black");
+          } else {
+            const progressGain = Math.min(100 - node.investigationProgress, Math.floor(totalPerception * 2 + 5));
+            node.investigationProgress += progressGain;
+            if (progressGain > 0) addFloatingText(node.x, node.y, `+${progressGain}%`, "text-yellow-400 text-lg font-bold");
+
+            if (node.investigationProgress >= 100) {
+              if (node.hasAnomaly) {
+                node.status = 'locked';
+                const themes: AnomalyTheme[] = ['BIO', 'TECH', 'PSIONIC', 'PHYSICAL', 'OCCULT'];
+                const theme = themes[Math.floor(Math.random() * themes.length)]; 
+                node.anomalyTheme = theme;
+                node.anomalyName = `SCP-${Math.floor(Math.random()*900)+100}`;
+                node.scpReport = generateSCPReport(node.flavor, theme); 
+                
+                newReports.push({ 
+                  id: `rep_${day}_${node.id}_done`, day, nodeName: node.name, type: 'success', 
+                  content: `调查完成！确认 ${theme} 类目标 [${node.anomalyName}]。档案已归档。`,
+                  relatedNodeId: node.id 
+                });
+                eventNews.push({ id: `news_${day+1}_inv_${node.id}`, title: `【头条】${node.name}全面封锁`, content: [`收容局已接管该区域。`], type: 'headline', relatedNodeId: node.id });
+              } else {
+                node.status = 'calm';
+                node.investigationProgress = 0;
+                node.activeRumors = [];
+                newReports.push({ id: `rep_${day}_${node.id}_false`, day, nodeName: node.name, type: 'info', content: `确认无异常。警报解除。` });
+              }
+              assignedAgents.forEach(a => { a.status = 'idle'; a.assignedNodeId = undefined; a.xp += 30; });
+            }
+          }
+        }
+
+        // 收容
+        if (node.status === 'containing') {
+          if (Math.random() < 0.3) {
+             node.pendingEvent = generateObstacleEvent(node);
+             addFloatingText(node.x, node.y, "警告!", "text-red-500 text-3xl font-black");
+          } else {
+            const resistance = Math.floor(node.anomalyLevel / 5) + 5; 
+            const baseGain = Math.floor((totalPower + totalOperation) * 1.5 + 5);
+            const finalGain = Math.max(0, baseGain - resistance);
+            
+            node.containmentProgress = Math.min(100, node.containmentProgress + finalGain);
+            if (finalGain > 0) addFloatingText(node.x, node.y, `+${finalGain}%`, "text-blue-400 text-lg font-bold");
+            else addFloatingText(node.x, node.y, "僵持", "text-zinc-500 text-lg");
+
+            if (node.containmentProgress >= 100) {
+              node.status = 'secured';
+              setSamples(s => s + 10);
+              setMoney(m => m + 1000);
+              dailyPanicIncrease -= 10; 
+              assignedAgents.forEach(a => { a.status = 'idle'; a.assignedNodeId = undefined; a.xp += 150; });
+              newReports.push({ id: `rep_${day}_${node.id}_sec`, day, nodeName: node.name, type: 'success', content: `收容成功！${node.anomalyName} 已压制。` });
+              eventNews.push({ id: `news_${day+1}_sec_${node.id}`, title: `【捷报】${node.name}危机结束`, content: [`收容局成功消除威胁。`], type: 'headline', relatedNodeId: node.id });
+            }
+          }
+        }
+      }
+    });
+
+    updatedAgents.forEach(agent => {
+      if (agent.status === 'hospitalized') {
+         agent.hp += 20;
+         if (agent.hp >= agent.maxHp) agent.status = 'idle';
+      }
+      if (agent.xp >= agent.maxXp) {
+        agent.level += 1;
+        agent.xp -= agent.maxXp;
+        agent.maxXp = Math.floor(agent.maxXp * 1.2);
+        const attrs: Attribute[] = ['perception', 'resistance', 'operation', 'power'];
+        const buffAttr = attrs[Math.floor(Math.random() * attrs.length)];
+        agent.attributes[buffAttr] += 1;
+        agent.freePoints += 1; 
+        newReports.push({ id: `rep_${day}_up_${agent.id}`, day, nodeName: '人事部', type: 'success', content: `${agent.name} 晋升为 LV.${agent.level}！` });
+        addFloatingText(50, 50, "LEVEL UP", "text-purple-400 text-2xl font-black animate-ping");
+      }
+      if (agent.status === 'idle') {
+        agent.hp = Math.min(agent.maxHp, agent.hp + 15);
+        agent.san = Math.min(agent.maxSan, agent.san + 5);
+      }
+    });
+
+    setPanic(p => Math.min(100, Math.max(0, p + dailyPanicIncrease)));
+    
+    // 中央大字提示
+    setTimeout(() => {
+        if (dailyPanicIncrease > 0) {
+            addFloatingText(50, 50, `警告：恐慌度 +${dailyPanicIncrease}%`, "text-red-600 text-5xl font-black drop-shadow-lg z-50");
+        } else if (dailyPanicIncrease < 0) {
+            addFloatingText(50, 50, `局势缓和：恐慌度 ${dailyPanicIncrease}%`, "text-emerald-500 text-5xl font-black drop-shadow-lg z-50");
+        } else {
+            addFloatingText(50, 50, `恐慌度稳定`, "text-zinc-400 text-3xl font-bold drop-shadow-lg z-50");
+        }
+    }, 500);
+
+    // Effect: News Generation (reads latest updatedNodes)
+    generateDailyNews(day + 1, eventNews);
+    
+    // State Updates
+    setNodes(updatedNodes);
+    setAgents(updatedAgents);
+    setReports(prev => [...newReports, ...prev]);
+    setDay(d => d + 1);
+    
+    if (newReports.length > 0) setActiveModal('reports');
+  };
+
+  const handleEventChoice = (choiceIndex: number) => {
+    if (!currentEventNodeId) return;
+    const updatedNodes = [...nodes];
+    const node = updatedNodes.find(n => n.id === currentEventNodeId);
+    if (!node || !node.pendingEvent) return;
+
+    const assignedAgents = agents.filter(a => a.assignedNodeId === node.id);
+    const option = node.pendingEvent.options[choiceIndex];
+    
+    let success = true;
+    if (option.reqAttr) {
+        const totalAttr = assignedAgents.reduce((s, a) => s + a.attributes[option.reqAttr!], 0);
+        const chance = Math.min(100, Math.max(0, Math.floor((totalAttr / (option.baseThreshold || 10)) * 70))); 
+        success = Math.random() * 100 < chance;
+    }
+
+    const result = option.action(node, assignedAgents, success);
+    
+    if (node.status === 'investigating') {
+      node.investigationProgress = Math.max(0, Math.min(100, node.investigationProgress + result.progress));
+      addFloatingText(node.x, node.y, `${result.progress > 0 ? '+' : ''}${result.progress}%`, result.progress > 0 ? "text-yellow-400 text-lg font-bold" : "text-red-500 text-lg font-bold");
+    } else if (node.status === 'containing') {
+      node.containmentProgress = Math.max(0, Math.min(100, node.containmentProgress + result.progress));
+      addFloatingText(node.x, node.y, `${result.progress > 0 ? '+' : ''}${result.progress}%`, result.progress > 0 ? "text-blue-400 text-lg font-bold" : "text-red-500 text-lg font-bold");
+    }
+
+    if (result.dmg) {
+      addFloatingText(node.x, node.y, `DMG -${result.dmg}`, "text-rose-600 font-black text-xl");
+    }
+
+    if (node.containmentProgress < 0) node.containmentProgress = 0;
+    
+    node.pendingEvent = undefined; 
+    setEventResult({ report: result.report, dmg: result.dmg });
+    setNodes(updatedNodes);
+    setAgents([...agents]);
+  };
+
+  const closeEventResult = () => {
+    setEventResult(null);
+    setActiveModal('none');
+    setCurrentEventNodeId(null);
+  }
+
+  const handleDispatch = () => {
+    if (!selectedNodeId) return;
+    const updatedAgents = agents.map(agent => {
+      if (selectedAgentsForDispatch.includes(agent.id)) {
+        return { ...agent, status: 'assigned' as const, assignedNodeId: selectedNodeId };
+      }
+      return agent;
+    });
+    const updatedNodes = nodes.map(node => {
+      if (node.id === selectedNodeId) {
+        if (node.status === 'calm') return { ...node, status: 'investigating' as const };
+        if (node.status === 'locked') return { ...node, status: 'containing' as const };
+      }
+      return node;
+    });
+    setAgents(updatedAgents);
+    setNodes(updatedNodes);
+    setActiveModal('none');
+    setSelectedAgentsForDispatch([]);
+    setSelectedRumorId(null);
+    setSelectedTraitId(null);
+    setNodeView('menu');
+  };
+
+  const dispatchPreview = useMemo(() => {
+    const selected = agents.filter(a => selectedAgentsForDispatch.includes(a.id));
+    return {
+      p: selected.reduce((s, a) => s + a.attributes.perception, 0),
+      r: selected.reduce((s, a) => s + a.attributes.resistance, 0),
+      o: selected.reduce((s, a) => s + a.attributes.operation, 0),
+      f: selected.reduce((s, a) => s + a.attributes.power, 0),
+    };
+  }, [agents, selectedAgentsForDispatch]);
+
+  const getSelectedNode = () => nodes.find(n => n.id === selectedNodeId);
+
+  const handleRetreat = () => {
+    if (!selectedNodeId) return;
+    const updatedAgents = agents.map(agent => {
+      if (agent.assignedNodeId === selectedNodeId) {
+        return { ...agent, status: 'idle' as const, assignedNodeId: undefined };
+      }
+      return agent;
+    });
+    const updatedNodes = nodes.map(node => {
+      if (node.id === selectedNodeId) {
+        return { ...node, pendingEvent: undefined };
+      }
+      return node;
+    });
+    setNodes(updatedNodes);
+    setAgents(updatedAgents);
+    setActiveModal('none');
+  };
+
+  const getAttrLabel = (attr: Attribute) => {
+    switch (attr) {
+      case 'perception': return '感知';
+      case 'resistance': return '耐受';
+      case 'operation': return '作业';
+      case 'power': return '武力';
+    }
+  };
+
+  return (
+    <ErrorBoundary>
+    <div className="w-full h-screen bg-zinc-950 text-zinc-100 font-sans flex flex-col overflow-hidden select-none">
+      
+      {/* 顶部栏 */}
+      <header className="h-14 md:h-16 bg-black border-b border-zinc-800 flex items-center justify-between px-4 md:px-6 shadow-lg z-20 shrink-0">
+        <div className="flex items-center gap-3 md:gap-6">
+          <div className="flex flex-col"><span className="text-[10px] md:text-xs text-zinc-500 tracking-widest uppercase">当前日期</span><span className="text-xl md:text-2xl font-black text-white font-mono">第 {day} 日</span></div>
+          <div className="h-6 md:h-8 w-px bg-zinc-800"></div>
+          <div className="flex flex-col"><span className="text-[10px] md:text-xs text-rose-800 tracking-widest uppercase font-bold">恐慌度</span><div className="flex items-center gap-1 md:gap-2"><Activity size={16} className="text-rose-600" /><span className="text-lg md:text-xl font-bold text-rose-500 font-mono">{panic}%</span></div></div>
+        </div>
+        <div className="flex items-center gap-4 md:gap-8">
+          <div className="text-right"><div className="text-[10px] md:text-xs text-zinc-500 uppercase">资金</div><div className="text-base md:text-lg font-mono text-emerald-400">$ {money}</div></div>
+          <div className="text-right"><div className="text-[10px] md:text-xs text-zinc-500 uppercase">样本</div><div className="text-base md:text-lg font-mono text-purple-400 flex items-center justify-end gap-1"><Zap size={14}/> {samples}</div></div>
+        </div>
+      </header>
+
+      {/* 地图 */}
+      <main className="flex-1 relative bg-zinc-900 overflow-hidden cursor-crosshair touch-none">
+        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)', backgroundSize: '50px 50px' }}></div>
+        <div className="absolute top-4 left-4 text-zinc-700 font-black text-4xl md:text-6xl opacity-10 pointer-events-none">NOAH CONTINENT</div>
+
+        {floatingTexts.map(ft => (
+          <div key={ft.id} className={`absolute tracking-wider animate-bounce pointer-events-none whitespace-nowrap transform -translate-x-1/2 ${ft.className}`} style={{ left: `${ft.x}%`, top: `${ft.y}%` }}>{ft.text}</div>
+        ))}
+
+        {nodes.map(node => (
+          <div 
+            key={node.id}
+            onClick={() => { 
+              if (node.pendingEvent) { setCurrentEventNodeId(node.id); setActiveModal('event'); }
+              else { setSelectedNodeId(node.id); setNodeView('menu'); setSelectedAgentsForDispatch([]); setActiveModal('node'); }
+            }}
+            className="absolute flex flex-col items-center justify-center cursor-pointer group z-10 hover:scale-105 transition-transform active:scale-95"
+            style={{ left: `${node.x}%`, top: `${node.y}%`, transform: 'translate(-50%, -50%)' }}
+          >
+            <div className={`w-12 h-12 md:w-14 md:h-14 rounded-sm shadow-2xl flex items-center justify-center border-2 transition-all duration-300 ${
+              node.pendingEvent ? 'bg-rose-500 border-white animate-pulse' : 
+              node.status === 'investigating' ? 'bg-yellow-500 border-yellow-300' :
+              node.status === 'containing' ? 'bg-blue-500 border-blue-300' :
+              node.status === 'locked' ? 'bg-red-600 border-red-400' :
+              node.status === 'secured' ? 'bg-green-500 border-green-300' :
+              'bg-slate-700 hover:bg-slate-600 border-slate-500'
+            }`}>
+               {node.pendingEvent ? <AlertOctagon size={24} className="text-white" /> : (
+                 <>
+                   {node.status === 'calm' && <div className="w-2 h-2 bg-white/40 rounded-full" />}
+                   {node.status === 'investigating' && <Eye size={20} className="text-zinc-900" />}
+                   {node.status === 'locked' && <Crosshair size={24} className="text-white" />}
+                   {node.status === 'containing' && <Lock size={20} className="text-white" />}
+                   {node.status === 'secured' && <CheckCircle size={20} className="text-white" />}
+                 </>
+               )}
+            </div>
+            
+            <div className="mt-2 bg-black/80 px-3 py-1 rounded text-[10px] md:text-xs font-bold border border-zinc-700 text-zinc-300 whitespace-nowrap shadow-lg">
+              {node.name}
+            </div>
+
+            {!node.pendingEvent && (node.status === 'investigating' || node.status === 'containing') && (
+              <div className="absolute -bottom-6 flex flex-col items-center w-24">
+                <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden border border-zinc-900">
+                  <div className={`h-full ${node.status === 'investigating' ? 'bg-yellow-500' : 'bg-blue-500'}`} style={{ width: `${node.status === 'investigating' ? node.investigationProgress : node.containmentProgress}%` }} />
+                </div>
+                <span className={`text-[10px] font-bold mt-0.5 ${node.status === 'investigating' ? 'text-yellow-500' : 'text-blue-400'}`}>
+                  {node.status === 'investigating' ? node.investigationProgress : node.containmentProgress}%
+                </span>
+              </div>
+            )}
+          </div>
+        ))}
+      </main>
+
+      {/* 底部菜单 - 移动端优化 */}
+      <footer className="h-16 md:h-24 bg-zinc-950 border-t border-zinc-800 flex items-center justify-around md:justify-center md:gap-6 px-4 shrink-0 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <button onClick={() => { setActiveModal('news'); setUnreadNews(false); }} className="group relative p-2 md:h-14 md:px-6 bg-transparent md:bg-zinc-900 hover:bg-zinc-800 rounded md:border border-zinc-700 flex items-center gap-0 md:gap-4 transition-all">
+          <Newspaper size={24} className="text-zinc-400 group-hover:text-zinc-200" /><div className="hidden md:flex flex-col items-start"><span className="text-zinc-200 font-bold tracking-wider">每日晨报</span></div>{unreadNews && <span className="absolute top-2 right-2 md:top-2 md:right-2 w-2 h-2 md:w-3 md:h-3 bg-red-600 rounded-full animate-bounce"></span>}
+        </button>
+        <button onClick={() => setActiveModal('roster')} className="group p-2 md:h-14 md:px-6 bg-transparent md:bg-zinc-900 hover:bg-zinc-800 rounded md:border border-zinc-700 flex items-center gap-0 md:gap-4 transition-all">
+          <Users size={24} className="text-zinc-400 group-hover:text-zinc-200" /><div className="hidden md:flex flex-col items-start"><span className="text-zinc-200 font-bold tracking-wider">人员档案</span></div>
+        </button>
+        <button onClick={() => setActiveModal('reports')} className="group p-2 md:h-14 md:px-6 bg-transparent md:bg-zinc-900 hover:bg-zinc-800 rounded md:border border-zinc-700 flex items-center gap-0 md:gap-4 transition-all">
+          <FileText size={24} className="text-zinc-400 group-hover:text-zinc-200" /><div className="hidden md:flex flex-col items-start"><span className="text-zinc-200 font-bold tracking-wider">行动报告</span></div>
+        </button>
+        <div className="w-px h-8 bg-zinc-800 mx-2 hidden md:block"></div>
+        <button onClick={handleEndDay} className="h-12 md:h-16 px-6 md:px-10 bg-rose-900 hover:bg-rose-800 rounded-sm border-b-4 border-rose-950 hover:border-rose-900 flex items-center justify-center gap-2 md:gap-3 transition-all active:translate-y-1 active:border-b-0 shadow-lg">
+          <Clock size={20} className="text-white" /><span className="text-white font-black text-sm md:text-lg tracking-widest whitespace-nowrap">结束日程</span>
+        </button>
+      </footer>
+
+      {/* --- Modals --- */}
+
+      {/* 6. SCP 档案弹窗 */}
+      {activeModal === 'scp_report' && viewingReport && (
+        <div className="absolute inset-0 bg-black/95 z-[60] flex items-center justify-center p-0 md:p-8 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border-0 md:border-2 border-zinc-600 w-full md:max-w-2xl h-full md:max-h-[85vh] overflow-y-auto flex flex-col rounded shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none"><Brain size={120} /></div>
+            <button 
+                onClick={() => { 
+                    if (selectedNodeId) {
+                      setActiveModal('node'); 
+                      setNodeView('target_select'); 
+                    } else {
+                      setActiveModal('reports');
+                    }
+                }} 
+                className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-400 hover:text-white z-20 border border-zinc-600 transition-colors"
+            >
+                <X size={24} />
+            </button>
+            <div className="p-8 border-b border-zinc-800 mt-8 md:mt-0">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-4xl font-black text-white mb-2">{viewingReport.code}</h1>
+                  <div className={`inline-block px-3 py-1 text-sm font-bold rounded border ${
+                    viewingReport.class === 'Safe' ? 'border-green-600 text-green-500 bg-green-900/20' :
+                    viewingReport.class === 'Euclid' ? 'border-yellow-600 text-yellow-500 bg-yellow-900/20' :
+                    'border-red-600 text-red-500 bg-red-900/20'
+                  }`}>
+                    等级: {viewingReport.class} | 类型: {viewingReport.theme}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 space-y-8 font-serif text-zinc-300 leading-relaxed">
+              <div className="bg-zinc-950 p-4 border border-zinc-800 text-xs font-mono text-zinc-500">[图片数据丢失]</div>
+              <section><h3 className="text-zinc-500 font-bold mb-2 uppercase tracking-widest text-sm">描述 (Description)</h3><p>{viewingReport.description}</p></section>
+              <section><h3 className="text-zinc-500 font-bold mb-2 uppercase tracking-widest text-sm">特殊收容措施 (Procedures)</h3><p>{viewingReport.procedures}</p></section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. 决策事件弹窗 */}
+      {activeModal === 'event' && currentEventNodeId && (
+        <div className="absolute inset-0 bg-rose-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-zinc-900 border-2 border-rose-500 w-full max-w-2xl rounded shadow-[0_0_50px_rgba(244,63,94,0.5)] flex flex-col relative animate-in zoom-in-95 duration-200">
+            {eventResult ? (
+               <div className="p-8 text-center">
+                  <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6 ${eventResult.dmg ? 'bg-rose-500/20 text-rose-500' : 'bg-green-500/20 text-green-500'}`}>
+                    {eventResult.dmg ? <AlertTriangle size={40}/> : <CheckCircle size={40}/>}
+                  </div>
+                  <h3 className="text-3xl font-black text-white mb-4">{eventResult.dmg ? '行动受挫' : '行动成功'}</h3>
+                  <p className="text-zinc-300 mb-10 text-lg leading-relaxed">{eventResult.report}</p>
+                  <button onClick={closeEventResult} className="w-full py-4 bg-white text-black font-bold rounded hover:bg-zinc-200 text-lg">确认结果并继续</button>
+               </div>
+            ) : (
+              <>
+                <button onClick={() => setActiveModal('none')} className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-400 hover:text-white z-10 border border-zinc-600"><X size={24} /></button>
+                <div className="p-6 bg-rose-950/50 border-b border-rose-900 flex items-center gap-4">
+                  <div className="p-3 bg-rose-600 rounded text-white"><AlertOctagon size={32}/></div>
+                  <div>
+                    {(() => {
+                       const node = nodes.find(n => n.id === currentEventNodeId)!;
+                       const evt = node.pendingEvent!;
+                       return (
+                         <>
+                           <h2 className="text-2xl font-black text-white uppercase tracking-wider">{evt.type === 'investigation' ? '调查受阻' : '收容告急'}</h2>
+                           <div className="text-rose-300 text-sm font-bold flex items-center gap-2">
+                             地点: {node.name} 
+                             {evt.theme !== 'GENERIC' && <span className="border border-rose-500 px-1 rounded text-xs flex items-center gap-1"><ThemeIcon theme={evt.theme} /> {evt.theme}</span>}
+                           </div>
+                         </>
+                       );
+                    })()}
+                  </div>
+                </div>
+                
+                <div className="p-6 md:p-8">
+                  {(() => {
+                    const node = nodes.find(n => n.id === currentEventNodeId)!;
+                    const evt = node.pendingEvent!;
+                    const assignedAgents = agents.filter(a => a.assignedNodeId === node.id);
+
+                    return (
+                      <>
+                        <h3 className="text-xl font-bold text-white mb-2">{evt.title}</h3>
+                        <p className="text-zinc-400 mb-8 leading-relaxed">{evt.description}</p>
+                        
+                        <div className="space-y-4">
+                          {evt.options.map((opt, idx) => {
+                            let chance = 100;
+                            let totalAttr = 0;
+                            if (opt.reqAttr) {
+                               totalAttr = assignedAgents.reduce((s, a) => s + a.attributes[opt.reqAttr!], 0);
+                               chance = Math.min(100, Math.floor((totalAttr / (opt.baseThreshold || 10)) * 70));
+                            }
+
+                            return (
+                              <button 
+                                key={idx}
+                                onClick={() => handleEventChoice(idx)}
+                                className="w-full text-left p-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-400 rounded group transition-all"
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-bold text-white text-lg group-hover:text-amber-400">{opt.label}</span>
+                                  {opt.reqAttr ? (
+                                    <div className="text-right">
+                                      <div className="text-xs font-mono text-zinc-400">
+                                        {getAttrLabel(opt.reqAttr)}: <span className="text-white">{totalAttr}</span>
+                                      </div>
+                                      <div className={`text-xs font-bold ${chance > 70 ? 'text-green-500' : chance > 40 ? 'text-yellow-500' : 'text-red-500'}`}>
+                                        成功率: {chance}%
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-zinc-500">自动执行</span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-zinc-500 group-hover:text-zinc-400">{opt.desc}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 7. 天赋树弹窗 */}
+      {activeModal === 'talent' && viewingAgent && (
+        <div className="absolute inset-0 bg-black/95 z-50 flex items-center justify-center p-0 md:p-8 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border-0 md:border border-zinc-700 w-full max-w-5xl h-full md:h-[85vh] flex flex-col rounded shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal('none')} className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-400 hover:text-white z-10 border border-zinc-600"><X size={24} /></button>
+            <div className="p-6 border-b border-zinc-800 bg-black flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black text-zinc-200 tracking-wider flex items-center gap-3">
+                  <Dna className="text-purple-500" /> 进化手术台
+                </h2>
+                <div className="text-sm text-zinc-500 mt-1">受体: {viewingAgent.name} (可用点数: <span className="text-purple-400 font-bold">{viewingAgent.freePoints}</span>)</div>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 pb-20">
+              {TALENT_TREE.map(sys => {
+                const Icon = sys.icon;
+                return (
+                <div key={sys.id} className="bg-zinc-950/50 border border-zinc-800 rounded p-4">
+                  <div className="flex items-center gap-2 mb-4 text-zinc-300 font-bold border-b border-zinc-800 pb-2">
+                    <div className="p-1 bg-zinc-800 rounded text-purple-400"><Icon size={18}/></div>
+                    {sys.name}
+                  </div>
+                  <div className="space-y-4">
+                    {sys.nodes.map(node => {
+                      const isUnlocked = viewingAgent.unlockedTalents.includes(node.id);
+                      const canUnlock = !isUnlocked && viewingAgent.freePoints >= node.cost; 
+
+                      return (
+                        <div key={node.id} className={`p-3 rounded border transition-all ${
+                          isUnlocked ? 'bg-purple-900/20 border-purple-500/50' : 
+                          canUnlock ? 'bg-zinc-900 border-zinc-600 hover:border-zinc-400 cursor-pointer' : 
+                          'bg-zinc-900/50 border-zinc-800 opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => canUnlock && handleUnlockTalent(viewingAgent.id, node)}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`font-bold text-sm ${isUnlocked ? 'text-purple-300' : 'text-zinc-300'}`}>{node.name}</span>
+                            {isUnlocked ? <CheckCircle size={14} className="text-purple-500"/> : <span className="text-xs bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{node.cost} TP</span>}
+                          </div>
+                          <div className="text-xs text-zinc-500">{node.desc}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )})}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. 招聘弹窗 */}
+      {activeModal === 'recruit' && (
+        <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-0 md:p-8 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border-0 md:border border-zinc-700 w-full max-w-4xl h-full md:h-auto flex flex-col rounded shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal('none')} className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-400 hover:text-white z-10 border border-zinc-600"><X size={24} /></button>
+            <div className="p-6 border-b border-zinc-800 bg-black flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black text-zinc-200 tracking-wider flex items-center gap-3">
+                  <Briefcase className="text-emerald-500" /> 人才黑市
+                </h2>
+                <div className="text-sm text-zinc-500 mt-1">当前资金: <span className="text-emerald-400 font-bold">$ {money}</span></div>
+              </div>
+              <button 
+                onClick={handleRefreshRecruits}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-300 text-sm font-bold transition-colors mr-12"
+              >
+                <RefreshCw size={16} className={day > lastRefreshDay ? 'text-emerald-400' : 'text-zinc-400'}/>
+                {day > lastRefreshDay ? "免费刷新" : "刷新 ($50)"}
+              </button>
+            </div>
+            
+            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6 overflow-y-auto">
+              {recruitCandidates.map(candidate => (
+                <div key={candidate.id} className="bg-zinc-800 border border-zinc-700 p-6 rounded flex flex-col hover:border-zinc-500 transition-colors">
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-white">{candidate.name}</h3>
+                    <div className="text-sm text-zinc-500 font-mono mt-1">{candidate.class} • LV.{candidate.level}</div>
+                  </div>
+                  
+                  <div className="space-y-2 mb-6 flex-1">
+                    <div className="flex justify-between text-xs text-zinc-400"><span>HP</span><span>{candidate.maxHp}</span></div>
+                    <div className="flex justify-between text-xs text-zinc-400"><span>SAN</span><span>{candidate.maxSan}</span></div>
+                    <div className="w-full h-px bg-zinc-700 my-2"></div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between"><span className="text-amber-500">感知</span><span>{candidate.attributes.perception}</span></div>
+                      <div className="flex justify-between"><span className="text-green-500">耐受</span><span>{candidate.attributes.resistance}</span></div>
+                      <div className="flex justify-between"><span className="text-cyan-500">作业</span><span>{candidate.attributes.operation}</span></div>
+                      <div className="flex justify-between"><span className="text-rose-500">武力</span><span>{candidate.attributes.power}</span></div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => handleHireAgent(candidate)}
+                    disabled={money < (candidate.hireCost || 0)}
+                    className="w-full py-3 bg-emerald-900/50 hover:bg-emerald-800 border border-emerald-700 text-emerald-400 hover:text-white rounded font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <Coins size={16}/> 雇佣 (${candidate.hireCost})
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. 节点详情/菜单弹窗 */}
+      {activeModal === 'node' && selectedNodeId && (
+        <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border-0 md:border border-zinc-600 w-full max-w-lg rounded shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal('none')} className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-500 hover:text-white z-10 border border-zinc-600"><X size={24} /></button>
+            {(() => {
+              const node = getSelectedNode()!;
+              const assignedAgents = agents.filter(a => a.assignedNodeId === node.id);
+              const admin = agents.find(a => a.id === node.adminAgentId);
+              
+              return (
+                <>
+                  <div className="p-6 border-b border-zinc-800 bg-black relative">
+                    <div className="relative z-10 pr-8">
+                      <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-wide">{node.name}</h2>
+                      <div className="flex items-center gap-2 mb-2">
+                         <span className="text-xs text-zinc-500 font-mono uppercase border border-zinc-800 px-2 py-1 rounded bg-zinc-900">区域: {node.flavor}</span>
+                         <span className={`text-xs px-2 py-1 font-bold rounded border ${node.status === 'calm' ? 'border-zinc-600 text-zinc-400' : node.status === 'investigating' ? 'border-yellow-600 text-yellow-500' : node.status === 'locked' ? 'border-red-600 text-red-500' : node.status === 'containing' ? 'border-blue-500 text-blue-400' : 'border-green-600 text-green-500'}`}>
+                           {node.status.toUpperCase()}
+                         </span>
+                      </div>
+                      <p className="text-zinc-400 text-sm italic border-l-2 border-zinc-700 pl-3">"{node.description}"</p>
+                    </div>
+                  </div>
+
+                  <div className="p-6 flex-1 overflow-y-auto">
+                    {assignedAgents.length > 0 && node.status !== 'secured' ? (
+                      <div>
+                        {/* ... 已派遣状态 UI (保持不变) ... */}
+                        <div className="text-xs text-zinc-500 mb-3 uppercase tracking-widest font-bold flex items-center gap-2"><Clock size={14}/> 行动进行中</div>
+                        <div className="space-y-3 mb-6">
+                          {assignedAgents.map(a => (
+                            <div key={a.id} className="bg-zinc-800 p-3 rounded flex justify-between items-center border border-zinc-700">
+                              <span className="font-bold">{a.name}</span>
+                              <div className="flex gap-4 text-xs font-mono"><span className="text-rose-500">HP {a.hp}</span><span className="text-blue-400">SAN {a.san}</span></div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="bg-zinc-950 p-4 rounded border border-zinc-800 mb-6">
+                           <div className="flex justify-between mb-2 text-xs font-bold text-zinc-400 uppercase"><span>当前进度</span><span>{node.status === 'investigating' ? node.investigationProgress : node.containmentProgress}%</span></div>
+                           <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                             <div className={`h-full ${node.status === 'investigating' ? 'bg-yellow-500' : 'bg-blue-500'}`} style={{ width: `${node.status === 'investigating' ? node.investigationProgress : node.containmentProgress}%` }} />
+                           </div>
+                        </div>
+                        <button onClick={handleRetreat} className="w-full py-3 border border-rose-900 text-rose-500 hover:bg-rose-950/50 rounded font-bold text-sm">中止任务 / 撤退</button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* 已收容状态：管理界面 (NEW) */}
+                        {node.status === 'secured' && (
+                          <div className="mb-6">
+                             <div className="text-center py-6 border-b border-zinc-800 mb-6">
+                               <CheckCircle size={48} className="text-green-500 mx-auto mb-2" />
+                               <div className="text-green-400 font-bold text-lg">收容措施执行中</div>
+                             </div>
+
+                             {/* 管理员槽位 */}
+                             <div className="bg-zinc-800/50 p-4 rounded border border-zinc-700 mb-4">
+                               <div className="flex justify-between items-center mb-4">
+                                 <h3 className="font-bold text-zinc-300 flex items-center gap-2"><Shield size={16}/> 站点管理员</h3>
+                                 <button onClick={() => setNodeView('admin_select')} className="text-xs bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-white flex items-center gap-1">
+                                   <Settings size={12}/> {admin ? '更换' : '指派'}
+                                 </button>
+                               </div>
+                               
+                               {admin ? (
+                                 <div className="flex items-center justify-between bg-zinc-900 p-3 rounded border border-zinc-800">
+                                   <div>
+                                     <div className="font-bold text-white">{admin.name}</div>
+                                     <div className="text-xs text-zinc-500">LV.{admin.level} {admin.class}</div>
+                                   </div>
+                                   <div className="text-right text-xs">
+                                     <div className="text-emerald-400">产出加成: +{admin.attributes.operation * 15}$</div>
+                                     <div className="text-rose-400">日损耗: -5 HP/SAN</div>
+                                   </div>
+                                 </div>
+                               ) : (
+                                 <div className="text-center p-4 border border-dashed border-red-800 bg-red-900/10 rounded text-red-400 text-sm">
+                                   警告：当前无管理员<br/>资源产出减半，恐慌上升
+                                 </div>
+                               )}
+                             </div>
+                             
+                             {/* 选人列表 (嵌入式) */}
+                             {nodeView === 'admin_select' && (
+                                <div className="space-y-2 max-h-48 overflow-y-auto mb-4 border-t border-zinc-800 pt-4 custom-scrollbar">
+                                  <div className="text-xs text-zinc-500 mb-2">选择一名干员进驻 ([作业]影响产出, [耐受]影响生存)</div>
+                                  {agents.filter(a => a.status === 'idle').map(agent => (
+                                    <div key={agent.id} onClick={() => handleAssignAdmin(agent.id)} className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded cursor-pointer flex justify-between items-center border border-zinc-700 hover:border-zinc-500">
+                                      <span className="font-bold text-sm">{agent.name}</span>
+                                      <div className="flex gap-2 text-xs font-mono">
+                                        <span className="text-cyan-400">OP:{agent.attributes.operation}</span>
+                                        <span className="text-green-400">RES:{agent.attributes.resistance}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                             )}
+                          </div>
+                        )}
+
+                        {/* C1. 主菜单 (非收容状态) */}
+                        {nodeView === 'menu' && node.status !== 'secured' && (
+                          <div className="space-y-4">
+                            <div className="bg-zinc-800/50 p-4 rounded border border-zinc-700">
+                              <h3 className="font-bold text-zinc-300 mb-2 flex items-center gap-2"><FileText size={16}/> 节点情报</h3>
+                              <div className="text-sm text-zinc-500 space-y-1">
+                                <p>警戒等级: {node.difficulty}</p>
+                                <p>已知传闻: {node.activeRumors.length}</p>
+                                <p>已确认特征: {node.discoveredTraits.length}</p>
+                              </div>
+                            </div>
+                            <button onClick={() => setNodeView('rumor')} disabled={node.status !== 'calm'} className={`w-full p-4 rounded border flex items-center justify-between group transition-all ${node.status === 'calm' ? 'bg-zinc-800 border-zinc-600 hover:bg-zinc-700 hover:border-zinc-400' : 'bg-zinc-900 border-zinc-800 opacity-50 cursor-not-allowed'}`}>
+                              <div className="flex items-center gap-3"><div className={`p-2 rounded ${node.status === 'calm' ? 'bg-yellow-900/30 text-yellow-500' : 'bg-zinc-800 text-zinc-600'}`}><Search size={20} /></div><div className="text-left"><div className="font-bold text-zinc-200">调查</div><div className="text-xs text-zinc-500">核实传闻 & 搜集情报</div></div></div><ChevronRight className="text-zinc-600 group-hover:text-zinc-300" />
+                            </button>
+                            <button onClick={() => setNodeView('target_select')} disabled={node.status !== 'locked'} className={`w-full p-4 rounded border flex items-center justify-between group transition-all ${node.status === 'locked' ? 'bg-zinc-800 border-zinc-600 hover:bg-zinc-700 hover:border-zinc-400' : 'bg-zinc-900 border-zinc-800 opacity-50 cursor-not-allowed'}`}>
+                              <div className="flex items-center gap-3"><div className={`p-2 rounded ${node.status === 'locked' ? 'bg-red-900/30 text-red-500' : 'bg-zinc-800 text-zinc-600'}`}><Lock size={20} /></div><div className="text-left"><div className="font-bold text-zinc-200">收容</div><div className="text-xs text-zinc-500">压制异常 & 控制区域</div></div></div><ChevronRight className="text-zinc-600 group-hover:text-zinc-300" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* C2. 传闻选择 */}
+                        {nodeView === 'rumor' && (
+                          <div>
+                            <button onClick={() => setNodeView('menu')} className="text-xs text-zinc-500 hover:text-white mb-4 flex items-center gap-1"><ChevronLeft size={12}/> 返回菜单</button>
+                            <h3 className="text-lg font-bold text-white mb-4">选择切入点</h3>
+                            <div className="space-y-3 mb-6">
+                              {node.activeRumors.length === 0 && <div className="p-4 border border-dashed border-zinc-700 text-zinc-500 text-center text-sm italic">没有在报纸上发现活跃传闻。<br/> "盲目调查" 效率会很低。</div>}
+                              <div onClick={() => setSelectedRumorId('blind')} className={`p-3 border rounded cursor-pointer transition-all ${selectedRumorId === 'blind' ? 'bg-zinc-800 border-white' : 'bg-zinc-900 border-zinc-700 hover:border-zinc-500'}`}>
+                                <div className="font-bold text-sm">盲目调查</div><div className="text-xs text-zinc-500">效率低。风险高。</div>
+                              </div>
+                              {node.activeRumors.map(rumor => (
+                                <div key={rumor.id} onClick={() => setSelectedRumorId(rumor.id)} className={`p-3 border rounded cursor-pointer transition-all ${selectedRumorId === rumor.id ? 'bg-zinc-800 border-yellow-500' : 'bg-zinc-900 border-zinc-700 hover:border-zinc-500'}`}>
+                                  <div className="flex justify-between mb-1"><span className="font-bold text-sm text-yellow-500">{rumor.title}</span><span className="text-xs text-zinc-600">{rumor.source}</span></div>
+                                  <div className="text-xs text-zinc-400 line-clamp-2">{rumor.description}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => setNodeView('agent')} disabled={!selectedRumorId} className="w-full py-3 bg-white text-black font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed">前往编队</button>
+                          </div>
+                        )}
+
+                        {/* NEW: C2.5 目标确认 */}
+                        {nodeView === 'target_select' && (
+                          <div>
+                            <button onClick={() => setNodeView('menu')} className="text-xs text-zinc-500 hover:text-white mb-4 flex items-center gap-1"><ChevronLeft size={12}/> 返回菜单</button>
+                            <h3 className="text-lg font-bold text-white mb-4">确认收容目标</h3>
+                            <div className="bg-zinc-800 border border-zinc-600 p-4 rounded mb-6">
+                              <div className="flex justify-between items-start mb-4">
+                                <div><div className="text-2xl font-black text-white">{node.anomalyName}</div><div className="text-xs text-red-500 font-bold border border-red-900 bg-red-900/20 px-2 py-0.5 inline-block rounded mt-1">异常已锁定</div></div>
+                                <Target size={32} className="text-red-500" />
+                              </div>
+                              <p className="text-sm text-zinc-400 mb-4 line-clamp-3 italic">"{node.scpReport?.description || '暂无描述'}"</p>
+                              <button onClick={() => { if(node.scpReport) { setViewingReport(node.scpReport); setActiveModal('scp_report'); } }} className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-bold rounded flex items-center justify-center gap-2"><BookOpen size={14}/> 查阅详细档案</button>
+                            </div>
+                            <button onClick={() => setNodeView('trait')} className="w-full py-3 bg-white text-black font-bold rounded">确认目标并制定战术</button>
+                          </div>
+                        )}
+
+                        {/* C3. 特征选择 */}
+                        {nodeView === 'trait' && (
+                          <div>
+                            <button onClick={() => setNodeView('target_select')} className="text-xs text-zinc-500 hover:text-white mb-4 flex items-center gap-1"><ChevronLeft size={12}/> 返回</button>
+                            <h3 className="text-lg font-bold text-white mb-4">战术方案</h3>
+                            <div className="space-y-3 mb-6">
+                              <div onClick={() => setSelectedTraitId('brute')} className={`p-3 border rounded cursor-pointer transition-all ${selectedTraitId === 'brute' ? 'bg-zinc-800 border-white' : 'bg-zinc-900 border-zinc-700 hover:border-zinc-500'}`}>
+                                <div className="font-bold text-sm">标准镇压</div><div className="text-xs text-zinc-500">依赖武力强行突破。</div>
+                              </div>
+                              {node.discoveredTraits.map(trait => (
+                                <div key={trait.id} onClick={() => setSelectedTraitId(trait.id)} className={`p-3 border rounded cursor-pointer transition-all ${selectedTraitId === trait.id ? 'bg-zinc-800 border-blue-500' : 'bg-zinc-900 border-zinc-700 hover:border-zinc-500'}`}>
+                                  <div className="font-bold text-sm text-blue-400">目标弱点: {trait.name}</div><div className="text-xs text-zinc-400">{trait.description}</div><div className="text-xs text-green-600 mt-1 uppercase font-bold">克制属性: {getAttrLabel(trait.counterAttr)}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => setNodeView('agent')} disabled={!selectedTraitId} className="w-full py-3 bg-white text-black font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed">前往编队</button>
+                          </div>
+                        )}
+
+                        {/* C4. 人员选择 */}
+                        {nodeView === 'agent' && (
+                          <div>
+                            <button onClick={() => setNodeView(node.status === 'locked' ? 'trait' : 'rumor')} className="text-xs text-zinc-500 hover:text-white mb-4 flex items-center gap-1"><ChevronLeft size={12}/> 返回</button>
+                            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-white">组建小队</h3><span className="text-xs text-zinc-500">{selectedAgentsForDispatch.length} 已选择</span></div>
+                            <div className="space-y-2 max-h-56 overflow-y-auto mb-6 pr-2 custom-scrollbar">
+                              {agents.filter(a => a.status === 'idle').map(agent => (
+                                <div key={agent.id} onClick={() => { if (selectedAgentsForDispatch.includes(agent.id)) { setSelectedAgentsForDispatch(prev => prev.filter(id => id !== agent.id)); } else { setSelectedAgentsForDispatch(prev => [...prev, agent.id]); } }} className={`p-3 rounded border cursor-pointer flex justify-between items-center transition-all ${selectedAgentsForDispatch.includes(agent.id) ? 'bg-zinc-800 border-white ring-1 ring-white/50' : 'bg-zinc-900 border-zinc-800 hover:border-zinc-600'}`}>
+                                  <div><div className="font-bold text-sm text-zinc-200">{agent.name}</div><div className="text-xs text-zinc-500">等级.{agent.level}</div></div>
+                                  <div className="grid grid-cols-4 gap-3 text-xs text-center font-mono">
+                                    <div className={node.status !== 'locked' ? 'text-amber-400 font-bold' : 'text-zinc-700'}>{agent.attributes.perception}</div>
+                                    <div className="text-green-600 font-bold">{agent.attributes.resistance}</div>
+                                    <div className={node.status === 'locked' ? 'text-cyan-400 font-bold' : 'text-zinc-700'}>{agent.attributes.operation}</div>
+                                    <div className={node.status === 'locked' ? 'text-rose-400 font-bold' : 'text-zinc-700'}>{agent.attributes.power}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={handleDispatch} disabled={selectedAgentsForDispatch.length === 0} className={`w-full py-4 font-black tracking-widest rounded text-sm flex items-center justify-center gap-2 transition-all ${selectedAgentsForDispatch.length > 0 ? 'bg-white text-black hover:bg-zinc-200 hover:scale-[1.02]' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}>
+                              {node.status === 'locked' ? '执行收容' : '派遣小队'}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* 3. 人员档案 (包含天赋入口) */}
+      {activeModal === 'roster' && (
+        <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-0 md:p-8 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border-0 md:border border-zinc-700 w-full max-w-5xl h-full md:h-[800px] flex flex-col rounded shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal('none')} className="absolute top-4 right-4 p-3 bg-zinc-800 hover:bg-black rounded-full text-zinc-400 hover:text-white z-10 border border-zinc-600"><X size={24} /></button>
+            <div className="p-6 border-b border-zinc-800 bg-black flex justify-between items-center">
+              <h2 className="text-2xl font-black text-zinc-200 tracking-wider flex items-center gap-3">
+                <Users className="text-zinc-500" /> 干员名录
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              {/* 招聘入口卡片 */}
+              <div 
+                onClick={() => { setActiveModal('recruit'); }}
+                className="bg-zinc-900/50 border-2 border-dashed border-zinc-700 p-5 rounded hover:border-emerald-500 hover:bg-emerald-900/10 transition-all group flex flex-col items-center justify-center cursor-pointer min-h-[300px]"
+              >
+                <div className="p-4 bg-zinc-800 rounded-full group-hover:bg-emerald-500 group-hover:text-black text-zinc-500 transition-colors mb-4">
+                  <UserPlus size={32} />
+                </div>
+                <div className="text-lg font-bold text-zinc-400 group-hover:text-emerald-400">招聘新干员</div>
+                <div className="text-sm text-zinc-600 mt-2">访问人才黑市</div>
+              </div>
+
+              {agents.map(agent => (
+                <div key={agent.id} className="bg-zinc-800 border border-zinc-700 p-5 rounded hover:border-zinc-500 transition-colors group relative flex flex-col">
+                  {/* Status Badge */}
+                  <div className="absolute top-4 right-4">
+                    {agent.status === 'assigned' ? <span className="flex items-center gap-1 text-xs font-bold bg-amber-950 text-amber-500 px-2 py-1 rounded border border-amber-900"><Clock size={12}/> 执行中</span> : 
+                     agent.status === 'admin' ? <span className="flex items-center gap-1 text-xs font-bold bg-purple-950 text-purple-500 px-2 py-1 rounded border border-purple-900"><Shield size={12}/> 驻守中</span> :
+                     <span className="flex items-center gap-1 text-xs font-bold bg-emerald-950 text-emerald-500 px-2 py-1 rounded border border-emerald-900"><CheckCircle size={12}/> 待命</span>}
+                  </div>
+                  {/* Header */}
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-white">{agent.name}</h3>
+                    <p className="text-sm text-zinc-500 font-mono">职业: {agent.class} • 等级.{agent.level}</p>
+                    {agent.freePoints > 0 && <div className="text-xs text-purple-400 font-bold mt-1 animate-pulse">可用天赋点: {agent.freePoints}</div>}
+                  </div>
+                  {/* XP Bar */}
+                  <div className="w-full h-1.5 bg-zinc-950 rounded-full mb-6 overflow-hidden"><div className="h-full bg-gradient-to-r from-purple-600 to-blue-500" style={{ width: `${(agent.xp / agent.maxXp) * 100}%` }}></div></div>
+                  
+                  <div className="space-y-2 mb-4 flex-1">
+                    {(['perception', 'resistance', 'operation', 'power'] as Attribute[]).map(attr => (
+                      <div key={attr} className="flex items-center justify-between text-sm group/attr">
+                        <span className="text-zinc-400 uppercase text-xs font-bold">{getAttrLabel(attr)}</span>
+                        <div className="flex items-center gap-2">
+                           <div className="h-2 w-24 bg-zinc-900 rounded-full overflow-hidden">
+                             <div className={`h-full ${attr === 'perception' ? 'bg-amber-500' : attr === 'resistance' ? 'bg-green-500' : attr === 'operation' ? 'bg-cyan-500' : 'bg-rose-500'}`} style={{ width: `${(agent.attributes[attr] / 20) * 100}%` }}></div>
+                           </div>
+                           <span className={`font-mono font-bold w-6 text-right ${attr === 'perception' ? 'text-amber-500' : attr === 'resistance' ? 'text-green-500' : attr === 'operation' ? 'text-cyan-500' : 'text-rose-500'}`}>{agent.attributes[attr]}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setViewingAgent(agent); setActiveModal('talent'); }}
+                    className="w-full py-2 mt-auto bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 hover:border-purple-500 text-zinc-300 rounded flex items-center justify-center gap-2 transition-all relative overflow-hidden group/btn"
+                  >
+                    <Dna size={16} className="text-purple-500 group-hover/btn:animate-spin-slow" />
+                    <span className="font-bold text-sm">进化手术 ({agent.freePoints})</span>
+                    {agent.freePoints > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-purple-500 rounded-full animate-ping"></span>}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Action Reports Modal */}
+      {activeModal === 'reports' && (
+        <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-8 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-zinc-900 border border-zinc-700 w-full max-w-2xl h-[80vh] flex flex-col rounded shadow-2xl relative" onClick={e => e.stopPropagation()}>
+             <button onClick={() => setActiveModal('none')} className="absolute top-5 right-5 p-1 text-zinc-500 hover:text-white z-10"><X size={24} /></button>
+             <div className="p-5 border-b border-zinc-800 flex justify-between items-center bg-black">
+              <h2 className="text-xl font-bold text-zinc-200 flex items-center gap-2"><FileText className="text-zinc-500" /> 任务日志</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 font-mono text-sm space-y-6">
+              {reports.length === 0 && <div className="text-zinc-600 text-center italic mt-10">等待数据中...</div>}
+              {reports.slice().reverse().map((report, idx) => (
+                <div key={report.id} className="border-l-2 border-zinc-800 pl-6 relative">
+                  <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-zinc-900 ${report.type === 'success' ? 'bg-green-500' : report.type === 'failure' || report.type === 'danger' ? 'bg-rose-500' : 'bg-zinc-600'}`}></div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-zinc-500 text-xs font-bold">第 {report.day} 日</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded tracking-wider uppercase ${report.type === 'success' ? 'bg-green-900 text-green-400' : report.type === 'failure' || report.type === 'danger' ? 'bg-rose-900 text-rose-400' : 'bg-zinc-800 text-zinc-400'}`}>{report.type}</span>
+                    <span className="text-zinc-200 font-bold">{report.nodeName}</span>
+                  </div>
+                  <p className="text-zinc-400 leading-relaxed text-sm mb-2">{report.content}</p>
+                  {report.type === 'success' && report.relatedNodeId && (
+                    <button 
+                      onClick={() => {
+                        const node = nodes.find(n => n.id === report.relatedNodeId);
+                        if (node?.scpReport) {
+                          setViewingReport(node.scpReport);
+                          setActiveModal('scp_report');
+                        }
+                      }}
+                      className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1 rounded border border-zinc-600 flex items-center gap-2 w-fit"
+                    >
+                      <FileSearch size={12}/> 查看相关档案
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-zinc-800 bg-zinc-950 text-center"><button onClick={() => setActiveModal('none')} className="text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-widest">确认并关闭</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* 1. 报纸弹窗 */}
+      {activeModal === 'news' && (
+        <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-0 md:p-4 backdrop-blur-sm" onClick={() => setActiveModal('none')}>
+          <div className="bg-[#dfdfdf] text-zinc-900 w-full max-w-4xl h-full md:h-[90vh] overflow-hidden flex flex-col shadow-2xl rounded-sm border-8 border-zinc-800 relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal('none')} className="absolute top-6 right-6 p-2 bg-black text-white hover:bg-zinc-800 z-50"><X size={24} /></button>
+            {/* Header */}
+            <div className="border-b-4 border-black p-6 flex justify-between items-end bg-[#d4d4d4]">
+               <div><h1 className="text-5xl font-black uppercase tracking-tighter leading-none font-serif">诺亚大陆日报</h1><div className="text-sm font-bold mt-2 text-zinc-600 flex gap-4"><span>官方指定媒体</span><span>•</span><span>第 {day} 期</span><span>•</span><span>第 {newsPage + 1} 页 / 共 {Math.ceil(news.length / 4)} 页</span></div></div>
+               <div className="flex gap-2 mr-12">
+                 <button disabled={newsPage === 0} onClick={() => setNewsPage(p => Math.max(0, p - 1))} className="p-2 border-2 border-black hover:bg-black hover:text-white disabled:opacity-30 transition-colors"><ChevronLeft size={24} /></button>
+                 <button disabled={newsPage >= Math.ceil(news.length / 4) - 1} onClick={() => setNewsPage(p => p + 1)} className="p-2 border-2 border-black hover:bg-black hover:text-white disabled:opacity-30 transition-colors"><ChevronRight size={24} /></button>
+               </div>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-10 font-serif bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
+              <div className="columns-1 md:columns-2 gap-10 space-y-10">
+                {news.slice(newsPage * 4, (newsPage + 1) * 4).map((item, idx) => (
+                  <article key={item.id} className={`break-inside-avoid mb-8 ${item.type === 'headline' ? 'border-b-4 border-black pb-6' : 'border-b border-zinc-400 pb-6'}`}>
+                    {item.type === 'headline' && <span className="bg-black text-white text-xs font-sans font-bold px-2 py-0.5 mb-3 inline-block tracking-widest">突发新闻</span>}
+                    {item.type === 'ad' && <span className="border border-zinc-500 text-zinc-500 text-[10px] font-sans px-1 mr-2">广告</span>}
+                    <h2 className={`font-black leading-tight mb-2 ${item.type === 'headline' ? 'text-4xl' : 'text-2xl'}`}>{item.title}</h2>
+                    <div className="text-zinc-800 text-base leading-relaxed text-justify space-y-3 font-medium">{item.content.map((p, i) => <p key={i}>{p}</p>)}</div>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="bg-[#d4d4d4] p-4 text-center border-t-4 border-black text-sm text-zinc-600 font-bold uppercase tracking-widest">
+              阅读完毕请手动前往地图进行异常侦查
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Over Screen */}
+      {gameState === 'gameover' && (
+        <div className="absolute inset-0 bg-black z-[100] flex flex-col items-center justify-center p-8 text-center z-100">
+           <AlertOctagon size={64} className="text-red-600 mb-6 animate-pulse" />
+           <h1 className="text-6xl font-black text-white mb-2 uppercase tracking-tighter">世界陷落</h1>
+           <p className="text-xl text-zinc-500 mb-8 font-mono">全球恐慌指数突破临界值。现实结构已崩溃。</p>
+           <div className="text-zinc-400 mb-12 border border-zinc-800 p-6 rounded max-w-md bg-zinc-900">
+             <div className="flex justify-between mb-2"><span>生存天数:</span><span className="text-white">{day}</span></div>
+             <div className="flex justify-between mb-2"><span>收容样本:</span><span className="text-white">{samples}</span></div>
+             <div className="flex justify-between"><span>局长评价:</span><span className="text-red-500 font-bold">K.I.A</span></div>
+           </div>
+           <button 
+             onClick={resetGame}
+             className="px-8 py-4 bg-white text-black font-black text-xl hover:bg-zinc-200 hover:scale-105 transition-all rounded"
+           >
+             重置世界线 (REBOOT)
+           </button>
+        </div>
+      )}
+
+    </div>
+    </ErrorBoundary>
+  );
+}
