@@ -1,3 +1,9 @@
+// Canvas-maintained file: UI/NodeButton
+// Source: Assets/Scripts/UI/NodeButton.cs
+// N-task model compatible: summarizes active investigate/contain tasks from node.Tasks.
+
+using System.Linq;
+using System.Text;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -9,10 +15,12 @@ public class NodeButton : MonoBehaviour
     [SerializeField] private TMP_Text label;
     private Button _btn;
 
+    private const float EPS = 0.0001f;
+
     private void Awake()
     {
         _btn = GetComponent<Button>();
-        _btn.onClick.AddListener(OnClick);
+        if (_btn) _btn.onClick.AddListener(OnClick);
     }
 
     void OnClick()
@@ -20,7 +28,7 @@ public class NodeButton : MonoBehaviour
         if (UIPanelRoot.I) UIPanelRoot.I.OpenNode(NodeId);
     }
 
-    public void Set(string nodeId, string text)
+    public void Set(string nodeId, string _unusedText)
     {
         NodeId = nodeId;
         Refresh();
@@ -34,25 +42,74 @@ public class NodeButton : MonoBehaviour
         var node = GameController.I.GetNode(NodeId);
         if (node == null) return;
 
-        // --- Visual State Mapping ---
-        string txt = node.Name;
+        var sb = new StringBuilder();
+        sb.Append(node.Name);
 
-        // 1. Anomaly
+        // 1) Anomaly
         if (node.HasAnomaly)
-            txt += " <color=red>(!)</color>";
+            sb.Append(" <color=red>(!)</color>");
 
-        // 2. Task Status
-        if (node.Status == NodeStatus.Investigating)
-            txt += $"\n<color=#FFD700>调查中 {(int)(node.InvestigateProgress * 100)}%</color>";
-        else if (node.Status == NodeStatus.Containing)
-            txt += $"\n<color=#00FFFF>收容中 {(int)(node.ContainProgress * 100)}%</color>";
-        else if (node.Status == NodeStatus.Secured)
-            txt += "\n<color=green>[已收容]</color>";
+        // 2) Node coarse status
+        if (node.Status == NodeStatus.Secured)
+        {
+            sb.Append("\n<color=green>[已收容]</color>");
+        }
+        else
+        {
+            var tasks = node.Tasks;
+            if (tasks != null)
+            {
+                var inv = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate).ToList();
+                var con = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain).ToList();
 
-        // 3. Squad Count (New Feature)
-        if (node.AssignedAgentIds != null && node.AssignedAgentIds.Count > 0)
-            txt += $"\n[{node.AssignedAgentIds.Count} 人在编]";
+                if (inv.Count > 0)
+                {
+                    var t = inv.OrderByDescending(x => x.Progress)
+                               .ThenByDescending(x => x.AssignedAgentIds != null && x.AssignedAgentIds.Count > 0)
+                               .First();
 
-        if (label) label.text = txt;
+                    bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
+                    if (hasSquad && t.Progress <= EPS)
+                        sb.Append("\n<color=#FFD700>调查：待开始</color>");
+                    else
+                        sb.Append($"\n<color=#FFD700>调查中 {(int)(t.Progress * 100)}%</color>");
+
+                    if (inv.Count > 1)
+                        sb.Append($" <color=#FFD700>(+{inv.Count - 1})</color>");
+                }
+
+                if (con.Count > 0)
+                {
+                    var t = con.OrderByDescending(x => x.Progress)
+                               .ThenByDescending(x => x.AssignedAgentIds != null && x.AssignedAgentIds.Count > 0)
+                               .First();
+
+                    bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
+                    if (hasSquad && t.Progress <= EPS)
+                        sb.Append("\n<color=#00FFFF>收容：待开始</color>");
+                    else
+                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(t.Progress * 100)}%</color>");
+
+                    if (con.Count > 1)
+                        sb.Append($" <color=#00FFFF>(+{con.Count - 1})</color>");
+                }
+
+                int containables = (node.Containables != null) ? node.Containables.Count : 0;
+                if (con.Count == 0 && containables > 0)
+                    sb.Append($"\n<color=#00FFFF>可收容 {containables}</color>");
+
+                // 3) Squad count (sum of active task squads, distinct)
+                int busy = tasks
+                    .Where(t => t != null && t.State == TaskState.Active && t.AssignedAgentIds != null)
+                    .SelectMany(t => t.AssignedAgentIds)
+                    .Distinct()
+                    .Count();
+
+                if (busy > 0)
+                    sb.Append($"\n[{busy} 人在编]");
+            }
+        }
+
+        if (label) label.text = sb.ToString();
     }
 }

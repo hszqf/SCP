@@ -1,13 +1,15 @@
 // Canvas-maintained file: Assets/Scripts/UI/NodePanelView.cs
-// Purpose (current iteration): Read-only refresh for NodePanel Task Status cards (Investigate/Contain)
-// Notes:
-// - Prefab expected to contain: TaskStatusSection/TaskStatusList/TaskCard_Investigate and TaskCard_Contain
-// - Each TaskCard contains children: Title, Status, People (TextMeshProUGUI)
-// - Current data model appears to have a single AssignedAgentIds list on Node, so per-task assignment is inferred.
-// - We do NOT introduce a separate dedicated pending data structure.
-//   UI-wise, when progress is still 0 we label it as "待开始" to reflect: assigned today, advancement happens on next StepDay.
+// N-task model compatible (Core.NodeState.Tasks)
+//
+// Current UI scope (minimal, stable):
+// - Still renders 2 summary cards (调查 / 收容) by selecting ONE representative active task per type.
+// - Shows counts (+N) if there are multiple active tasks of that type.
+// - Cancel/Retreat operates on that representative task (taskId) via GameController.CancelOrRetreatTask.
+//
+// Next iteration (requires prefab patch): render the full task list UI with one row per task.
 
 using System;
+using System.Linq;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -33,7 +35,7 @@ public class NodePanelView : MonoBehaviour
 
     private string _nodeId;
 
-    // --- Task Status UI (read-only) ---
+    // --- Task Status UI (read-only summary cards) ---
     private bool _taskUiCached;
     private TMP_Text _invTitle;
     private TMP_Text _invStatus;
@@ -56,20 +58,43 @@ public class NodePanelView : MonoBehaviour
     private TaskActionMode _conActionMode = TaskActionMode.None;
     private float _conConfirmUntil = 0f;
 
+    // Representative task ids for current refresh
+    private string _invTaskId;
+    private string _conTaskId;
+
+    private const float EPS = 0.0001f;
+
     public void Init(Action onInvestigate, Action onContain, Action onClose)
     {
         _onInvestigate = onInvestigate;
         _onContain = onContain;
         _onClose = onClose;
 
-        if (investigateButton) { investigateButton.onClick.RemoveAllListeners(); investigateButton.onClick.AddListener(() => _onInvestigate?.Invoke()); }
-        if (containButton) { containButton.onClick.RemoveAllListeners(); containButton.onClick.AddListener(() => _onContain?.Invoke()); }
-        if (closeButton) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(() => _onClose?.Invoke()); }
+        if (investigateButton)
+        {
+            investigateButton.onClick.RemoveAllListeners();
+            investigateButton.onClick.AddListener(() => _onInvestigate?.Invoke());
+        }
+
+        if (containButton)
+        {
+            containButton.onClick.RemoveAllListeners();
+            containButton.onClick.AddListener(() => _onContain?.Invoke());
+        }
+
+        if (closeButton)
+        {
+            closeButton.onClick.RemoveAllListeners();
+            closeButton.onClick.AddListener(() => _onClose?.Invoke());
+        }
 
         // 蒙版点击 = 关闭
-        if (backgroundButton) { backgroundButton.onClick.RemoveAllListeners(); backgroundButton.onClick.AddListener(() => _onClose?.Invoke()); }
+        if (backgroundButton)
+        {
+            backgroundButton.onClick.RemoveAllListeners();
+            backgroundButton.onClick.AddListener(() => _onClose?.Invoke());
+        }
 
-        // Best-effort cache for patched task status section
         CacheTaskStatusUIIfNeeded();
     }
 
@@ -102,29 +127,29 @@ public class NodePanelView : MonoBehaviour
         if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
         if (statusText) statusText.text = s;
 
-        // 预定占用：一旦节点已有预定/进行中的任务（含待开始），不允许再次打开选人进行重复派遣。
-        // 必须通过任务卡片的【取消/撤退】释放后再派遣。
         UpdateDispatchButtons(n);
 
         if (progressText)
         {
-            // Avoid hard dependency on NodeStatus / AssignedAgentIds declarations.
-            // Use reflection for robustness and to keep this iteration read-only.
-            float invP = TryGetFloat(n, "InvestigateProgress");
-            float conP = TryGetFloat(n, "ContainProgress");
-            string statusName = TryGetMemberString(n, "Status");
+            int invActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate) ?? 0;
+            int conActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain) ?? 0;
+            int containables = n.Containables?.Count ?? 0;
 
-            float p = invP;
-            if (statusName.IndexOf("Contain", StringComparison.OrdinalIgnoreCase) >= 0) p = conP;
-            else if (statusName.IndexOf("Investigat", StringComparison.OrdinalIgnoreCase) >= 0) p = invP;
+            int busy = 0;
+            if (n.Tasks != null)
+            {
+                busy = n.Tasks
+                    .Where(t => t != null && t.State == TaskState.Active && t.AssignedAgentIds != null)
+                    .SelectMany(t => t.AssignedAgentIds)
+                    .Distinct()
+                    .Count();
+            }
 
-            int count = TryGetCollectionCount(n, "AssignedAgentIds");
-            progressText.text = $"Progress: {(int)(p * 100)}% | Squad: {count}";
+            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive} | 可收容 {containables} | Busy {busy}";
         }
 
-        // Read-only Task Cards
         CacheTaskStatusUIIfNeeded();
-        RefreshTaskCardsReadOnly(n);
+        RefreshTaskCardsSummary(n);
     }
 
     // ----------------------
@@ -135,7 +160,6 @@ public class NodePanelView : MonoBehaviour
     {
         if (_taskUiCached) return;
 
-        // Defensive: allow for different root nesting; find by name anywhere under this panel.
         Transform invCard = FindDeepChild(transform, "TaskCard_Investigate");
         if (invCard != null)
         {
@@ -176,76 +200,74 @@ public class NodePanelView : MonoBehaviour
             }
         }
 
-        // Consider cached if we found at least one card; this avoids repeating deep searches each Refresh.
         _taskUiCached = (invCard != null || conCard != null);
     }
 
-    private void RefreshTaskCardsReadOnly(object node)
+    private void RefreshTaskCardsSummary(NodeState node)
     {
         // If task cards are not present (prefab not patched / different variant), do nothing.
         if (_invTitle == null && _invStatus == null && _invPeople == null && _conTitle == null && _conStatus == null && _conPeople == null)
             return;
 
-        // Fixed titles (avoid localization work now)
         if (_invTitle) _invTitle.text = "调查";
         if (_conTitle) _conTitle.text = "收容";
 
-        // NOTE: We intentionally avoid `dynamic` here.
-        // Unity projects may not reference Microsoft.CSharp.RuntimeBinder, which breaks compilation when using dynamic.
-        // Instead, we use lightweight reflection to read AssignedAgentIds / Status.
+        var tasks = node.Tasks ?? new System.Collections.Generic.List<NodeTask>();
+        var inv = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate).ToList();
+        var con = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain).ToList();
 
-        int squad = TryGetCollectionCount(node, "AssignedAgentIds");
-        string statusName = TryGetMemberString(node, "Status");
+        NodeTask invMain = inv.OrderByDescending(t => t.Progress)
+                             .ThenByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
+                             .FirstOrDefault();
 
-        bool isInvestigating = statusName.IndexOf("Investigat", StringComparison.OrdinalIgnoreCase) >= 0;
-        bool isContaining = statusName.IndexOf("Contain", StringComparison.OrdinalIgnoreCase) >= 0;
+        NodeTask conMain = con.OrderByDescending(t => t.Progress)
+                             .ThenByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
+                             .FirstOrDefault();
 
-        // Current model limitation: a single squad list. We infer which card “owns” the squad by current status.
-        // - If Investigating: squad belongs to Investigate card, Contain card shows 0.
-        // - If Containing: squad belongs to Contain card, Investigate card shows 0.
-        // - Else (unexpected but possible): both cards show the squad count, and we mark as “已指派（未归属）”。
+        _invTaskId = invMain?.Id;
+        _conTaskId = conMain?.Id;
 
-        // Per-card progress (for distinguishing "未推进" vs running)
-        float invP = TryGetFloat(node, "InvestigateProgress");
-        float conP = TryGetFloat(node, "ContainProgress");
-        const float EPS = 0.0001f;
+        int containablesCount = node.Containables?.Count ?? 0;
 
         // Investigate card
         if (_invStatus)
         {
-            if (isInvestigating)
+            if (invMain == null)
             {
-                // Assigned today; progress will start advancing on next StepDay.
-                if (squad > 0 && invP <= EPS) _invStatus.text = "状态：待开始";
-                else _invStatus.text = $"状态：进行中（{(int)(invP * 100)}%）";
-            }
-            else if (!isContaining && squad > 0)
-            {
-                _invStatus.text = "状态：已指派（未归属）";
+                _invStatus.text = "状态：可调查";
             }
             else
             {
-                _invStatus.text = "状态：未指派";
+                bool hasSquad = invMain.AssignedAgentIds != null && invMain.AssignedAgentIds.Count > 0;
+                if (hasSquad && invMain.Progress <= EPS) _invStatus.text = "状态：待开始";
+                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(invMain.Progress * 100)}%）";
+                else _invStatus.text = "状态：未指派";
+
+                if (inv.Count > 1) _invStatus.text += $"（+{inv.Count - 1}）";
             }
         }
 
         if (_invPeople)
         {
-            int c = isInvestigating ? squad : (isContaining ? 0 : squad);
+            int c = (invMain != null && invMain.AssignedAgentIds != null) ? invMain.AssignedAgentIds.Count : 0;
             _invPeople.text = $"人员：{c}人";
         }
 
         // Contain card
         if (_conStatus)
         {
-            if (isContaining)
+            if (conMain != null)
             {
-                if (squad > 0 && conP <= EPS) _conStatus.text = "状态：待开始";
-                else _conStatus.text = $"状态：进行中（{(int)(conP * 100)}%）";
+                bool hasSquad = conMain.AssignedAgentIds != null && conMain.AssignedAgentIds.Count > 0;
+                if (hasSquad && conMain.Progress <= EPS) _conStatus.text = "状态：待开始";
+                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(conMain.Progress * 100)}%）";
+                else _conStatus.text = "状态：未指派";
+
+                if (con.Count > 1) _conStatus.text += $"（+{con.Count - 1}）";
             }
-            else if (!isInvestigating && squad > 0)
+            else if (containablesCount > 0)
             {
-                _conStatus.text = "状态：已指派（未归属）";
+                _conStatus.text = containablesCount == 1 ? "状态：可收容" : $"状态：可收容（{containablesCount}）";
             }
             else
             {
@@ -255,98 +277,47 @@ public class NodePanelView : MonoBehaviour
 
         if (_conPeople)
         {
-            int c = isContaining ? squad : (isInvestigating ? 0 : squad);
-            _conPeople.text = $"人员：{c}人";
+            if (conMain != null)
+            {
+                int c = (conMain.AssignedAgentIds != null) ? conMain.AssignedAgentIds.Count : 0;
+
+                string targetName = "";
+                if (node.Containables != null && node.Containables.Count > 0)
+                {
+                    var target = node.Containables.FirstOrDefault(x => x != null && x.Id == conMain.TargetContainableId)
+                                 ?? node.Containables[0];
+                    targetName = target?.Name ?? "";
+                }
+
+                _conPeople.text = string.IsNullOrEmpty(targetName)
+                    ? $"人员：{c}人"
+                    : $"目标：{targetName}\n人员：{c}人";
+            }
+            else if (containablesCount > 0)
+            {
+                string targetName = node.Containables[0]?.Name ?? "";
+                _conPeople.text = string.IsNullOrEmpty(targetName)
+                    ? "目标：可收容\n人员：0人"
+                    : $"目标：{targetName}\n人员：0人";
+            }
+            else
+            {
+                _conPeople.text = "人员：0人";
+            }
         }
 
-        // Action buttons (Cancel vs Retreat)
-        UpdateActionButtons(isInvestigating, isContaining, squad, invP, conP, EPS);
+        UpdateActionButtons(invMain, conMain);
     }
 
-    private static float TryGetFloat(object obj, string memberName)
-    {
-        try
-        {
-            var v = TryGetMemberValue(obj, memberName);
-            if (v == null) return 0f;
-
-            if (v is float f) return f;
-            if (v is double d) return (float)d;
-            if (v is int i) return i;
-
-            if (float.TryParse(v.ToString(), out var parsed)) return parsed;
-            return 0f;
-        }
-        catch
-        {
-            return 0f;
-        }
-    }
-
-    private static int TryGetCollectionCount(object obj, string memberName)
-    {
-        try
-        {
-            var v = TryGetMemberValue(obj, memberName);
-            if (v == null) return 0;
-
-            // Most Unity-friendly collections implement ICollection
-            if (v is System.Collections.ICollection c) return c.Count;
-
-            // Fallback: try property "Count" if present
-            var t = v.GetType();
-            var p = t.GetProperty("Count");
-            if (p != null && p.PropertyType == typeof(int))
-                return (int)p.GetValue(v);
-
-            return 0;
-        }
-        catch
-        {
-            return 0;
-        }
-    }
-
-    private static string TryGetMemberString(object obj, string memberName)
-    {
-        try
-        {
-            var v = TryGetMemberValue(obj, memberName);
-            return v != null ? v.ToString() : string.Empty;
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
-    private static object TryGetMemberValue(object obj, string memberName)
-    {
-        if (obj == null || string.IsNullOrEmpty(memberName)) return null;
-
-        var t = obj.GetType();
-        const System.Reflection.BindingFlags Flags =
-            System.Reflection.BindingFlags.Instance |
-            System.Reflection.BindingFlags.Public |
-            System.Reflection.BindingFlags.NonPublic;
-
-        var p = t.GetProperty(memberName, Flags);
-        if (p != null) return p.GetValue(obj);
-
-        var f = t.GetField(memberName, Flags);
-        if (f != null) return f.GetValue(obj);
-
-        return null;
-    }
-
-    private void UpdateActionButtons(bool isInvestigating, bool isContaining, int squad, float invP, float conP, float eps)
+    private void UpdateActionButtons(NodeTask invTask, NodeTask conTask)
     {
         // Investigate action
         if (_invActionBtn != null)
         {
-            if (isInvestigating && squad > 0)
+            bool show = invTask != null && invTask.State == TaskState.Active && invTask.AssignedAgentIds != null && invTask.AssignedAgentIds.Count > 0;
+            if (show)
             {
-                _invActionMode = (invP > eps) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
+                _invActionMode = (invTask.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
                 _invActionBtn.gameObject.SetActive(true);
                 if (_invActionLabel)
                 {
@@ -366,9 +337,10 @@ public class NodePanelView : MonoBehaviour
         // Contain action
         if (_conActionBtn != null)
         {
-            if (isContaining && squad > 0)
+            bool show = conTask != null && conTask.State == TaskState.Active && conTask.AssignedAgentIds != null && conTask.AssignedAgentIds.Count > 0;
+            if (show)
             {
-                _conActionMode = (conP > eps) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
+                _conActionMode = (conTask.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
                 _conActionBtn.gameObject.SetActive(true);
                 if (_conActionLabel)
                 {
@@ -388,23 +360,22 @@ public class NodePanelView : MonoBehaviour
 
     private void OnInvActionClicked()
     {
-        HandleActionClick(ref _invActionMode, ref _invConfirmUntil);
+        HandleActionClick(_invTaskId, ref _invActionMode, ref _invConfirmUntil);
     }
 
     private void OnConActionClicked()
     {
-        HandleActionClick(ref _conActionMode, ref _conConfirmUntil);
+        HandleActionClick(_conTaskId, ref _conActionMode, ref _conConfirmUntil);
     }
 
-    private void HandleActionClick(ref TaskActionMode mode, ref float confirmUntil)
+    private void HandleActionClick(string taskId, ref TaskActionMode mode, ref float confirmUntil)
     {
-        if (string.IsNullOrEmpty(_nodeId)) return;
+        if (string.IsNullOrEmpty(taskId)) return;
         if (GameController.I == null) return;
 
         if (mode == TaskActionMode.Cancel)
         {
-            // cancel = progress == 0
-            GameController.I.ForceWithdraw(_nodeId);
+            GameController.I.CancelOrRetreatTask(taskId);
             confirmUntil = 0f;
             Refresh();
             return;
@@ -412,11 +383,10 @@ public class NodePanelView : MonoBehaviour
 
         if (mode == TaskActionMode.Retreat)
         {
-            // retreat = progress > 0, requires confirm (second click within window)
             const float ConfirmWindowSec = 3f;
             if (Time.unscaledTime <= confirmUntil)
             {
-                GameController.I.ForceWithdraw(_nodeId);
+                GameController.I.CancelOrRetreatTask(taskId);
                 confirmUntil = 0f;
                 Refresh();
             }
@@ -432,14 +402,18 @@ public class NodePanelView : MonoBehaviour
     {
         if (n == null) return;
 
-        bool hasReservedTask =
-            (n.Status == NodeStatus.Investigating || n.Status == NodeStatus.Containing) &&
-            n.AssignedAgentIds != null &&
-            n.AssignedAgentIds.Count > 0;
+        // N-task model:
+        // - Investigate: node has anomaly => allow creating more investigate tasks (unlimited).
+        // - Contain: requires discovered containables.
+        // Busy/repick constraints are enforced in picker assignment rules (GameControllerTaskExt).
 
-        // When reserved or running, lock dispatch entry points; cancellation/withdrawal is done on task cards.
-        if (investigateButton) investigateButton.interactable = !hasReservedTask;
-        if (containButton) containButton.interactable = !hasReservedTask;
+        bool hasContainables = (n.Containables != null && n.Containables.Count > 0);
+
+        bool canInvestigate = true; // 调查随时可发起
+        bool canContain = n.Status != NodeStatus.Secured && hasContainables; // 收容必须有可收容物
+
+        if (investigateButton) investigateButton.interactable = canInvestigate;
+        if (containButton) containButton.interactable = canContain;
     }
 
     private static TMP_Text GetTmp(Transform parent, string childName)

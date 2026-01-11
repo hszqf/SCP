@@ -1,10 +1,23 @@
+// Canvas-maintained file: Core/GameState (v3 - N tasks)
+// Source target: Assets/Scripts/Core/GameState.cs
+// Goal: Support unlimited per-node tasks (investigate/contain) via NodeState.Tasks.
+// Notes:
+// - Legacy single-task fields are kept temporarily for compatibility with existing UI/code.
+// - New systems should only use NodeState.Tasks.
+
 using System;
 using System.Collections.Generic;
 
 namespace Core
 {
-    public enum NodeStatus { Calm, Investigating, Containing, Secured }
+    // Keep for legacy UI and map display. In N-task model, task state is derived from NodeState.Tasks.
+    public enum NodeStatus { Calm, Secured }
+
+    // Events still attach to a node; their kind affects which task type they modify.
     public enum EventKind { Investigate, Contain }
+
+    public enum TaskType { Investigate, Contain }
+    public enum TaskState { Active, Completed, Cancelled }
 
     [Serializable]
     public class AgentState
@@ -19,6 +32,36 @@ namespace Core
     }
 
     [Serializable]
+    public class ContainableItem
+    {
+        public string Id;
+        public string Name;
+        public int Level = 1;
+    }
+
+    [Serializable]
+    public class NodeTask
+    {
+        public string Id;
+        public TaskType Type;
+        public TaskState State = TaskState.Active;
+
+        // 0..1
+        public float Progress = 0f;
+
+        // 预定占用：progress==0 也算占用。
+        public List<string> AssignedAgentIds = new();
+
+        // Only for containment tasks: which containable we are trying to contain.
+        public string TargetContainableId;
+
+        public int CreatedDay;
+        public int CompletedDay;
+
+        public bool IsStarted => Progress > 0.0001f;
+    }
+
+    [Serializable]
     public class NodeState
     {
         public string Id;
@@ -28,14 +71,23 @@ namespace Core
         public float X;
         public float Y;
 
+        // Node-level status is now coarse. Tasks are in Tasks list.
         public NodeStatus Status = NodeStatus.Calm;
 
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
 
-        public List<string> AssignedAgentIds = new List<string>(); // Squad System
-        public float InvestigateProgress = 0f; // 0..1
-        public float ContainProgress = 0f;     // 0..1
+        // 调查产出：可收容目标列表（调查完成后写入）
+        public List<ContainableItem> Containables = new();
+
+        // ===== NEW: Unlimited tasks =====
+        public List<NodeTask> Tasks = new();
+
+        // ===== Legacy fields (temporary) =====
+        // Kept so existing UI/code can compile during migration. Do not use for new features.
+        public List<string> AssignedAgentIds = new List<string>(); // legacy squad
+        public float InvestigateProgress = 0f; // legacy 0..1
+        public float ContainProgress = 0f;     // legacy 0..1
     }
 
     [Serializable]
