@@ -1,11 +1,18 @@
 // Canvas-maintained file: UI/UIPanelRoot
 // Source: Assets/Scripts/UI/UIPanelRoot.cs
-// Updated for rule-set: 预定占用
-// - Use TryAssign* (not Assign*) so UI respects "预定后只能取消再改派".
-// - When assignment fails, show ConfirmDialog info.
+// Updated for N-task backend:
+// - Each click on 调查/收容 creates a NEW task (NodeTask) and opens AgentPicker bound to that taskId.
+// - This enables multiple investigate tasks and multiple contain tasks (one per containable).
+// - On picker cancel (or close), the newly created task is cancelled to avoid leaving invisible active tasks.
+//
+// Notes:
+// - Busy check still uses GameControllerTaskExt.AreAgentsBusy (global task scan).
+// - Contain requires node.Containables.Count > 0; target selection picks a containable not already targeted by an active contain task when possible.
+// - UI still uses ConfirmDialog for info prompts.
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Core;
 using UnityEngine;
 
@@ -134,17 +141,52 @@ public class UIPanelRoot : MonoBehaviour
 
     void OpenPicker(AgentPickerView.Mode mode)
     {
+        if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(_currentNodeId)) return;
+
         if (!_agentPicker)
         {
             if (!agentPickerPrefab) return;
             _agentPicker = Instantiate(agentPickerPrefab, transform);
         }
 
+        var node = GameController.I.GetNode(_currentNodeId);
+        if (node == null)
+        {
+            ShowInfo("派遣失败", "节点不存在");
+            return;
+        }
+
+        // Create a NEW task for this dispatch action.
+        NodeTask createdTask = null;
+        if (mode == AgentPickerView.Mode.Investigate)
+        {
+            createdTask = GameController.I.CreateInvestigateTask(_currentNodeId);
+        }
+        else
+        {
+            // Contain requires containables.
+            if (node.Containables == null || node.Containables.Count == 0)
+            {
+                ShowInfo("派遣失败", "未发现可收容目标：请先完成调查产出收容物");
+                return;
+            }
+
+            string targetId = PickNextContainableId(node);
+            createdTask = GameController.I.CreateContainTask(_currentNodeId, targetId);
+        }
+
+        if (createdTask == null)
+        {
+            ShowInfo("派遣失败", "创建任务失败");
+            return;
+        }
+
+        string taskId = createdTask.Id;
+
         // Prepare data
         var agents = GameController.I.State.Agents;
-        var n = GameController.I.GetNode(_currentNodeId);
-        var pre = new List<string>();
-        if (n != null && n.AssignedAgentIds != null) pre.AddRange(n.AssignedAgentIds);
+        var pre = new List<string>(); // new task => no preselected agents
 
         _agentPicker.transform.SetAsLastSibling();
         _agentPicker.Show(
@@ -155,22 +197,28 @@ public class UIPanelRoot : MonoBehaviour
             isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, _currentNodeId),
             onConfirm: (ids) =>
             {
-                // IMPORTANT: Use TryAssign so "预定占用" and "撤退/取消" rules are enforced in one place.
-                GameControllerTaskExt.AssignResult res;
-                if (mode == AgentPickerView.Mode.Investigate)
-                    res = GameController.I.TryAssignInvestigate(_currentNodeId, ids);
-                else
-                    res = GameController.I.TryAssignContain(_currentNodeId, ids);
-
-                if (!res.ok)
+                if (ids == null || ids.Count == 0)
                 {
-                    ShowInfo("派遣失败", res.reason);
+                    ShowInfo("派遣失败", "未选择干员");
                     return;
                 }
 
+                // Global busy check (multi-select)
+                if (GameControllerTaskExt.AreAgentsBusy(GameController.I, ids, _currentNodeId))
+                {
+                    ShowInfo("派遣失败", "部分干员正在其他任务执行中");
+                    return;
+                }
+
+                GameController.I.AssignTask(taskId, ids);
                 RefreshNodePanel();
             },
-            onCancel: () => { },
+            onCancel: () =>
+            {
+                // Cancel the newly created task if the user backs out of picker.
+                GameController.I.CancelOrRetreatTask(taskId);
+                RefreshNodePanel();
+            },
             multiSelect: true
         );
     }
@@ -225,7 +273,35 @@ public class UIPanelRoot : MonoBehaviour
         CloseNode();
         CloseEvent();
         if (_newsPanel) _newsPanel.Hide();
+
+        // If picker is being closed implicitly, also cancel its newly created task via onCancel callback.
+        // (AgentPickerView.Hide() is expected to invoke onCancel internally; if not, worst case the task remains Active+empty and will be ignored by Sim.)
         if (_agentPicker) _agentPicker.Hide();
+
         if (_confirmDialog) _confirmDialog.Hide();
+    }
+
+    // ================== HELPERS ==================
+
+    // Pick a containable that is not already targeted by an active containment task when possible.
+    string PickNextContainableId(NodeState node)
+    {
+        if (node == null || node.Containables == null || node.Containables.Count == 0) return null;
+
+        var activeTargets = (node.Tasks == null)
+            ? new HashSet<string>()
+            : new HashSet<string>(node.Tasks
+                .Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain)
+                .Select(t => t.TargetContainableId)
+                .Where(x => !string.IsNullOrEmpty(x)));
+
+        foreach (var c in node.Containables)
+        {
+            if (c == null) continue;
+            if (!activeTargets.Contains(c.Id)) return c.Id;
+        }
+
+        // Fallback: allow multiple tasks for same containable if all are already targeted.
+        return node.Containables[0].Id;
     }
 }

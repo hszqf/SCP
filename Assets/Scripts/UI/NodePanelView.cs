@@ -216,13 +216,23 @@ public class NodePanelView : MonoBehaviour
         var inv = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate).ToList();
         var con = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain).ToList();
 
-        NodeTask invMain = inv.OrderByDescending(t => t.Progress)
-                             .ThenByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
-                             .FirstOrDefault();
+        // 代表任务选择策略（为兼容“同节点多任务”）：
+        // 1) 优先显示“有小队”的任务；
+        // 2) 在有小队的任务中，优先显示“待开始(progress==0)”的任务（方便取消/确认新派遣生效）；
+        // 3) 其后按 CreatedDay(新) -> Progress(高) 取一条。
+        NodeTask invMain = inv
+            .OrderByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
+            .ThenBy(t => (t.Progress > EPS) ? 1 : 0)
+            .ThenByDescending(t => t.CreatedDay)
+            .ThenByDescending(t => t.Progress)
+            .FirstOrDefault();
 
-        NodeTask conMain = con.OrderByDescending(t => t.Progress)
-                             .ThenByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
-                             .FirstOrDefault();
+        NodeTask conMain = con
+            .OrderByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
+            .ThenBy(t => (t.Progress > EPS) ? 1 : 0)
+            .ThenByDescending(t => t.CreatedDay)
+            .ThenByDescending(t => t.Progress)
+            .FirstOrDefault();
 
         _invTaskId = invMain?.Id;
         _conTaskId = conMain?.Id;
