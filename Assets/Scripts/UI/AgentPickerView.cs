@@ -1,3 +1,8 @@
+// Canvas-maintained file: UI/AgentPickerView
+// Source: Assets/Scripts/UI/AgentPickerView.cs
+// Updated for rule-set: 预定占用
+// - PreSelected agents stay BUSY (locked) even in current node.
+
 using System;
 using System.Collections.Generic;
 using Core;
@@ -17,7 +22,8 @@ public class AgentPickerView : MonoBehaviour
 
     private List<AgentPickerItemView> _items = new List<AgentPickerItemView>();
     private HashSet<string> _selected = new HashSet<string>();
-    
+    private HashSet<string> _baseline = new HashSet<string>(); // 用于判断是否有变更（dirty）
+
     private Mode _mode;
     private Action<List<string>> _onConfirm;
     private Action _onCancel;
@@ -29,12 +35,12 @@ public class AgentPickerView : MonoBehaviour
 
     private void Awake()
     {
-        if (confirmButton) 
+        if (confirmButton)
         {
             confirmButton.onClick.RemoveAllListeners();
             confirmButton.onClick.AddListener(OnConfirmClicked);
         }
-        if (cancelButton) 
+        if (cancelButton)
         {
             cancelButton.onClick.RemoveAllListeners();
             cancelButton.onClick.AddListener(OnCancelClicked);
@@ -47,9 +53,10 @@ public class AgentPickerView : MonoBehaviour
         }
     }
 
+    // Confirm 仅在“有变更”时可点（避免无操作误触 + 触发派遣失败提示）
     private void Update()
     {
-        if (confirmButton) confirmButton.interactable = true;
+        RefreshConfirmInteractable();
     }
 
     public void Show(
@@ -68,15 +75,21 @@ public class AgentPickerView : MonoBehaviour
         _multiSelect = multiSelect;
 
         _selected.Clear();
+        _baseline.Clear();
         if (preSelected != null)
         {
-            foreach (var id in preSelected) _selected.Add(id);
+            foreach (var id in preSelected)
+            {
+                _selected.Add(id);
+                _baseline.Add(id);
+            }
         }
 
         gameObject.SetActive(true);
         UpdateTitle(); // 初始化标题
 
         RefreshList(agents, isBusyOtherNode);
+        RefreshConfirmInteractable();
     }
 
     public void Hide()
@@ -90,14 +103,14 @@ public class AgentPickerView : MonoBehaviour
         _items.Clear();
 
         if (!itemPrefab) return;
-        
+
         foreach (var agent in agents)
         {
             var item = Instantiate(itemPrefab, contentRoot);
             item.gameObject.SetActive(true);
-            
+
+            // 预定占用：即便是当前节点的预选成员，也保持 busy（锁定不可点）。
             bool isBusy = isBusyOtherNode(agent.Id);
-            if (_selected.Contains(agent.Id)) isBusy = false;
 
             item.Bind(
                 agent.Id,
@@ -119,7 +132,7 @@ public class AgentPickerView : MonoBehaviour
         {
             if (_selected.Contains(agentId)) _selected.Remove(agentId);
             else _selected.Add(agentId);
-            
+
             foreach (var it in _items)
                 if (it && it.AgentId == agentId) it.SetSelected(_selected.Contains(agentId));
         }
@@ -130,28 +143,49 @@ public class AgentPickerView : MonoBehaviour
             foreach (var it in _items)
                 if (it) it.SetSelected(_selected.Contains(it.AgentId));
         }
-        
+
         UpdateTitle(); // 每次点击都更新标题数量
+        RefreshConfirmInteractable();
     }
 
     void UpdateTitle()
     {
         if (!titleText) return;
         string baseTitle = _mode == Mode.Investigate ? "SELECT TEAM" : "CONTAINMENT TEAM";
-        // 关键修复：显示已选数量
         titleText.text = $"{baseTitle} ({_selected.Count})";
+    }
+
+    bool HasChanges()
+    {
+        if (_selected.Count != _baseline.Count) return true;
+        foreach (var id in _selected)
+            if (!_baseline.Contains(id)) return true;
+        return false;
+    }
+
+    void RefreshConfirmInteractable()
+    {
+        if (!confirmButton) return;
+        bool dirty = HasChanges();
+        confirmButton.interactable = dirty && _selected.Count > 0;
     }
 
     void OnConfirmClicked()
     {
+        // 无变更：直接关闭，不触发派遣（也就不会弹出失败提示）。
+        if (!HasChanges())
+        {
+            Hide();
+            return;
+        }
+
         _onConfirm?.Invoke(new List<string>(_selected));
         Hide();
     }
 
     void OnCancelClicked()
     {
-        // 关键逻辑：取消就是不做任何改动，直接关闭
-        // 不调用 _onConfirm，所以外部数据不会变
+        // 取消就是不做任何改动，直接关闭
         _onCancel?.Invoke();
         Hide();
     }

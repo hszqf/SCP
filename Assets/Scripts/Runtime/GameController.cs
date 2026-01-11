@@ -1,3 +1,6 @@
+// Canvas-maintained file: Runtime/GameController
+// Source: Assets/Scripts/Runtime/GameController.cs
+
 // <EXPORT_BLOCK>
 using System;
 using System.Collections.Generic;
@@ -27,8 +30,8 @@ public class GameController : MonoBehaviour
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
         State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4 });
-        State.Agents.Add(new AgentState { Id = "A2", Name = "Bob",   Perception = 4, Operation = 7, Resistance = 5, Power = 6 });
-        State.Agents.Add(new AgentState { Id = "A3", Name = "Chen",  Perception = 5, Operation = 5, Resistance = 7, Power = 4 });
+        State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6 });
+        State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4 });
 
         // ---- 初始节点（先写死）----
         State.Nodes.Add(new NodeState { Id = "N1", Name = "节点1", X = 0.35f, Y = 0.42f });
@@ -125,19 +128,21 @@ public static class GameControllerTaskExt
     // [Updated] 检查小队中是否有人忙碌
     public static bool AreAgentsBusy(GameController gc, List<string> agentIds, string currentNodeId)
     {
+        // currentNodeId is kept for call-site compatibility.
+        // Rule-set: 预定占用 —— assigned to ANY node (including current node) counts as busy.
+        _ = currentNodeId;
+
         if (gc == null || gc.State == null || gc.State.Nodes == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 
         foreach (var node in gc.State.Nodes)
         {
             if (node == null) continue;
-            if (node.Id == currentNodeId) continue;
-            
-            // 如果该节点正在执行任务且有人员
-            if ((node.Status == NodeStatus.Investigating || node.Status == NodeStatus.Containing) && 
+
+            // 若节点处于调查/收容（包含“待开始/已推进”）且有人员
+            if ((node.Status == NodeStatus.Investigating || node.Status == NodeStatus.Containing) &&
                 node.AssignedAgentIds != null)
             {
-                // 检查是否有交集
                 if (node.AssignedAgentIds.Intersect(agentIds).Any())
                     return true;
             }
@@ -189,8 +194,8 @@ public static class GameControllerTaskExt
             // 已开始：仅允许完全相同的人员组合重复确认，否则需撤回
             if (started)
             {
-                bool sameSquad = (n.AssignedAgentIds != null && 
-                                  n.AssignedAgentIds.Count == agentIds.Count && 
+                bool sameSquad = (n.AssignedAgentIds != null &&
+                                  n.AssignedAgentIds.Count == agentIds.Count &&
                                   !n.AssignedAgentIds.Except(agentIds).Any());
 
                 if (sameSquad && n.Status == targetStatus)
@@ -199,14 +204,16 @@ public static class GameControllerTaskExt
                 return AssignResult.Fail("任务已开始：只能强制撤回后再更换派遣");
             }
 
-            // 未开始：允许换人
-            n.Status = targetStatus;
-            n.AssignedAgentIds = new List<string>(agentIds);
-            n.InvestigateProgress = 0f;
-            n.ContainProgress = 0f;
+            // 未推进（progress==0）：在“预定占用”规则下，不允许在选人面板里改派。
+            // 必须通过节点任务卡片的【取消】释放后再重新派遣。
+            bool sameSquad2 = (n.AssignedAgentIds != null &&
+                              n.AssignedAgentIds.Count == agentIds.Count &&
+                              !n.AssignedAgentIds.Except(agentIds).Any());
 
-            gc.Notify();
-            return AssignResult.Ok();
+            if (sameSquad2 && n.Status == targetStatus)
+                return AssignResult.Ok();
+
+            return AssignResult.Fail("任务已预定：请先取消任务后再重新派遣");
         }
 
         // Idle

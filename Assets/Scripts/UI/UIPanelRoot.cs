@@ -1,3 +1,9 @@
+// Canvas-maintained file: UI/UIPanelRoot
+// Source: Assets/Scripts/UI/UIPanelRoot.cs
+// Updated for rule-set: 预定占用
+// - Use TryAssign* (not Assign*) so UI respects "预定后只能取消再改派".
+// - When assignment fails, show ConfirmDialog info.
+
 using System;
 using System.Collections.Generic;
 using Core;
@@ -8,7 +14,7 @@ public class UIPanelRoot : MonoBehaviour
     public static UIPanelRoot I { get; private set; }
 
     [Header("Prefabs (请把 Assets/Prefabs/UI 下的文件拖进来)")]
-    [SerializeField] private HUD hudPrefab; // <-- 新增：HUD 也是 Prefab 了
+    [SerializeField] private HUD hudPrefab; // HUD Prefab
     [SerializeField] private NodePanelView nodePanelPrefab;
     [SerializeField] private EventPanel eventPanelPrefab;
     [SerializeField] private NewsPanel newsPanelPrefab;
@@ -16,7 +22,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
 
     // --- 运行时实例 (自动生成) ---
-    private HUD _hud; // <-- 新增实例记录
+    private HUD _hud;
     private NodePanelView _nodePanel;
     private EventPanel _eventPanel;
     private NewsPanel _newsPanel;
@@ -51,18 +57,18 @@ public class UIPanelRoot : MonoBehaviour
         if (hudPrefab)
         {
             _hud = Instantiate(hudPrefab, transform);
-            // HUD 应该在最底层 (First Sibling)，这样弹窗才能盖住它
+            // HUD should be at the bottom so panels can cover it
             _hud.transform.SetAsFirstSibling();
         }
     }
 
     void OnGameStateChanged()
     {
-        // 1. 如果节点面板开着，刷新它
+        // 1. If node panel is open, refresh it
         if (_nodePanel != null && _nodePanel.gameObject.activeSelf)
             _nodePanel.Refresh();
 
-        // 2. 尝试弹事件
+        // 2. Try auto-open event
         TryAutoOpenEvent();
     }
 
@@ -71,7 +77,7 @@ public class UIPanelRoot : MonoBehaviour
     public void OpenNode(string nodeId)
     {
         _currentNodeId = nodeId;
-        
+
         EnsureNodePanel();
         _nodePanel.Show(nodeId);
     }
@@ -93,12 +99,35 @@ public class UIPanelRoot : MonoBehaviour
         if (!nodePanelPrefab) { Debug.LogError("NodePanelPrefab 未配置！"); return; }
 
         _nodePanel = Instantiate(nodePanelPrefab, transform);
-        // 注入逻辑：告诉面板，当按钮被点击时该找谁
+        // Inject callbacks
         _nodePanel.Init(
             onInvestigate: () => OpenPicker(AgentPickerView.Mode.Investigate),
             onContain: () => OpenPicker(AgentPickerView.Mode.Contain),
             onClose: () => CloseNode()
         );
+    }
+
+    // ================== CONFIRM DIALOG ==================
+
+    void EnsureConfirmDialog()
+    {
+        if (_confirmDialog) return;
+        if (!confirmDialogPrefab) return;
+        _confirmDialog = Instantiate(confirmDialogPrefab, transform);
+    }
+
+    void ShowInfo(string title, string message)
+    {
+        EnsureConfirmDialog();
+        if (_confirmDialog)
+        {
+            _confirmDialog.ShowInfo(title, message);
+            _confirmDialog.transform.SetAsLastSibling();
+        }
+        else
+        {
+            Debug.LogWarning($"[UIPanelRoot] ConfirmDialog prefab not set. Info: {title} / {message}");
+        }
     }
 
     // ================== AGENT PICKER ==================
@@ -111,25 +140,35 @@ public class UIPanelRoot : MonoBehaviour
             _agentPicker = Instantiate(agentPickerPrefab, transform);
         }
 
-        // 准备数据
+        // Prepare data
         var agents = GameController.I.State.Agents;
         var n = GameController.I.GetNode(_currentNodeId);
         var pre = new List<string>();
         if (n != null && n.AssignedAgentIds != null) pre.AddRange(n.AssignedAgentIds);
 
-        _agentPicker.transform.SetAsLastSibling(); // 确保在最上层
+        _agentPicker.transform.SetAsLastSibling();
         _agentPicker.Show(
             mode,
             _currentNodeId,
             agents,
             pre,
-            isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string>{aid}, _currentNodeId),
+            isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, _currentNodeId),
             onConfirm: (ids) =>
             {
-                if (mode == AgentPickerView.Mode.Investigate) GameController.I.AssignInvestigate(_currentNodeId, ids);
-                else GameController.I.AssignContain(_currentNodeId, ids);
-                
-                RefreshNodePanel(); // 刷新底下的面板
+                // IMPORTANT: Use TryAssign so "预定占用" and "撤退/取消" rules are enforced in one place.
+                GameControllerTaskExt.AssignResult res;
+                if (mode == AgentPickerView.Mode.Investigate)
+                    res = GameController.I.TryAssignInvestigate(_currentNodeId, ids);
+                else
+                    res = GameController.I.TryAssignContain(_currentNodeId, ids);
+
+                if (!res.ok)
+                {
+                    ShowInfo("派遣失败", res.reason);
+                    return;
+                }
+
+                RefreshNodePanel();
             },
             onCancel: () => { },
             multiSelect: true
@@ -141,7 +180,7 @@ public class UIPanelRoot : MonoBehaviour
     public void OpenNews()
     {
         if (!_newsPanel && newsPanelPrefab) _newsPanel = Instantiate(newsPanelPrefab, transform);
-        if (_newsPanel) 
+        if (_newsPanel)
         {
             _newsPanel.Show();
             _newsPanel.transform.SetAsLastSibling();
@@ -150,15 +189,15 @@ public class UIPanelRoot : MonoBehaviour
 
     void TryAutoOpenEvent()
     {
-        // 如果有高级弹窗（Picker）开着，先不弹事件
+        // If a higher priority panel is shown, do not open events
         if (_agentPicker && _agentPicker.IsShown) return;
 
         var list = GameController.I.State.PendingEvents;
         if (list == null || list.Count == 0) return;
 
         if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
-        
-        // 只有当前没开才弹（避免重复 Refresh 导致闪烁）
+
+        // Only open when currently closed
         if (_eventPanel && !_eventPanel.gameObject.activeSelf)
         {
             _eventPanel.gameObject.SetActive(true);
@@ -166,19 +205,27 @@ public class UIPanelRoot : MonoBehaviour
             _eventPanel.Show(list[0]);
         }
     }
-    
-    public void CloseEvent() 
-    { 
-        if (_eventPanel) _eventPanel.gameObject.SetActive(false); 
+
+    public void CloseEvent()
+    {
+        if (_eventPanel) _eventPanel.gameObject.SetActive(false);
     }
 
     // ================== COMPATIBILITY ==================
-    // 兼容可能还存在的旧按钮调用，避免报错
+
     public void AssignInvestigate_A1() => Debug.Log("Old button clicked");
     public void AssignInvestigate_A2() => Debug.Log("Old button clicked");
     public void AssignInvestigate_A3() => Debug.Log("Old button clicked");
     public void AssignContain_A1() => Debug.Log("Old button clicked");
     public void AssignContain_A2() => Debug.Log("Old button clicked");
     public void AssignContain_A3() => Debug.Log("Old button clicked");
-    public void CloseAll() { CloseNode(); CloseEvent(); if(_newsPanel)_newsPanel.Hide(); if(_agentPicker)_agentPicker.Hide(); }
+
+    public void CloseAll()
+    {
+        CloseNode();
+        CloseEvent();
+        if (_newsPanel) _newsPanel.Hide();
+        if (_agentPicker) _agentPicker.Hide();
+        if (_confirmDialog) _confirmDialog.Hide();
+    }
 }
