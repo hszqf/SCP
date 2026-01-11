@@ -1,14 +1,23 @@
 // Canvas-maintained file: Assets/Scripts/UI/NodePanelView.cs
 // N-task model compatible (Core.NodeState.Tasks)
 //
-// Current UI scope (minimal, stable):
-// - Still renders 2 summary cards (调查 / 收容) by selecting ONE representative active task per type.
-// - Shows counts (+N) if there are multiple active tasks of that type.
-// - Cancel/Retreat operates on that representative task (taskId) via GameController.CancelOrRetreatTask.
+// UI behavior:
+// 1) If a scrollable task list exists in the prefab (Content + Row template), render ALL tasks as rows.
+// 2) Otherwise, fall back to the legacy 2 summary cards (调查 / 收容) by selecting one representative task per type.
 //
-// Next iteration (requires prefab patch): render the full task list UI with one row per task.
+// Required prefab names for full task list (recommended):
+// - TaskListScroll (ScrollRect)
+//   - Viewport
+//     - Content
+//       - TaskRowTemplate (inactive)
+//          - Title (TMP_Text)
+//          - Status (TMP_Text)
+//          - People (TMP_Text)
+//          - Btn_Action (Button)
+//             - Label (TMP_Text)
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Core;
 using TMPro;
@@ -37,6 +46,8 @@ public class NodePanelView : MonoBehaviour
 
     // --- Task Status UI (read-only summary cards) ---
     private bool _taskUiCached;
+    private Transform _invCardRoot;
+    private Transform _conCardRoot;
     private TMP_Text _invTitle;
     private TMP_Text _invStatus;
     private TMP_Text _invPeople;
@@ -45,7 +56,14 @@ public class NodePanelView : MonoBehaviour
     private TMP_Text _conStatus;
     private TMP_Text _conPeople;
 
-    // --- Task Card Action Buttons ---
+    // --- Task List UI (scrollable) ---
+    private bool _taskListCached;
+    private Transform _taskListContent;
+    private GameObject _taskRowTemplate;
+    private readonly List<GameObject> _taskRowInstances = new();
+    private readonly Dictionary<string, float> _rowConfirmUntil = new();
+
+    // --- Task Card / Row Action Buttons ---
     private enum TaskActionMode { None, Cancel, Retreat }
 
     private Button _invActionBtn;
@@ -96,6 +114,7 @@ public class NodePanelView : MonoBehaviour
         }
 
         CacheTaskStatusUIIfNeeded();
+        CacheTaskListUIIfNeeded();
     }
 
     public void Show(string nodeId)
@@ -105,6 +124,7 @@ public class NodePanelView : MonoBehaviour
         transform.SetAsLastSibling();
 
         CacheTaskStatusUIIfNeeded();
+        CacheTaskListUIIfNeeded();
         Refresh();
     }
 
@@ -148,26 +168,34 @@ public class NodePanelView : MonoBehaviour
             progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive} | 可收容 {containables} | Busy {busy}";
         }
 
+        CacheTaskListUIIfNeeded();
+        if (RefreshTaskListIfPresent(n))
+        {
+            // Optional: if list exists, you may want to hide legacy summary cards to reduce clutter.
+            // Keep them visible by default to avoid layout surprises.
+            return;
+        }
+
         CacheTaskStatusUIIfNeeded();
         RefreshTaskCardsSummary(n);
     }
 
     // ----------------------
-    // Task Status UI helpers
+    // Task Status UI helpers (summary cards)
     // ----------------------
 
     private void CacheTaskStatusUIIfNeeded()
     {
         if (_taskUiCached) return;
 
-        Transform invCard = FindDeepChild(transform, "TaskCard_Investigate");
-        if (invCard != null)
+        _invCardRoot = FindDeepChild(transform, "TaskCard_Investigate");
+        if (_invCardRoot != null)
         {
-            _invTitle = GetTmp(invCard, "Title");
-            _invStatus = GetTmp(invCard, "Status");
-            _invPeople = GetTmp(invCard, "People");
+            _invTitle = GetTmp(_invCardRoot, "Title");
+            _invStatus = GetTmp(_invCardRoot, "Status");
+            _invPeople = GetTmp(_invCardRoot, "People");
 
-            var btnT = invCard.Find("Btn_Action");
+            var btnT = _invCardRoot.Find("Btn_Action");
             if (btnT != null)
             {
                 _invActionBtn = btnT.GetComponent<Button>();
@@ -180,14 +208,14 @@ public class NodePanelView : MonoBehaviour
             }
         }
 
-        Transform conCard = FindDeepChild(transform, "TaskCard_Contain");
-        if (conCard != null)
+        _conCardRoot = FindDeepChild(transform, "TaskCard_Contain");
+        if (_conCardRoot != null)
         {
-            _conTitle = GetTmp(conCard, "Title");
-            _conStatus = GetTmp(conCard, "Status");
-            _conPeople = GetTmp(conCard, "People");
+            _conTitle = GetTmp(_conCardRoot, "Title");
+            _conStatus = GetTmp(_conCardRoot, "Status");
+            _conPeople = GetTmp(_conCardRoot, "People");
 
-            var btnT = conCard.Find("Btn_Action");
+            var btnT = _conCardRoot.Find("Btn_Action");
             if (btnT != null)
             {
                 _conActionBtn = btnT.GetComponent<Button>();
@@ -200,7 +228,7 @@ public class NodePanelView : MonoBehaviour
             }
         }
 
-        _taskUiCached = (invCard != null || conCard != null);
+        _taskUiCached = (_invCardRoot != null || _conCardRoot != null);
     }
 
     private void RefreshTaskCardsSummary(NodeState node)
@@ -212,14 +240,14 @@ public class NodePanelView : MonoBehaviour
         if (_invTitle) _invTitle.text = "调查";
         if (_conTitle) _conTitle.text = "收容";
 
-        var tasks = node.Tasks ?? new System.Collections.Generic.List<NodeTask>();
+        var tasks = node.Tasks ?? new List<NodeTask>();
         var inv = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate).ToList();
         var con = tasks.Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain).ToList();
 
-        // 代表任务选择策略（为兼容“同节点多任务”）：
-        // 1) 优先显示“有小队”的任务；
-        // 2) 在有小队的任务中，优先显示“待开始(progress==0)”的任务（方便取消/确认新派遣生效）；
-        // 3) 其后按 CreatedDay(新) -> Progress(高) 取一条。
+        // Representative task selection:
+        // 1) Prefer tasks with squad.
+        // 2) Among squad tasks, prefer "not started" (progress==0) so user can see/Cancel the newest assignment.
+        // 3) Then CreatedDay desc -> Progress desc.
         NodeTask invMain = inv
             .OrderByDescending(t => t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0)
             .ThenBy(t => (t.Progress > EPS) ? 1 : 0)
@@ -301,14 +329,14 @@ public class NodePanelView : MonoBehaviour
 
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? $"人员：{c}人"
-                    : $"目标：{targetName}\n人员：{c}人";
+                    : $"目标：{targetName}\\n人员：{c}人";
             }
             else if (containablesCount > 0)
             {
                 string targetName = node.Containables[0]?.Name ?? "";
                 _conPeople.text = string.IsNullOrEmpty(targetName)
-                    ? "目标：可收容\n人员：0人"
-                    : $"目标：{targetName}\n人员：0人";
+                    ? "目标：可收容\\n人员：0人"
+                    : $"目标：{targetName}\\n人员：0人";
             }
             else
             {
@@ -408,14 +436,256 @@ public class NodePanelView : MonoBehaviour
         }
     }
 
+    // ----------------------
+    // Task List UI (scrollable)
+    // ----------------------
+
+    private void CacheTaskListUIIfNeeded()
+    {
+        if (_taskListCached) return;
+
+        // Try a few common roots.
+        Transform scroll = FindDeepChild(transform, "TaskListScroll")
+                         ?? FindDeepChild(transform, "Scroll_Tasks")
+                         ?? FindDeepChild(transform, "TaskList");
+
+        if (scroll != null)
+        {
+            var viewport = scroll.Find("Viewport") ?? FindDeepChild(scroll, "Viewport");
+            var content = viewport != null ? (viewport.Find("Content") ?? FindDeepChild(viewport, "Content")) : (scroll.Find("Content") ?? FindDeepChild(scroll, "Content"));
+
+            if (content != null)
+            {
+                _taskListContent = content;
+
+                // Template search:
+                var tplT = content.Find("TaskRowTemplate");
+                if (tplT == null)
+                {
+                    // Find first inactive child as template.
+                    for (int i = 0; i < content.childCount; i++)
+                    {
+                        var c = content.GetChild(i);
+                        if (c != null && !c.gameObject.activeSelf)
+                        {
+                            tplT = c;
+                            break;
+                        }
+                    }
+                }
+
+                if (tplT != null)
+                {
+                    _taskRowTemplate = tplT.gameObject;
+                    _taskRowTemplate.SetActive(false);
+                }
+            }
+        }
+
+        _taskListCached = true;
+    }
+
+    private bool RefreshTaskListIfPresent(NodeState node)
+    {
+        if (_taskListContent == null || _taskRowTemplate == null) return false;
+
+        // Clear existing instances
+        for (int i = 0; i < _taskRowInstances.Count; i++)
+        {
+            if (_taskRowInstances[i] != null)
+                Destroy(_taskRowInstances[i]);
+        }
+        _taskRowInstances.Clear();
+
+        if (node.Tasks == null || node.Tasks.Count == 0)
+        {
+            // Keep empty; template stays hidden.
+            return true;
+        }
+
+        var tasks = node.Tasks
+            .Where(t => t != null)
+            .OrderBy(t => TaskStateOrder(t.State))
+            .ThenBy(t => TaskTypeOrder(t.Type))
+            .ThenByDescending(t => t.CreatedDay)
+            .ThenByDescending(t => t.Progress)
+            .ToList();
+
+        foreach (var t in tasks)
+        {
+            var go = Instantiate(_taskRowTemplate, _taskListContent);
+            go.name = $"TaskRow_{t.Type}_{t.Id}";
+            go.SetActive(true);
+            _taskRowInstances.Add(go);
+
+            var row = go.transform;
+            var title = GetTmp(row, "Title");
+            var status = GetTmp(row, "Status");
+            var people = GetTmp(row, "People");
+
+            string titleTextLocal = (t.Type == TaskType.Investigate) ? "调查" : "收容";
+            if (t.Type == TaskType.Contain)
+            {
+                string tn = ResolveContainableName(node, t.TargetContainableId);
+                if (!string.IsNullOrEmpty(tn)) titleTextLocal += $"：{tn}";
+            }
+            if (title) title.text = titleTextLocal;
+
+            bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
+            if (status)
+            {
+                status.text = BuildTaskStatusText(t, hasSquad);
+            }
+
+            if (people)
+            {
+                int c = hasSquad ? t.AssignedAgentIds.Count : 0;
+                people.text = $"人员：{c}人";
+            }
+
+            // Action button
+            var btnT = row.Find("Btn_Action");
+            var btn = btnT ? btnT.GetComponent<Button>() : null;
+            var lbl = btnT ? GetTmp(btnT, "Label") : null;
+
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+
+                var mode = GetActionMode(t, hasSquad);
+                if (mode == TaskActionMode.None)
+                {
+                    btn.gameObject.SetActive(false);
+                }
+                else
+                {
+                    btn.gameObject.SetActive(true);
+                    if (lbl) lbl.text = BuildActionLabel(mode, t.Id);
+                    string taskId = t.Id;
+
+                    btn.onClick.AddListener(() => OnRowActionClicked(taskId));
+                }
+            }
+        }
+
+        // Layout rebuild (best-effort)
+        var rt = _taskListContent as RectTransform;
+        if (rt != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+
+        return true;
+    }
+
+    private void OnRowActionClicked(string taskId)
+    {
+        if (string.IsNullOrEmpty(taskId) || GameController.I == null) return;
+
+        if (!GameController.I.TryGetTask(taskId, out var node, out var task) || task == null) return;
+        if (task.State != TaskState.Active) return;
+
+        bool hasSquad = task.AssignedAgentIds != null && task.AssignedAgentIds.Count > 0;
+        var mode = GetActionMode(task, hasSquad);
+
+        if (mode == TaskActionMode.Cancel)
+        {
+            GameController.I.CancelOrRetreatTask(taskId);
+            _rowConfirmUntil.Remove(taskId);
+            Refresh();
+            return;
+        }
+
+        if (mode == TaskActionMode.Retreat)
+        {
+            const float ConfirmWindowSec = 3f;
+            float until = 0f;
+            _rowConfirmUntil.TryGetValue(taskId, out until);
+
+            if (Time.unscaledTime <= until)
+            {
+                GameController.I.CancelOrRetreatTask(taskId);
+                _rowConfirmUntil.Remove(taskId);
+                Refresh();
+            }
+            else
+            {
+                _rowConfirmUntil[taskId] = Time.unscaledTime + ConfirmWindowSec;
+                Refresh();
+            }
+        }
+    }
+
+    private static int TaskStateOrder(TaskState s)
+    {
+        // Active first, then Completed, then Cancelled
+        return s switch
+        {
+            TaskState.Active => 0,
+            TaskState.Completed => 1,
+            TaskState.Cancelled => 2,
+            _ => 9
+        };
+    }
+
+    private static int TaskTypeOrder(TaskType t)
+    {
+        // Investigate first, then Contain
+        return t == TaskType.Investigate ? 0 : 1;
+    }
+
+    private static string ResolveContainableName(NodeState node, string containableId)
+    {
+        if (node == null || node.Containables == null || node.Containables.Count == 0) return "";
+        if (!string.IsNullOrEmpty(containableId))
+        {
+            var c = node.Containables.FirstOrDefault(x => x != null && x.Id == containableId);
+            if (c != null) return c.Name ?? "";
+        }
+        return node.Containables[0]?.Name ?? "";
+    }
+
+    private static string BuildTaskStatusText(NodeTask t, bool hasSquad)
+    {
+        if (t.State == TaskState.Completed) return "状态：已完成";
+        if (t.State == TaskState.Cancelled) return "状态：已取消";
+
+        if (!hasSquad) return "状态：未指派";
+
+        if (t.Progress <= EPS) return "状态：待开始";
+
+        return $"状态：进行中（{(int)(t.Progress * 100)}%）";
+    }
+
+    private static TaskActionMode GetActionMode(NodeTask t, bool hasSquad)
+    {
+        if (t == null) return TaskActionMode.None;
+        if (t.State != TaskState.Active) return TaskActionMode.None;
+        if (!hasSquad) return TaskActionMode.None;
+        return (t.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
+    }
+
+    private string BuildActionLabel(TaskActionMode mode, string taskId)
+    {
+        if (mode == TaskActionMode.Cancel) return "取消";
+        if (mode == TaskActionMode.Retreat)
+        {
+            float until = 0f;
+            _rowConfirmUntil.TryGetValue(taskId, out until);
+            return (Time.unscaledTime <= until) ? "确认撤退" : "撤退";
+        }
+        return "";
+    }
+
+    // ----------------------
+    // Dispatch buttons
+    // ----------------------
+
     private void UpdateDispatchButtons(NodeState n)
     {
         if (n == null) return;
 
         // N-task model:
-        // - Investigate: node has anomaly => allow creating more investigate tasks (unlimited).
+        // - Investigate: can be initiated freely.
         // - Contain: requires discovered containables.
-        // Busy/repick constraints are enforced in picker assignment rules (GameControllerTaskExt).
 
         bool hasContainables = (n.Containables != null && n.Containables.Count > 0);
 
@@ -426,8 +696,13 @@ public class NodePanelView : MonoBehaviour
         if (containButton) containButton.interactable = canContain;
     }
 
+    // ----------------------
+    // Utilities
+    // ----------------------
+
     private static TMP_Text GetTmp(Transform parent, string childName)
     {
+        if (parent == null) return null;
         var t = parent.Find(childName);
         if (t == null) return null;
         return t.GetComponent<TMP_Text>();
