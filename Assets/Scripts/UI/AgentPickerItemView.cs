@@ -56,6 +56,14 @@ public class AgentPickerItemView : MonoBehaviour
     public void SetSelected(bool selected)
     {
         if (selectedMark) selectedMark.SetActive(selected);
+        if (accentBar) accentBar.gameObject.SetActive(selected);
+
+        var img = GetComponent<Image>();
+        if (img)
+            img.color = selected
+                ? new Color(1f, 1f, 1f, 0.18f)
+                : new Color(1f, 1f, 1f, 0.10f);
     }
+
 }
 
