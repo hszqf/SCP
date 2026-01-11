@@ -8,6 +8,7 @@ public class UIPanelRoot : MonoBehaviour
     public static UIPanelRoot I { get; private set; }
 
     [Header("Prefabs (请把 Assets/Prefabs/UI 下的文件拖进来)")]
+    [SerializeField] private HUD hudPrefab; // <-- 新增：HUD 也是 Prefab 了
     [SerializeField] private NodePanelView nodePanelPrefab;
     [SerializeField] private EventPanel eventPanelPrefab;
     [SerializeField] private NewsPanel newsPanelPrefab;
@@ -15,6 +16,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
 
     // --- 运行时实例 (自动生成) ---
+    private HUD _hud; // <-- 新增实例记录
     private NodePanelView _nodePanel;
     private EventPanel _eventPanel;
     private NewsPanel _newsPanel;
@@ -28,6 +30,11 @@ public class UIPanelRoot : MonoBehaviour
         I = this;
     }
 
+    private void Start()
+    {
+        InitHUD();
+    }
+
     private void OnEnable()
     {
         if (GameController.I != null) GameController.I.OnStateChanged += OnGameStateChanged;
@@ -36,6 +43,17 @@ public class UIPanelRoot : MonoBehaviour
     private void OnDisable()
     {
         if (GameController.I != null) GameController.I.OnStateChanged -= OnGameStateChanged;
+    }
+
+    void InitHUD()
+    {
+        if (_hud) return;
+        if (hudPrefab)
+        {
+            _hud = Instantiate(hudPrefab, transform);
+            // HUD 应该在最底层 (First Sibling)，这样弹窗才能盖住它
+            _hud.transform.SetAsFirstSibling();
+        }
     }
 
     void OnGameStateChanged()

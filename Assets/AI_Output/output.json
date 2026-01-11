@@ -1,8 +1,24 @@
 {
-    "batch_id": "fix_node_panel_factory_alignment",
+    "batch_id": "upgrade_uipanelroot_manage_hud",
     "results": [
         {
             "id": 1,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "",
+            "data": "Snippet replaced."
+        },
+        {
+            "id": 2,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "",
+            "data": "Snippet replaced."
+        },
+        {
+            "id": 3,
             "status": "success",
             "error": "",
             "changed": false,
