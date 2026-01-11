@@ -1,5 +1,6 @@
 // <EXPORT_BLOCK>
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Core;
 using UnityEngine;
@@ -51,25 +52,25 @@ public class GameController : MonoBehaviour
         Notify();
     }
 
-    public void AssignInvestigate(string nodeId, string agentId)
+    public void AssignInvestigate(string nodeId, List<string> agentIds)
     {
         var n = GetNode(nodeId);
         if (n == null) return;
 
         n.Status = NodeStatus.Investigating;
-        n.AssignedAgentId = agentId;
+        n.AssignedAgentIds = new List<string>(agentIds);
         n.InvestigateProgress = 0f;
 
         Notify();
     }
 
-    public void AssignContain(string nodeId, string agentId)
+    public void AssignContain(string nodeId, List<string> agentIds)
     {
         var n = GetNode(nodeId);
         if (n == null) return;
 
         n.Status = NodeStatus.Containing;
-        n.AssignedAgentId = agentId;
+        n.AssignedAgentIds = new List<string>(agentIds);
         n.ContainProgress = 0f;
 
         Notify();
@@ -121,19 +122,25 @@ public static class GameControllerTaskExt
         return 0f;
     }
 
-    static bool IsAgentBusyOnOtherNode(GameController gc, string agentId, string currentNodeId)
+    // [Updated] 检查小队中是否有人忙碌
+    public static bool AreAgentsBusy(GameController gc, List<string> agentIds, string currentNodeId)
     {
         if (gc == null || gc.State == null || gc.State.Nodes == null) return false;
+        if (agentIds == null || agentIds.Count == 0) return false;
 
         foreach (var node in gc.State.Nodes)
         {
             if (node == null) continue;
             if (node.Id == currentNodeId) continue;
-            if (node.AssignedAgentId != agentId) continue;
-
-            // 只要在 Investigating/Containing，就算占用（即使进度==0，也避免一人多派）
-            if (node.Status == NodeStatus.Investigating || node.Status == NodeStatus.Containing)
-                return true;
+            
+            // 如果该节点正在执行任务且有人员
+            if ((node.Status == NodeStatus.Investigating || node.Status == NodeStatus.Containing) && 
+                node.AssignedAgentIds != null)
+            {
+                // 检查是否有交集
+                if (node.AssignedAgentIds.Intersect(agentIds).Any())
+                    return true;
+            }
         }
         return false;
     }
@@ -144,8 +151,8 @@ public static class GameControllerTaskExt
         var n = gc.GetNode(nodeId);
         if (!HasTask(n)) return false;
 
-        // 撤回=任务失败：清空派遣与进度；不额外惩罚（时间/过程中影响已体现在别处）
-        n.AssignedAgentId = null;
+        // 撤回：清空列表
+        if (n.AssignedAgentIds != null) n.AssignedAgentIds.Clear();
         n.InvestigateProgress = 0f;
         n.ContainProgress = 0f;
         n.Status = default(NodeStatus);
@@ -154,24 +161,24 @@ public static class GameControllerTaskExt
         return true;
     }
 
-    public static AssignResult TryAssignInvestigate(this GameController gc, string nodeId, string agentId)
-        => TryAssign(gc, nodeId, agentId, NodeStatus.Investigating);
+    // [Updated] 接口升级为 List<string>
+    public static AssignResult TryAssignInvestigate(this GameController gc, string nodeId, List<string> agentIds)
+        => TryAssign(gc, nodeId, agentIds, NodeStatus.Investigating);
 
-    public static AssignResult TryAssignContain(this GameController gc, string nodeId, string agentId)
-        => TryAssign(gc, nodeId, agentId, NodeStatus.Containing);
+    public static AssignResult TryAssignContain(this GameController gc, string nodeId, List<string> agentIds)
+        => TryAssign(gc, nodeId, agentIds, NodeStatus.Containing);
 
-    static AssignResult TryAssign(GameController gc, string nodeId, string agentId, NodeStatus targetStatus)
+    static AssignResult TryAssign(GameController gc, string nodeId, List<string> agentIds, NodeStatus targetStatus)
     {
         if (gc == null) return AssignResult.Fail("GameController is null");
         if (string.IsNullOrEmpty(nodeId)) return AssignResult.Fail("nodeId 为空");
-        if (string.IsNullOrEmpty(agentId)) return AssignResult.Fail("agentId 为空");
+        if (agentIds == null || agentIds.Count == 0) return AssignResult.Fail("未选择干员");
 
         var n = gc.GetNode(nodeId);
         if (n == null) return AssignResult.Fail("节点不存在");
 
-        // 忙于别的节点则不允许
-        if (IsAgentBusyOnOtherNode(gc, agentId, nodeId))
-            return AssignResult.Fail("该干员正在其他节点执行任务，不能重复派遣");
+        if (AreAgentsBusy(gc, agentIds, nodeId))
+            return AssignResult.Fail("部分干员正在其他节点执行任务");
 
         bool hasTask = HasTask(n);
 
@@ -179,18 +186,22 @@ public static class GameControllerTaskExt
         {
             bool started = GetProgress(n) > 0.0001f;
 
-            // 已开始：禁止直接换人/换类型（只允许重复点击同人同类型=OK）
+            // 已开始：仅允许完全相同的人员组合重复确认，否则需撤回
             if (started)
             {
-                if (n.AssignedAgentId == agentId && n.Status == targetStatus)
+                bool sameSquad = (n.AssignedAgentIds != null && 
+                                  n.AssignedAgentIds.Count == agentIds.Count && 
+                                  !n.AssignedAgentIds.Except(agentIds).Any());
+
+                if (sameSquad && n.Status == targetStatus)
                     return AssignResult.Ok();
 
                 return AssignResult.Fail("任务已开始：只能强制撤回后再更换派遣");
             }
 
-            // 未开始：允许自由换人、允许切换任务类型
+            // 未开始：允许换人
             n.Status = targetStatus;
-            n.AssignedAgentId = agentId;
+            n.AssignedAgentIds = new List<string>(agentIds);
             n.InvestigateProgress = 0f;
             n.ContainProgress = 0f;
 
@@ -198,11 +209,11 @@ public static class GameControllerTaskExt
             return AssignResult.Ok();
         }
 
-        // Idle：直接调用原有接口开始任务
+        // Idle
         if (targetStatus == NodeStatus.Investigating)
-            gc.AssignInvestigate(nodeId, agentId);
+            gc.AssignInvestigate(nodeId, agentIds);
         else
-            gc.AssignContain(nodeId, agentId);
+            gc.AssignContain(nodeId, agentIds);
 
         return AssignResult.Ok();
     }

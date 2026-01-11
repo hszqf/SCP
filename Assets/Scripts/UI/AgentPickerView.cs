@@ -26,6 +26,7 @@ public class AgentPickerView : MonoBehaviour
 
     private Mode _mode;
     private string _nodeId;
+    private bool _multiSelect;
 
     private Action<List<string>> _onConfirm;
     private Action _onCancel;
@@ -39,12 +40,14 @@ public class AgentPickerView : MonoBehaviour
         IEnumerable<string> preSelected,
         Func<string, bool> isBusyOtherNode,
         Action<List<string>> onConfirm,
-        Action onCancel)
+        Action onCancel,
+        bool multiSelect = true) // 修复：增加参数
     {
         _mode = mode;
         _nodeId = nodeId;
         _onConfirm = onConfirm;
         _onCancel = onCancel;
+        _multiSelect = multiSelect;
 
         _selected.Clear();
         if (preSelected != null)
@@ -126,12 +129,26 @@ public class AgentPickerView : MonoBehaviour
     {
         if (string.IsNullOrEmpty(agentId)) return;
 
-        // 多选：点击切换选中
-        if (_selected.Contains(agentId)) _selected.Remove(agentId);
-        else _selected.Add(agentId);
-
-        foreach (var it in _items)
-            if (it && it.AgentId == agentId) it.SetSelected(_selected.Contains(agentId));
+        if (_multiSelect)
+        {
+            // 多选模式
+            if (_selected.Contains(agentId)) _selected.Remove(agentId);
+            else _selected.Add(agentId);
+            
+            // 局部刷新
+            foreach (var it in _items)
+                if (it && it.AgentId == agentId) it.SetSelected(_selected.Contains(agentId));
+        }
+        else
+        {
+            // 单选模式
+            _selected.Clear();
+            _selected.Add(agentId);
+            
+            // 全局刷新
+            foreach (var it in _items)
+                if (it) it.SetSelected(_selected.Contains(it.AgentId));
+        }
 
         RefreshHeader();
     }

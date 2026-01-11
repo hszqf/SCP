@@ -1,8 +1,16 @@
 {
-    "batch_id": "restore_auto_wiring",
+    "batch_id": "fix_agent_picker_view_signature",
     "results": [
         {
             "id": 1,
+            "status": "success",
+            "error": "",
+            "changed": false,
+            "resolved_target": "",
+            "data": "Snippet replaced."
+        },
+        {
+            "id": 2,
             "status": "success",
             "error": "",
             "changed": false,

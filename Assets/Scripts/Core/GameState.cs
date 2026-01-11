@@ -33,7 +33,7 @@ namespace Core
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
 
-        public string AssignedAgentId = null;
+        public List<string> AssignedAgentIds = new List<string>(); // Squad System
         public float InvestigateProgress = 0f; // 0..1
         public float ContainProgress = 0f;     // 0..1
     }

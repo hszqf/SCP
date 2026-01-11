@@ -336,8 +336,10 @@ public class UIPanelRoot : MonoBehaviour
             nodeStatus.text = $"{n.Status} | Anomaly:{n.HasAnomaly} L{n.AnomalyLevel}";
 
         if (progressText)
-            progressText.text =
-                $"Progress: {Mathf.RoundToInt(p * 100)}%  |  Agent: {(string.IsNullOrEmpty(n.AssignedAgentId) ? "-" : n.AssignedAgentId)}";
+        {
+             int count = (n.AssignedAgentIds != null) ? n.AssignedAgentIds.Count : 0;
+             progressText.text = $"Progress: {Mathf.RoundToInt(p * 100)}%  |  Squad: {count} agents";
+        }
     }
 
     public void CloseNode()
@@ -426,7 +428,7 @@ public class UIPanelRoot : MonoBehaviour
         }
 
         // 兜底：旧逻辑
-        AssignInvestigate("A1");
+        AssignInvestigate(new List<string> { "A1" });
     }
 
     public void OnContain()
@@ -440,18 +442,18 @@ public class UIPanelRoot : MonoBehaviour
             return;
         }
 
-        AssignContain("A1");
+        AssignContain(new List<string> { "A1" });
     }
 
 
     // 旧兼容：如果你场景里还保留了 A1/A2/A3 按钮（目前是 Inactive）:contentReference[oaicite:3]{index=3}
-    public void AssignInvestigate_A1() => AssignInvestigate("A1");
-    public void AssignInvestigate_A2() => AssignInvestigate("A2");
-    public void AssignInvestigate_A3() => AssignInvestigate("A3");
+    public void AssignInvestigate_A1() => AssignInvestigate(new List<string> { "A1" });
+    public void AssignInvestigate_A2() => AssignInvestigate(new List<string> { "A2" });
+    public void AssignInvestigate_A3() => AssignInvestigate(new List<string> { "A3" });
 
-    public void AssignContain_A1() => AssignContain("A1");
-    public void AssignContain_A2() => AssignContain("A2");
-    public void AssignContain_A3() => AssignContain("A3");
+    public void AssignContain_A1() => AssignContain(new List<string> { "A1" });
+    public void AssignContain_A2() => AssignContain(new List<string> { "A2" });
+    public void AssignContain_A3() => AssignContain(new List<string> { "A3" });
 
     void OpenAgentPicker(AgentPickerView.Mode mode)
     {
@@ -460,19 +462,19 @@ public class UIPanelRoot : MonoBehaviour
         // 这里先用 State.Agents。你当前 GameState 里有 Agents 列表。:contentReference[oaicite:4]{index=4}
         var agents = GameController.I != null ? GameController.I.State.Agents : new List<Core.AgentState>();
 
-        // preSelected：先用当前节点 AssignedAgentId（现结构单人），后续你加多选字段再改成列表
+        // [Squad Update] 从列表加载已选人员
         var n = GameController.I.GetNode(_currentNodeId);
         var pre = new List<string>();
-        if (n != null && !string.IsNullOrEmpty(n.AssignedAgentId)) pre.Add(n.AssignedAgentId);
+        if (n != null && n.AssignedAgentIds != null) pre.AddRange(n.AssignedAgentIds);
 
         bool IsBusyOtherNode(string agentId)
         {
-            // 现阶段：用 NodeState.AssignedAgentId 判忙（单人）。后面做多人任务时这里会升级。
             foreach (var node in GameController.I.State.Nodes)
             {
                 if (node == null) continue;
                 if (node.Id == _currentNodeId) continue;
-                if (node.AssignedAgentId == agentId &&
+                // 检查该干员是否在其他节点的列表中
+                if (node.AssignedAgentIds != null && node.AssignedAgentIds.Contains(agentId) &&
                     (node.Status == Core.NodeStatus.Investigating || node.Status == Core.NodeStatus.Containing))
                     return true;
             }
@@ -485,14 +487,12 @@ public class UIPanelRoot : MonoBehaviour
             agents: agents,
             preSelected: pre,
             isBusyOtherNode: IsBusyOtherNode,
+            multiSelect: true, // <--- 开启多选！
             onConfirm: (selectedIds) =>
             {
-                // 重要：你现在 NodeState 只支持单人，所以这里先取第一个，保证不破现有 Sim/进度逻辑
-                var pick = selectedIds != null && selectedIds.Count > 0 ? selectedIds[0] : null;
-                if (string.IsNullOrEmpty(pick)) return;
-
-                if (mode == AgentPickerView.Mode.Investigate) AssignInvestigate(pick);
-                else AssignContain(pick);
+                // 直接传递整个列表
+                if (mode == AgentPickerView.Mode.Investigate) AssignInvestigate(selectedIds);
+                else AssignContain(selectedIds);
             },
             onCancel: () =>
             {
@@ -505,17 +505,17 @@ public class UIPanelRoot : MonoBehaviour
 
 
 
-    void AssignInvestigate(string agentId)
+    void AssignInvestigate(List<string> agentIds)
     {
         if (GameController.I == null || string.IsNullOrEmpty(_currentNodeId)) return;
-        GameController.I.AssignInvestigate(_currentNodeId, agentId);
+        GameController.I.AssignInvestigate(_currentNodeId, agentIds);
         RefreshNodePanel();
     }
 
-    void AssignContain(string agentId)
+    void AssignContain(List<string> agentIds)
     {
         if (GameController.I == null || string.IsNullOrEmpty(_currentNodeId)) return;
-        GameController.I.AssignContain(_currentNodeId, agentId);
+        GameController.I.AssignContain(_currentNodeId, agentIds);
         RefreshNodePanel();
     }
 
@@ -610,8 +610,10 @@ public class UIPanelRoot : MonoBehaviour
         btn.onClick.AddListener(() =>
         {
             HideAgentPicker();
-            if (_pickerMode == AssignMode.Investigate) AssignInvestigate(agentId);
-            else AssignContain(agentId);
+            // 适配多人接口
+            var list = new List<string> { agentId };
+            if (_pickerMode == AssignMode.Investigate) AssignInvestigate(list);
+            else AssignContain(list);
         });
 
         var txtGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
