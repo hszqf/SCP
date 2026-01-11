@@ -39,9 +39,13 @@ public class EventPanel : MonoBehaviour
         var (success, text) = GameController.I.ResolveEvent(_eventId, optionId);
         if (resultText) resultText.text = text;
 
-        // 简单做法：选完立即关闭（你也可以停留显示结果再关）
-UIPanelRoot.I?.CloseEvent();
-UIPanelRoot.I?.RefreshNodePanel();
+        // 简单做法：选完立即关闭
+        // 注意：这里不再直接调用 UIPanelRoot.CloseEvent，而是通过 callback 或者直接隐藏
+        // 为了解耦，我们暂时直接隐藏自己，Manager 会感知到
+        gameObject.SetActive(false);
+        
+        // 通知 Manager 刷新 (可选，如果 Manager 监听了 StateChange 则不需要这行)
+        UIPanelRoot.I?.RefreshNodePanel();
 
 
     }

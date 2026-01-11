@@ -1,5 +1,5 @@
 {
-    "batch_id": "fix_agent_picker_view_signature",
+    "batch_id": "rewrite_uipanelroot_final",
     "results": [
         {
             "id": 1,
@@ -7,15 +7,7 @@
             "error": "",
             "changed": false,
             "resolved_target": "",
-            "data": "Snippet replaced."
-        },
-        {
-            "id": 2,
-            "status": "success",
-            "error": "",
-            "changed": false,
-            "resolved_target": "",
-            "data": "Snippet replaced."
+            "data": "Script written."
         }
     ]
 }
