@@ -1,5 +1,5 @@
 {
-    "batch_id": "beautify_node_panel_structure",
+    "batch_id": "fix_node_panel_factory_alignment",
     "results": [
         {
             "id": 1,
@@ -7,7 +7,7 @@
             "error": "",
             "changed": false,
             "resolved_target": "",
-            "data": "Script written."
+            "data": "Snippet replaced."
         }
     ]
 }
