@@ -38,6 +38,10 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private Button withdrawButton;
     [SerializeField] private TMP_Text withdrawButtonLabel;
 
+
+    [SerializeField] private Button dimButton;
+
+
     // ===================== Agent Picker (existing approach) =====================
     [Header("Dispatch UI (Agent Picker)")]
     [SerializeField] private bool useAgentPicker = true;
@@ -70,6 +74,17 @@ public class UIPanelRoot : MonoBehaviour
         BindNodePanelButtonsInCode();
         AutoWireNewsPanelButtonsIfMissing();
         BindNewsPanelButtonsInCode();
+
+        if (!dimButton && dim) dimButton = dim.GetComponent<Button>();
+        if (dimButton)
+        {
+            dimButton.onClick.RemoveAllListeners();
+            dimButton.onClick.AddListener(CloseAll);
+        }
+        else
+        {
+            Debug.LogWarning("[UIPanelRoot] Dim has no Button; click-to-close disabled.", this);
+        }
 
 
         ResetUI();
