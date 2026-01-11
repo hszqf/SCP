@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -16,8 +15,9 @@ public class NodePanelView : MonoBehaviour
     [SerializeField] private Button investigateButton;
     [SerializeField] private Button containButton;
     [SerializeField] private Button closeButton;
+    [SerializeField] private Button backgroundButton; // 蒙版按钮
 
-    // 回调函数 (由 Manager 注入)
+    // 回调函数
     private Action _onInvestigate;
     private Action _onContain;
     private Action _onClose;
@@ -30,16 +30,19 @@ public class NodePanelView : MonoBehaviour
         _onContain = onContain;
         _onClose = onClose;
 
-        if (investigateButton) investigateButton.onClick.AddListener(() => _onInvestigate?.Invoke());
-        if (containButton) containButton.onClick.AddListener(() => _onContain?.Invoke());
-        if (closeButton) closeButton.onClick.AddListener(() => _onClose?.Invoke());
+        if (investigateButton) { investigateButton.onClick.RemoveAllListeners(); investigateButton.onClick.AddListener(() => _onInvestigate?.Invoke()); }
+        if (containButton) { containButton.onClick.RemoveAllListeners(); containButton.onClick.AddListener(() => _onContain?.Invoke()); }
+        if (closeButton) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(() => _onClose?.Invoke()); }
+        
+        // 蒙版点击 = 关闭
+        if (backgroundButton) { backgroundButton.onClick.RemoveAllListeners(); backgroundButton.onClick.AddListener(() => _onClose?.Invoke()); }
     }
 
     public void Show(string nodeId)
     {
         _nodeId = nodeId;
         gameObject.SetActive(true);
-        transform.SetAsLastSibling(); // 确保在最前
+        transform.SetAsLastSibling();
         Refresh();
     }
 
@@ -58,12 +61,10 @@ public class NodePanelView : MonoBehaviour
 
         if (titleText) titleText.text = n.Name;
 
-        // 状态显示
         string s = $"{n.Status}";
         if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
         if (statusText) statusText.text = s;
 
-        // 进度与小队
         if (progressText)
         {
             float p = (n.Status == NodeStatus.Investigating) ? n.InvestigateProgress : n.ContainProgress;

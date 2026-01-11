@@ -1,4 +1,3 @@
-// <EXPORT_BLOCK>
 using System;
 using Core;
 using TMPro;
@@ -7,49 +6,65 @@ using UnityEngine.UI;
 
 public class EventPanel : MonoBehaviour
 {
+    [Header("Refs")]
     [SerializeField] private TMP_Text titleText;
-    [SerializeField] private TMP_Text descText;
-    [SerializeField] private Transform optionRoot;
-    [SerializeField] private Button optionPrefab;
-    [SerializeField] private TMP_Text resultText;
+    [SerializeField] private TMP_Text bodyText;
+    [SerializeField] private Button optionAButton;
+    [SerializeField] private Button optionBButton;
+    [SerializeField] private TMP_Text optionAText;
+    [SerializeField] private TMP_Text optionBText;
+    [SerializeField] private Button backgroundButton; // 蒙版按钮
 
-    private string _eventId;
+    private PendingEvent _evt;
 
-    public void Show(PendingEvent ev)
+    public void Show(PendingEvent evt)
     {
+        _evt = evt;
         gameObject.SetActive(true);
-        _eventId = ev.Id;
 
-        titleText.text = ev.Title;
-        descText.text = ev.Desc;
-        if (resultText) resultText.text = "";
-
-        foreach (Transform c in optionRoot) Destroy(c.gameObject);
-
-        foreach (var opt in ev.Options)
+        // 绑定蒙版关闭
+        if (backgroundButton) 
         {
-            var b = Instantiate(optionPrefab, optionRoot);
-            b.GetComponentInChildren<TMP_Text>().text = opt.Text;
-            b.onClick.AddListener(() => OnPick(opt.Id));
+            backgroundButton.onClick.RemoveAllListeners();
+            backgroundButton.onClick.AddListener(() => gameObject.SetActive(false));
+        }
+
+        if (titleText) titleText.text = evt.Title;
+        if (bodyText) bodyText.text = evt.Desc;
+
+        // Option A
+        if (optionAButton)
+        {
+            optionAButton.onClick.RemoveAllListeners();
+            optionAButton.onClick.AddListener(() => OnOptionSelected(0));
+            if (optionAText) optionAText.text = evt.Options.Count > 0 ? evt.Options[0].Text : "Option A";
+        }
+
+        // Option B
+        if (optionBButton)
+        {
+            optionBButton.onClick.RemoveAllListeners();
+            if (evt.Options.Count > 1)
+            {
+                optionBButton.gameObject.SetActive(true);
+                optionBButton.onClick.AddListener(() => OnOptionSelected(1));
+                if (optionBText) optionBText.text = evt.Options[1].Text;
+            }
+            else
+            {
+                optionBButton.gameObject.SetActive(false);
+            }
         }
     }
 
-    void OnPick(string optionId)
+    void OnOptionSelected(int index)
     {
-        var (success, text) = GameController.I.ResolveEvent(_eventId, optionId);
-        if (resultText) resultText.text = text;
-
-        // 简单做法：选完立即关闭
-        // 注意：这里不再直接调用 UIPanelRoot.CloseEvent，而是通过 callback 或者直接隐藏
-        // 为了解耦，我们暂时直接隐藏自己，Manager 会感知到
-        gameObject.SetActive(false);
+        if (_evt == null || index < 0 || index >= _evt.Options.Count) return;
         
-        // 通知 Manager 刷新 (可选，如果 Manager 监听了 StateChange 则不需要这行)
-        UIPanelRoot.I?.RefreshNodePanel();
-
-
+        // 修正：使用 PendingEvent 里的 ID 调用 GameController
+        var opt = _evt.Options[index];
+        GameController.I.ResolveEvent(_evt.Id, opt.Id);
+        
+        gameObject.SetActive(false);
     }
 }
-
-// </EXPORT_BLOCK>
-

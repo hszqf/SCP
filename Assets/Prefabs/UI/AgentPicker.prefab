@@ -866,6 +866,7 @@ GameObject:
   - component: {fileID: 7210291498014754819}
   - component: {fileID: 1940363238367980429}
   - component: {fileID: 7515083810427959721}
+  - component: {fileID: 3890096817878825428}
   m_Layer: 0
   m_Name: AgentPicker
   m_TagString: Untagged
@@ -955,13 +956,56 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 926d358af69231e45afa0d0c9f69e5b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AgentPickerView
-  titleText: {fileID: 5931703904350425804}
-  closeButton: {fileID: 8869462590453508019}
-  selectedCountText: {fileID: 2297399661716773896}
-  confirmButton: {fileID: 632314294991890310}
-  scrollRect: {fileID: 5184495289117765238}
-  contentRoot: {fileID: 3500533589710822342}
   itemPrefab: {fileID: 1120503368642989573, guid: 30273646f02dbbf4d9d5fda1185cb3a7, type: 3}
+  contentRoot: {fileID: 3500533589710822342}
+  confirmButton: {fileID: 632314294991890310}
+  cancelButton: {fileID: 8869462590453508019}
+  backgroundButton: {fileID: 3890096817878825428}
+  titleText: {fileID: 5931703904350425804}
+--- !u!114 &3890096817878825428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4505972744065322776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 0
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 7210291498014754819}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &4849904738727993971
 GameObject:
   m_ObjectHideFlags: 0

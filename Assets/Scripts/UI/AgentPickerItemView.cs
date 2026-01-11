@@ -6,13 +6,21 @@ public class AgentPickerItemView : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Button button;
-    [SerializeField] private Image accentBar;          // 可选
+    [SerializeField] private Image background;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text attrText;
     [SerializeField] private TMP_Text busyTagText;
-    [SerializeField] private GameObject selectedMark;  // 选中标记（Inactive/Active）
+    
+    // 不再依赖 SelectedMark GameObject，直接用颜色
+    [SerializeField] private GameObject selectedIcon; // 可选：保留一个勾选图标
+
+    [Header("Style Colors")]
+    private Color colNormal = new Color(1f, 1f, 1f, 0.05f); // 极淡灰
+    private Color colSelected = new Color(0f, 0.68f, 0.71f, 0.8f); // 战术青 (高亮)
+    private Color colBusy = new Color(0.3f, 0.1f, 0.1f, 0.4f); // 暗红
 
     public string AgentId { get; private set; }
+    private bool _isBusy;
 
     public void Bind(
         string agentId,
@@ -23,47 +31,63 @@ public class AgentPickerItemView : MonoBehaviour
         System.Action<string> onClick)
     {
         AgentId = agentId;
+        _isBusy = isBusyOtherNode;
 
+        if (!button) button = GetComponent<Button>();
+        if (!background) background = GetComponent<Image>();
+
+        // 文本设置
         if (nameText) nameText.text = string.IsNullOrEmpty(displayName) ? agentId : displayName;
         if (attrText) attrText.text = attrLine;
 
+        // 忙碌状态
         if (busyTagText)
         {
-            busyTagText.gameObject.SetActive(isBusyOtherNode);
-            busyTagText.text = isBusyOtherNode ? "BUSY" : "";
+            busyTagText.gameObject.SetActive(_isBusy);
+            busyTagText.text = _isBusy ? "BUSY" : "";
         }
 
-        if (selectedMark) selectedMark.SetActive(selected);
-
-        if (!button) button = GetComponent<Button>();
+        // 按钮交互
         if (button)
         {
             button.onClick.RemoveAllListeners();
-            button.interactable = !isBusyOtherNode;
+            button.interactable = !_isBusy;
             button.onClick.AddListener(() => onClick?.Invoke(agentId));
         }
 
-        // 轻量视觉：忙碌/可用的底色你也可以在 prefab 里调整
-        var img = GetComponent<Image>();
-        if (img)
-        {
-            img.color = isBusyOtherNode
-                ? new Color(1f, 0.6f, 0.6f, 0.10f)
-                : new Color(1f, 1f, 1f, 0.10f);
-        }
+        // 立即刷新视觉
+        UpdateVisuals(selected);
     }
 
     public void SetSelected(bool selected)
     {
-        if (selectedMark) selectedMark.SetActive(selected);
-        if (accentBar) accentBar.gameObject.SetActive(selected);
-
-        var img = GetComponent<Image>();
-        if (img)
-            img.color = selected
-                ? new Color(1f, 1f, 1f, 0.18f)
-                : new Color(1f, 1f, 1f, 0.10f);
+        UpdateVisuals(selected);
     }
 
-}
+    void UpdateVisuals(bool selected)
+    {
+        // 1. 背景颜色逻辑
+        if (background)
+        {
+            if (_isBusy)
+            {
+                background.color = colBusy;
+            }
+            else if (selected)
+            {
+                background.color = colSelected; // 选中：亮青色
+            }
+            else
+            {
+                background.color = colNormal; // 普通：透明
+            }
+        }
 
+        // 2. 勾选图标 (辅助)
+        if (selectedIcon) selectedIcon.SetActive(selected);
+
+        // 3. 选中时文字变亮/变黑以适应背景
+        if (nameText) nameText.color = selected ? Color.black : Color.white;
+        if (attrText) attrText.color = selected ? new Color(0.2f, 0.2f, 0.2f) : new Color(0.8f, 0.8f, 0.8f);
+    }
+}

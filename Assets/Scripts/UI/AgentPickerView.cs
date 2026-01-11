@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -8,30 +7,50 @@ using UnityEngine.UI;
 
 public class AgentPickerView : MonoBehaviour
 {
-    public enum Mode { Investigate, Contain }
-
     [Header("Refs")]
-    [SerializeField] private TMP_Text titleText;
-    [SerializeField] private Button closeButton;
-    [SerializeField] private TMP_Text selectedCountText;
-    [SerializeField] private Button confirmButton;
-
-    [Header("List")]
-    [SerializeField] private ScrollRect scrollRect;
-    [SerializeField] private Transform contentRoot;
     [SerializeField] private AgentPickerItemView itemPrefab;
+    [SerializeField] private RectTransform contentRoot;
+    [SerializeField] private Button confirmButton;
+    [SerializeField] private Button cancelButton;
+    [SerializeField] private Button backgroundButton; // 新增：蒙版按钮
+    [SerializeField] private TMP_Text titleText;
 
-    private readonly List<AgentPickerItemView> _items = new();
-    private readonly HashSet<string> _selected = new();
-
+    private List<AgentPickerItemView> _items = new List<AgentPickerItemView>();
+    private HashSet<string> _selected = new HashSet<string>();
+    
     private Mode _mode;
-    private string _nodeId;
-    private bool _multiSelect;
-
     private Action<List<string>> _onConfirm;
     private Action _onCancel;
+    private bool _multiSelect;
 
     public bool IsShown => gameObject.activeSelf;
+
+    public enum Mode { Investigate, Contain }
+
+    private void Awake()
+    {
+        if (confirmButton) 
+        {
+            confirmButton.onClick.RemoveAllListeners();
+            confirmButton.onClick.AddListener(OnConfirmClicked);
+        }
+        if (cancelButton) 
+        {
+            cancelButton.onClick.RemoveAllListeners();
+            cancelButton.onClick.AddListener(OnCancelClicked);
+        }
+        // 蒙版点击逻辑
+        if (backgroundButton)
+        {
+            backgroundButton.onClick.RemoveAllListeners();
+            backgroundButton.onClick.AddListener(OnCancelClicked);
+        }
+    }
+
+    private void Update()
+    {
+        if (confirmButton) confirmButton.interactable = true;
+    }
 
     public void Show(
         Mode mode,
@@ -41,88 +60,55 @@ public class AgentPickerView : MonoBehaviour
         Func<string, bool> isBusyOtherNode,
         Action<List<string>> onConfirm,
         Action onCancel,
-        bool multiSelect = true) // 修复：增加参数
+        bool multiSelect = true)
     {
         _mode = mode;
-        _nodeId = nodeId;
         _onConfirm = onConfirm;
         _onCancel = onCancel;
         _multiSelect = multiSelect;
 
         _selected.Clear();
         if (preSelected != null)
-            foreach (var id in preSelected) if (!string.IsNullOrEmpty(id)) _selected.Add(id);
+        {
+            foreach (var id in preSelected) _selected.Add(id);
+        }
 
         gameObject.SetActive(true);
+        UpdateTitle(); // 初始化标题
 
-        WireButtons();
-        RebuildList(agents, isBusyOtherNode);
-        RefreshHeader();
+        RefreshList(agents, isBusyOtherNode);
     }
 
     public void Hide()
     {
         gameObject.SetActive(false);
-        _onConfirm = null;
-        _onCancel = null;
-        _nodeId = null;
-        _selected.Clear();
     }
 
-    void WireButtons()
+    void RefreshList(IEnumerable<AgentState> agents, Func<string, bool> isBusyOtherNode)
     {
-        if (closeButton)
-        {
-            closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(() =>
-            {
-                _onCancel?.Invoke();
-                Hide();
-            });
-        }
-
-        if (confirmButton)
-        {
-            confirmButton.onClick.RemoveAllListeners();
-            confirmButton.onClick.AddListener(() =>
-            {
-                _onConfirm?.Invoke(_selected.ToList());
-                Hide();
-            });
-        }
-    }
-
-    void RebuildList(IEnumerable<AgentState> agents, Func<string, bool> isBusyOtherNode)
-    {
-        // clear old
-        for (int i = 0; i < contentRoot.childCount; i++)
-            Destroy(contentRoot.GetChild(i).gameObject);
+        foreach (Transform child in contentRoot) if (child.gameObject.activeSelf) Destroy(child.gameObject);
         _items.Clear();
 
-        foreach (var a in agents)
+        if (!itemPrefab) return;
+        
+        foreach (var agent in agents)
         {
-            var id = a.Id;
-            bool busy = isBusyOtherNode != null && isBusyOtherNode(id);
+            var item = Instantiate(itemPrefab, contentRoot);
+            item.gameObject.SetActive(true);
+            
+            bool isBusy = isBusyOtherNode(agent.Id);
+            if (_selected.Contains(agent.Id)) isBusy = false;
 
-            var row = Instantiate(itemPrefab, contentRoot);
-            row.gameObject.SetActive(true);
-
-            string attrs = $"P:{a.Perception}  O:{a.Operation}  R:{a.Resistance}  Pow:{a.Power}";
-            bool selected = _selected.Contains(id);
-
-            row.Bind(
-                agentId: id,
-                displayName: a.Name,
-                attrLine: attrs,
-                isBusyOtherNode: busy,
-                selected: selected,
-                onClick: OnItemClicked);
-
-            _items.Add(row);
+            item.Bind(
+                agent.Id,
+                agent.Id,
+                $"Agent {agent.Id}",
+                isBusy,
+                _selected.Contains(agent.Id),
+                OnItemClicked
+            );
+            _items.Add(item);
         }
-
-        // 可选：滚动回顶
-        if (scrollRect) scrollRect.verticalNormalizedPosition = 1f;
     }
 
     void OnItemClicked(string agentId)
@@ -131,37 +117,42 @@ public class AgentPickerView : MonoBehaviour
 
         if (_multiSelect)
         {
-            // 多选模式
             if (_selected.Contains(agentId)) _selected.Remove(agentId);
             else _selected.Add(agentId);
             
-            // 局部刷新
             foreach (var it in _items)
                 if (it && it.AgentId == agentId) it.SetSelected(_selected.Contains(agentId));
         }
         else
         {
-            // 单选模式
             _selected.Clear();
             _selected.Add(agentId);
-            
-            // 全局刷新
             foreach (var it in _items)
                 if (it) it.SetSelected(_selected.Contains(it.AgentId));
         }
-
-        RefreshHeader();
+        
+        UpdateTitle(); // 每次点击都更新标题数量
     }
 
-    void RefreshHeader()
+    void UpdateTitle()
     {
-        if (titleText)
-            titleText.text = _mode == Mode.Investigate ? "Select Agents - Investigate" : "Select Agents - Contain";
+        if (!titleText) return;
+        string baseTitle = _mode == Mode.Investigate ? "SELECT TEAM" : "CONTAINMENT TEAM";
+        // 关键修复：显示已选数量
+        titleText.text = $"{baseTitle} ({_selected.Count})";
+    }
 
-        if (selectedCountText)
-            selectedCountText.text = $"Selected: {_selected.Count}";
+    void OnConfirmClicked()
+    {
+        _onConfirm?.Invoke(new List<string>(_selected));
+        Hide();
+    }
 
-        if (confirmButton)
-            confirmButton.interactable = _selected.Count > 0;
+    void OnCancelClicked()
+    {
+        // 关键逻辑：取消就是不做任何改动，直接关闭
+        // 不调用 _onConfirm，所以外部数据不会变
+        _onCancel?.Invoke();
+        Hide();
     }
 }

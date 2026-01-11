@@ -1,5 +1,5 @@
 {
-    "batch_id": "upgrade_uipanelroot_manage_hud",
+    "batch_id": "force_bind_background_buttons",
     "results": [
         {
             "id": 1,
@@ -7,23 +7,7 @@
             "error": "",
             "changed": false,
             "resolved_target": "",
-            "data": "Snippet replaced."
-        },
-        {
-            "id": 2,
-            "status": "success",
-            "error": "",
-            "changed": false,
-            "resolved_target": "",
-            "data": "Snippet replaced."
-        },
-        {
-            "id": 3,
-            "status": "success",
-            "error": "",
-            "changed": false,
-            "resolved_target": "",
-            "data": "Snippet replaced."
+            "data": "Script written."
         }
     ]
 }
