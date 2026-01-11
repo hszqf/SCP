@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class NewsPanel : MonoBehaviour
 {
     [Header("Refs")]
+    [SerializeField] private Button closeButton;        // <-- 新增：关闭按钮引用
     [SerializeField] private Transform contentRoot;     // Viewport/Content
     [SerializeField] private ScrollRect scrollRect;     // Scroll View
     [SerializeField] private GameObject linePrefab;     // NewsLine.prefab
@@ -27,6 +28,12 @@ public class NewsPanel : MonoBehaviour
 
     void Awake()
     {
+        if (closeButton) 
+        {
+            closeButton.onClick.RemoveAllListeners();
+            closeButton.onClick.AddListener(Hide);
+        }
+
         // 容错：不拖也尽量自动找
         if (scrollRect == null) scrollRect = GetComponentInChildren<ScrollRect>(true);
 
