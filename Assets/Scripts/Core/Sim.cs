@@ -185,14 +185,21 @@ namespace Core
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
 
-                // 若已无可收容目标且无进行中的收容任务，则节点视为清空异常
+                // 若已无可收容目标且无进行中的收容任务，则节点可视为“清空异常”。
+                // 但如果还有进行中的调查（有小队）在该节点跑动，则不应标记为 Secured，避免 UI/体验出现“已收容但还在调查”的割裂。
                 bool hasMoreContainables = node.Containables != null && node.Containables.Count > 0;
                 bool hasActiveContainTask = node.Tasks != null && node.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain);
+                bool hasActiveInvestigateWithSquad = node.Tasks != null && node.Tasks.Any(t =>
+                    t != null &&
+                    t.State == TaskState.Active &&
+                    t.Type == TaskType.Investigate &&
+                    t.AssignedAgentIds != null &&
+                    t.AssignedAgentIds.Count > 0);
 
                 if (!hasMoreContainables && !hasActiveContainTask)
                 {
                     node.HasAnomaly = false;
-                    node.Status = NodeStatus.Secured;
+                    node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
                 }
                 else
                 {

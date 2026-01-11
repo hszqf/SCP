@@ -329,14 +329,14 @@ public class NodePanelView : MonoBehaviour
 
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? $"人员：{c}人"
-                    : $"目标：{targetName}\\n人员：{c}人";
+                    : $"目标：{targetName}\n人员：{c}人";
             }
             else if (containablesCount > 0)
             {
                 string targetName = node.Containables[0]?.Name ?? "";
                 _conPeople.text = string.IsNullOrEmpty(targetName)
-                    ? "目标：可收容\\n人员：0人"
-                    : $"目标：{targetName}\\n人员：0人";
+                    ? "目标：可收容\n人员：0人"
+                    : $"目标：{targetName}\n人员：0人";
             }
             else
             {
@@ -504,9 +504,8 @@ public class NodePanelView : MonoBehaviour
         }
 
         var tasks = node.Tasks
-            .Where(t => t != null)
-            .OrderBy(t => TaskStateOrder(t.State))
-            .ThenBy(t => TaskTypeOrder(t.Type))
+            .Where(t => t != null && t.State == TaskState.Active)
+            .OrderBy(t => TaskTypeOrder(t.Type))
             .ThenByDescending(t => t.CreatedDay)
             .ThenByDescending(t => t.Progress)
             .ToList();
@@ -703,7 +702,8 @@ public class NodePanelView : MonoBehaviour
     private static TMP_Text GetTmp(Transform parent, string childName)
     {
         if (parent == null) return null;
-        var t = parent.Find(childName);
+        // Deep search to support templates like TaskRowTemplate/Col/Title
+        var t = FindDeepChild(parent, childName);
         if (t == null) return null;
         return t.GetComponent<TMP_Text>();
     }
