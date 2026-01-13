@@ -220,6 +220,7 @@ public static class GameControllerTaskExt
         if (gc == null || gc.State?.Nodes == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 
+        // 1) Busy by any ACTIVE task squad (any node)
         foreach (var node in gc.State.Nodes)
         {
             if (node?.Tasks == null) continue;
@@ -233,6 +234,21 @@ public static class GameControllerTaskExt
                     return true;
             }
         }
+
+        // 2) Busy by anomaly management (ManagerAgentIds) across ALL nodes
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.ManagedAnomalies == null) continue;
+            foreach (var m in node.ManagedAnomalies)
+            {
+                if (m == null) continue;
+                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
+
+                if (m.ManagerAgentIds.Intersect(agentIds).Any())
+                    return true;
+            }
+        }
+
         return false;
     }
 

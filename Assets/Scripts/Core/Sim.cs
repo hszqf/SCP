@@ -75,6 +75,12 @@ namespace Core
                 }
             }
 
+            // 2.5) 收容后管理（负熵产出）
+            // 管理系统：被成功收容的异常会进入 NodeState.ManagedAnomalies（该节点“已收容异常/已收藏异常”）。
+            // 若某异常被分配了管理干员（ManagerAgentIds 非空），则每天结算产出负熵，并累加到全局货币 GameState.NegEntropy。
+            // 后续逃逸等影响也将基于节点数据实现。
+            StepManageAnomalies(s, rng);
+
             // 3) 恐慌 & 收入
             int activeAnomaly = s.Nodes.Count(n => n.HasAnomaly && n.Status != NodeStatus.Secured);
             s.Panic = ClampInt(s.Panic + activeAnomaly, 0, 100);
@@ -184,6 +190,29 @@ namespace Core
                 s.Panic = Math.Max(0, s.Panic - 5);
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
+
+                // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
+                // 注意：在并行收容/目标缺失等情况下，target 可能为 null，但我们仍然需要记录一个“已收容异常”，否则管理系统无法进入。
+                {
+                    ContainableItem recordItem = target;
+                    if (recordItem == null)
+                    {
+                        string rid = !string.IsNullOrEmpty(task.TargetContainableId)
+                            ? task.TargetContainableId
+                            : $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}";
+
+                        recordItem = new ContainableItem
+                        {
+                            Id = rid,
+                            Name = $"已收容异常（{node.Name}）",
+                            Level = level
+                        };
+
+                        s.News.Add($"- {node.Name} 收容成功：目标信息缺失，已用占位记录写入收藏列表");
+                    }
+
+                    EnsureManagedAnomalyRecorded(node, recordItem);
+                }
 
                 // 若已无可收容目标且无进行中的收容任务，则节点可视为“清空异常”。
                 // 但如果还有进行中的调查（有小队）在该节点跑动，则不应标记为 Secured，避免 UI/体验出现“已收容但还在调查”的割裂。
@@ -313,6 +342,93 @@ namespace Core
             ev.Options.Add(new DecisionOption { Id = "A", Text = inv ? "安抚" : "加固", CheckAttr = inv ? "Perception" : "Resistance", Threshold = 6 });
             ev.Options.Add(new DecisionOption { Id = "B", Text = inv ? "驱散" : "推进", CheckAttr = inv ? "Power" : "Operation", Threshold = 7 });
             return ev;
+        }
+
+        // =====================
+        // Management (NegEntropy)
+        // =====================
+
+        static void StepManageAnomalies(GameState s, Random rng)
+        {
+            if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
+
+            int totalAllNodes = 0;
+
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+                if (node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) continue;
+
+                int nodeTotal = 0;
+
+                foreach (var m in node.ManagedAnomalies)
+                {
+                    if (m == null) continue;
+                    if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue; // 未开始管理
+
+                    // 首次开始管理时记录开始日
+                    if (m.StartDay <= 0) m.StartDay = s.Day;
+
+                    var squad = GetAssignedAgents(s, m.ManagerAgentIds);
+                    if (squad.Count == 0) continue;
+
+                    int yield = CalcDailyNegEntropyYield(m, squad, rng);
+                    if (yield <= 0) continue;
+
+                    nodeTotal += yield;
+                    m.TotalNegEntropy += yield;
+                }
+
+                if (nodeTotal > 0)
+                {
+                    totalAllNodes += nodeTotal;
+                    s.News.Add($"- {node.Name} 管理产出：+{nodeTotal} 负熵");
+                }
+            }
+
+            if (totalAllNodes > 0)
+            {
+                s.NegEntropy += totalAllNodes;
+            }
+        }
+
+        static int CalcDailyNegEntropyYield(ManagedAnomalyState m, List<AgentState> managers, Random rng)
+        {
+            int level = Math.Max(1, m.Level);
+
+            // 基础产出：与异常等级相关
+            int baseYield = 2 + level;
+
+            // 管理干员加成：偏向 Resistance + Perception
+            int stat = 0;
+            foreach (var a in managers)
+                stat += a.Resistance + a.Perception;
+
+            int bonus = stat / 10; // 每 10 点合计属性 +1
+
+            // 轻微波动（避免过于机械）
+            int noise = (rng.NextDouble() < 0.5) ? 0 : 1;
+
+            return Math.Max(1, baseYield + bonus + noise);
+        }
+
+        static void EnsureManagedAnomalyRecorded(NodeState node, ContainableItem item)
+        {
+            if (node == null || item == null) return;
+            if (node.ManagedAnomalies == null) node.ManagedAnomalies = new List<ManagedAnomalyState>();
+
+            bool exists = node.ManagedAnomalies.Any(x => x != null && x.Id == item.Id);
+            if (exists) return;
+
+            node.ManagedAnomalies.Add(new ManagedAnomalyState
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Level = Math.Max(1, item.Level),
+                Favorited = true,
+                StartDay = 0,
+                TotalNegEntropy = 0
+            });
         }
 
         static float Clamp01(float v) => v < 0 ? 0 : (v > 1 ? 1 : v);

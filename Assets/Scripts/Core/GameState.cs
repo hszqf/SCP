@@ -39,6 +39,27 @@ namespace Core
         public int Level = 1;
     }
 
+    // 收容后进入“已收藏异常”，可被分配干员进行长期管理，按天产出负熵。
+    [Serializable]
+    public class ManagedAnomalyState
+    {
+        public string Id;
+        public string Name;
+        public int Level = 1;
+
+        // 左侧“已收藏异常”列表使用（后续可做收藏/取消收藏筛选）
+        public bool Favorited = true;
+
+        // 被分配的管理干员（占用）
+        public List<string> ManagerAgentIds = new List<string>();
+
+        // 第一次开始管理的日期（用于统计/成长）
+        public int StartDay;
+
+        // 累计产出
+        public int TotalNegEntropy;
+    }
+
     [Serializable]
     public class NodeTask
     {
@@ -79,6 +100,9 @@ namespace Core
 
         // 调查产出：可收容目标列表（调查完成后写入）
         public List<ContainableItem> Containables = new();
+        // 收容产出：已收容目标列表（收容完成后写入）
+        public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
+
 
         // ===== NEW: Unlimited tasks =====
         public List<NodeTask> Tasks = new();
@@ -129,6 +153,12 @@ namespace Core
         public int Day = 1;
         public int Money = 1000;
         public int Panic = 0;
+
+        // 新货币：负熵（由“管理异常”系统每日产出）
+        public int NegEntropy = 0;
+
+        // 已收藏/已收容异常的长期管理状态
+        public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
 
         public List<NodeState> Nodes = new();
         public List<AgentState> Agents = new();

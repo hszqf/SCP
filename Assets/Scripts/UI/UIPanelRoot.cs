@@ -1,5 +1,6 @@
 // Canvas-maintained file: UI/UIPanelRoot
 // Source: Assets/Scripts/UI/UIPanelRoot.cs
+// Version: UI_UIPanelRoot_v2_20260114a
 // Updated for N-task backend:
 // - Each click on 调查/收容 creates a NEW task (NodeTask) and opens AgentPicker bound to that taskId.
 // - This enables multiple investigate tasks and multiple contain tasks (one per containable).
@@ -27,6 +28,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private NewsPanel newsPanelPrefab;
     [SerializeField] private AgentPickerView agentPickerPrefab;
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
+    [SerializeField] private GameObject managePanelPrefab; // 管理面板 Prefab（你新建的管理界面）
 
     // --- 运行时实例 (自动生成) ---
     private HUD _hud;
@@ -35,8 +37,13 @@ public class UIPanelRoot : MonoBehaviour
     private NewsPanel _newsPanel;
     private AgentPickerView _agentPicker;
     private ConfirmDialog _confirmDialog;
+    private GameObject _managePanel;
 
     private string _currentNodeId;
+    private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
+
+    public string CurrentNodeId => _currentNodeId;
+    public string ManageNodeId => _manageNodeId;
 
     private void Awake()
     {
@@ -93,6 +100,7 @@ public class UIPanelRoot : MonoBehaviour
     {
         if (_nodePanel) _nodePanel.Hide();
         _currentNodeId = null;
+        // 注意：不要清理 _manageNodeId。管理面板可能仍在打开，需要保持其上下文。
     }
 
     public void RefreshNodePanel() // 兼容旧接口
@@ -194,7 +202,9 @@ public class UIPanelRoot : MonoBehaviour
             _currentNodeId,
             agents,
             pre,
-            isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, _currentNodeId),
+            // Busy means: already assigned to ANY active task (any node) OR managing ANY anomaly (any node).
+            // Do NOT ignore current node here; otherwise agents could be double-assigned within the same node.
+            isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, null),
             onConfirm: (ids) =>
             {
                 if (ids == null || ids.Count == 0)
@@ -204,7 +214,7 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 // Global busy check (multi-select)
-                if (GameControllerTaskExt.AreAgentsBusy(GameController.I, ids, _currentNodeId))
+                if (GameControllerTaskExt.AreAgentsBusy(GameController.I, ids, null))
                 {
                     ShowInfo("派遣失败", "部分干员正在其他任务执行中");
                     return;
@@ -221,6 +231,45 @@ public class UIPanelRoot : MonoBehaviour
             },
             multiSelect: true
         );
+    }
+
+    // ================== MANAGE PANEL ==================
+
+    void EnsureManagePanel()
+    {
+        if (_managePanel) return;
+        if (!managePanelPrefab)
+        {
+            Debug.LogWarning("[UIPanelRoot] managePanelPrefab 未配置！");
+            return;
+        }
+        _managePanel = Instantiate(managePanelPrefab, transform);
+        _managePanel.SetActive(false);
+    }
+
+    // 由 NodePanel 的“管理”按钮调用（推荐：传入当前节点 id）
+    public void OpenManage(string nodeId)
+    {
+        _manageNodeId = nodeId;
+        OpenManage();
+    }
+
+    // 兼容旧调用：若未传 nodeId，则默认使用当前打开的节点
+    public void OpenManage()
+    {
+        if (string.IsNullOrEmpty(_manageNodeId)) _manageNodeId = _currentNodeId;
+
+        EnsureManagePanel();
+        if (_managePanel)
+        {
+            _managePanel.SetActive(true);
+            _managePanel.transform.SetAsLastSibling();
+        }
+    }
+
+    public void CloseManage()
+    {
+        if (_managePanel) _managePanel.SetActive(false);
     }
 
     // ================== OTHERS ==================
@@ -272,6 +321,7 @@ public class UIPanelRoot : MonoBehaviour
     {
         CloseNode();
         CloseEvent();
+        CloseManage();
         if (_newsPanel) _newsPanel.Hide();
 
         // If picker is being closed implicitly, also cancel its newly created task via onCancel callback.

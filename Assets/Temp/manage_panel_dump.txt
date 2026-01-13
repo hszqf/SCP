@@ -1,0 +1,58 @@
+﻿=== Dump AnomalyManagePanel Prefab ===
+Prefab: Assets/Prefabs/UI/AnomalyManagementPanel.prefab
+Root: AnomalyManagementPanel
+
+-- Component Bindings (AnomalyManagePanel) --
+[OK] anomalyListContent = Content (RectTransform) path=AnomalyManagementPanel/MainContent/Left_AnomalyList/Viewport/Content
+[MISSING] anomalyListItemPrefab = null
+[OK] agentListContent = Content (RectTransform) path=AnomalyManagementPanel/MainContent/Right_OpsArea/Viewport/Content
+[OK] agentPickerItemPrefab = AgentPickerItem (GameObject) name=AgentPickerItem
+[OK] confirmButton = Btn_Confirm (Button) path=AnomalyManagementPanel/Btn_Confirm
+[OK] closeButton = Btn_Close (Button) path=AnomalyManagementPanel/Btn_Close
+[OK] headerText = Title (TextMeshProUGUI) path=AnomalyManagementPanel/Background/Title
+[OK] hintText = Hint (TextMeshProUGUI) path=AnomalyManagementPanel/Background/Hint
+
+-- Layout Checks --
+anomalyListContent path=AnomalyManagementPanel/MainContent/Left_AnomalyList/Viewport/Content
+  - In ScrollRect: Left_AnomalyList
+  - LayoutGroup: NO
+  - ContentSizeFitter: NO
+  - Rect: anchorMin=(0.00, 1.00) anchorMax=(1.00, 1.00) pivot=(0.00, 1.00) sizeDelta=(0.00, 300.00)
+agentListContent path=AnomalyManagementPanel/MainContent/Right_OpsArea/Viewport/Content
+  - In ScrollRect: Right_OpsArea
+  - LayoutGroup: NO
+  - ContentSizeFitter: NO
+  - Rect: anchorMin=(0.00, 1.00) anchorMax=(1.00, 1.00) pivot=(0.00, 1.00) sizeDelta=(0.00, 300.00)
+
+-- Item Prefab Checks --
+[MISSING] anomalyListItemPrefab is null
+agentPickerItemPrefab: AgentPickerItem
+  - AgentPickerItemView: YES
+  - LayoutElement: NO
+
+-- Hierarchy --
+- AnomalyManagementPanel
+  - Background
+    - Title
+    - Hint
+  - MainContent [LayoutGroup]
+    - Left_AnomalyList [ScrollRect]
+      - Viewport
+        - Content
+      - Scrollbar Horizontal
+        - Sliding Area
+          - Handle
+      - Scrollbar Vertical
+        - Sliding Area
+          - Handle
+    - Right_OpsArea [ScrollRect]
+      - Viewport
+        - Content
+      - Scrollbar Horizontal
+        - Sliding Area
+          - Handle
+      - Scrollbar Vertical
+        - Sliding Area
+          - Handle
+  - Btn_Close
+  - Btn_Confirm

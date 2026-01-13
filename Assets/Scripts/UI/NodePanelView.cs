@@ -34,6 +34,7 @@ public class NodePanelView : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button investigateButton;
     [SerializeField] private Button containButton;
+    [SerializeField] private Button manageButton; // 收容后管理（打开管理面板）
     [SerializeField] private Button closeButton;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
 
@@ -41,6 +42,9 @@ public class NodePanelView : MonoBehaviour
     private Action _onInvestigate;
     private Action _onContain;
     private Action _onClose;
+
+    // Cached root (for opening manage panel without changing Init signature)
+    private UIPanelRoot _uiRoot;
 
     private string _nodeId;
 
@@ -84,6 +88,8 @@ public class NodePanelView : MonoBehaviour
 
     public void Init(Action onInvestigate, Action onContain, Action onClose)
     {
+        // Cache UIPanelRoot once
+        if (_uiRoot == null) _uiRoot = FindObjectOfType<UIPanelRoot>();
         _onInvestigate = onInvestigate;
         _onContain = onContain;
         _onClose = onClose;
@@ -98,6 +104,16 @@ public class NodePanelView : MonoBehaviour
         {
             containButton.onClick.RemoveAllListeners();
             containButton.onClick.AddListener(() => _onContain?.Invoke());
+        }
+
+        if (manageButton)
+        {
+            manageButton.onClick.RemoveAllListeners();
+            manageButton.onClick.AddListener(() =>
+            {
+                // Manage panel is global (not per-node). If missing, do nothing.
+                _uiRoot?.OpenManage(_nodeId);
+            });
         }
 
         if (closeButton)
@@ -148,6 +164,7 @@ public class NodePanelView : MonoBehaviour
         if (statusText) statusText.text = s;
 
         UpdateDispatchButtons(n);
+        UpdateManageButton(n);
 
         if (progressText)
         {
@@ -165,7 +182,9 @@ public class NodePanelView : MonoBehaviour
                     .Count();
             }
 
-            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive} | 可收容 {containables} | Busy {busy}";
+            int managed = n.ManagedAnomalies != null ? n.ManagedAnomalies.Count : 0;
+            int neg = GameController.I.State.NegEntropy;
+            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg}";
         }
 
         CacheTaskListUIIfNeeded();
@@ -693,6 +712,21 @@ public class NodePanelView : MonoBehaviour
 
         if (investigateButton) investigateButton.interactable = canInvestigate;
         if (containButton) containButton.interactable = canContain;
+    }
+
+    private void UpdateManageButton(NodeState n)
+    {
+        if (!manageButton) return;
+        if (n == null)
+        {
+            manageButton.interactable = false;
+            return;
+        }
+
+        // 管理入口属于“节点内异常”，因此按当前节点是否存在已收容异常来决定是否可点。
+        // 如需允许空态也可打开，把下面的 hasAny 判断改为 true。
+        bool hasAny = n.ManagedAnomalies != null && n.ManagedAnomalies.Any(x => x != null && x.Favorited);
+        manageButton.interactable = hasAny;
     }
 
     // ----------------------
