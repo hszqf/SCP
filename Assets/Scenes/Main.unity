@@ -621,6 +621,7 @@ MonoBehaviour:
   newsPanelPrefab: {fileID: 5476982729825800897, guid: 5947778c867db39458830230ff31d3d5, type: 3}
   agentPickerPrefab: {fileID: 7515083810427959721, guid: 57bb04d57c340e94eaa39ef2d3112740, type: 3}
   confirmDialogPrefab: {fileID: 8639386908128668977, guid: 443d7c44dc6ecff419aecfe2e57a2c7d, type: 3}
+  managePanelPrefab: {fileID: 5526819420777000065, guid: e32b9f1e805088e48afc0644c360b814, type: 3}
 --- !u!1 &1038949951
 GameObject:
   m_ObjectHideFlags: 0
