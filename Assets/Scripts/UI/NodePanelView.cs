@@ -697,6 +697,10 @@ public class NodePanelView : MonoBehaviour
 
         if (!hasSquad) return "状态：未指派";
 
+        // Manage tasks: no "待开始" concept; once assigned, it is immediately "管理中".
+        if (t.Type == TaskType.Manage)
+            return "状态：管理中";
+
         if (t.Progress <= EPS) return "状态：待开始";
 
         return $"状态：进行中（{(int)(t.Progress * 100)}%）";
@@ -707,6 +711,9 @@ public class NodePanelView : MonoBehaviour
         if (t == null) return TaskActionMode.None;
         if (t.State != TaskState.Active) return TaskActionMode.None;
         if (!hasSquad) return TaskActionMode.None;
+        // Manage tasks: always allow Cancel to release agents; no Retreat confirmation flow.
+        if (t.Type == TaskType.Manage) return TaskActionMode.Cancel;
+
         return (t.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
     }
 
