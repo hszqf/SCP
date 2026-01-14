@@ -115,6 +115,36 @@ public class GameController : MonoBehaviour
         return t;
     }
 
+    public NodeTask CreateManageTask(string nodeId, string managedAnomalyId)
+    {
+        var n = GetNode(nodeId);
+        if (n == null) return null;
+        if (n.ManagedAnomalies == null || n.ManagedAnomalies.Count == 0) return null;
+
+        // Validate target
+        string target = managedAnomalyId;
+        if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.Id == target))
+            return null;
+
+        if (n.Tasks == null) n.Tasks = new List<NodeTask>();
+
+        // If already has an active manage task for this anomaly, reuse (idempotent)
+        var existing = n.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == target);
+        if (existing != null) return existing;
+
+        var t = new NodeTask
+        {
+            Id = "T_" + Guid.NewGuid().ToString("N")[..10],
+            Type = TaskType.Manage,
+            State = TaskState.Active,
+            CreatedDay = State.Day,
+            Progress = 0f,
+            TargetManagedAnomalyId = target,
+        };
+        n.Tasks.Add(t);
+        return t;
+    }
+
     public bool TryGetTask(string taskId, out NodeState node, out NodeTask task)
     {
         node = null;
@@ -145,6 +175,13 @@ public class GameController : MonoBehaviour
         t.Progress = 0f;
         t.State = TaskState.Cancelled;
 
+        // Compatibility: if this is a Manage task, also clear legacy ManagerAgentIds on the target anomaly.
+        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
+        {
+            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
+            if (m != null && m.ManagerAgentIds != null) m.ManagerAgentIds.Clear();
+        }
+
         // Node status: only coarse
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
@@ -159,6 +196,18 @@ public class GameController : MonoBehaviour
         if (t.State != TaskState.Active) return;
 
         t.AssignedAgentIds = new List<string>(agentIds);
+
+        // Compatibility: if this is a Manage task, mirror to legacy ManagerAgentIds on the target anomaly.
+        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
+        {
+            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
+            if (m != null)
+            {
+                if (m.ManagerAgentIds == null) m.ManagerAgentIds = new List<string>();
+                m.ManagerAgentIds.Clear();
+                m.ManagerAgentIds.AddRange(agentIds);
+            }
+        }
 
         // Node-level bookkeeping
         if (n != null && n.Status != NodeStatus.Secured)
@@ -187,6 +236,14 @@ public class GameController : MonoBehaviour
 
         // Legacy: default to first containable
         var t = CreateContainTask(nodeId, n.Containables[0].Id);
+        if (t == null) return;
+        AssignTask(t.Id, agentIds);
+    }
+
+    // Optional convenience API for UI: assign management squad to a managed anomaly.
+    public void AssignManage(string nodeId, string managedAnomalyId, List<string> agentIds)
+    {
+        var t = CreateManageTask(nodeId, managedAnomalyId);
         if (t == null) return;
         AssignTask(t.Id, agentIds);
     }
@@ -235,7 +292,23 @@ public static class GameControllerTaskExt
             }
         }
 
-        // 2) Busy by anomaly management (ManagerAgentIds) across ALL nodes
+        // 2) Busy by anomaly management via ACTIVE Manage tasks (formalized)
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.Tasks == null) continue;
+            foreach (var t in node.Tasks)
+            {
+                if (t == null) continue;
+                if (t.State != TaskState.Active) continue;
+                if (t.Type != TaskType.Manage) continue;
+                if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
+
+                if (t.AssignedAgentIds.Intersect(agentIds).Any())
+                    return true;
+            }
+        }
+
+        // 3) Compatibility: legacy ManagerAgentIds (should be phased out)
         foreach (var node in gc.State.Nodes)
         {
             if (node?.ManagedAnomalies == null) continue;

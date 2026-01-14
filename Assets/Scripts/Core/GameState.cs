@@ -16,7 +16,7 @@ namespace Core
     // Events still attach to a node; their kind affects which task type they modify.
     public enum EventKind { Investigate, Contain }
 
-    public enum TaskType { Investigate, Contain }
+    public enum TaskType { Investigate, Contain, Manage }
     public enum TaskState { Active, Completed, Cancelled }
 
     [Serializable]
@@ -51,6 +51,8 @@ namespace Core
         public bool Favorited = true;
 
         // 被分配的管理干员（占用）
+        // Legacy field: when “Manage” is formalized as NodeTask (TaskType.Manage), agent assignment should live in NodeTask.AssignedAgentIds.
+        // Kept temporarily for migration/compatibility; do not write new logic against this field.
         public List<string> ManagerAgentIds = new List<string>();
 
         // 第一次开始管理的日期（用于统计/成长）
@@ -75,6 +77,9 @@ namespace Core
 
         // Only for containment tasks: which containable we are trying to contain.
         public string TargetContainableId;
+
+        // Only for management tasks: which managed anomaly we are managing.
+        public string TargetManagedAnomalyId;
 
         public int CreatedDay;
         public int CompletedDay;
@@ -157,7 +162,8 @@ namespace Core
         // 新货币：负熵（由“管理异常”系统每日产出）
         public int NegEntropy = 0;
 
-        // 已收藏/已收容异常的长期管理状态
+        // 已收藏/已收容异常的长期管理状态（Legacy/Deprecated）
+        // Node-scoped source of truth is NodeState.ManagedAnomalies.
         public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
 
         public List<NodeState> Nodes = new();

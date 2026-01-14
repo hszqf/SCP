@@ -170,6 +170,7 @@ public class NodePanelView : MonoBehaviour
         {
             int invActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate) ?? 0;
             int conActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain) ?? 0;
+            int manActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage) ?? 0;
             int containables = n.Containables?.Count ?? 0;
 
             int busy = 0;
@@ -184,7 +185,7 @@ public class NodePanelView : MonoBehaviour
 
             int managed = n.ManagedAnomalies != null ? n.ManagedAnomalies.Count : 0;
             int neg = GameController.I.State.NegEntropy;
-            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg}";
+            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg}";
         }
 
         CacheTaskListUIIfNeeded();
@@ -541,11 +542,22 @@ public class NodePanelView : MonoBehaviour
             var status = GetTmp(row, "Status");
             var people = GetTmp(row, "People");
 
-            string titleTextLocal = (t.Type == TaskType.Investigate) ? "调查" : "收容";
+            string titleTextLocal = t.Type switch
+            {
+                TaskType.Investigate => "调查",
+                TaskType.Contain => "收容",
+                TaskType.Manage => "管理",
+                _ => t.Type.ToString()
+            };
             if (t.Type == TaskType.Contain)
             {
                 string tn = ResolveContainableName(node, t.TargetContainableId);
                 if (!string.IsNullOrEmpty(tn)) titleTextLocal += $"：{tn}";
+            }
+            else if (t.Type == TaskType.Manage)
+            {
+                string an = ResolveManagedAnomalyName(node, t.TargetManagedAnomalyId);
+                if (!string.IsNullOrEmpty(an)) titleTextLocal += $"：{an}";
             }
             if (title) title.text = titleTextLocal;
 
@@ -646,8 +658,14 @@ public class NodePanelView : MonoBehaviour
 
     private static int TaskTypeOrder(TaskType t)
     {
-        // Investigate first, then Contain
-        return t == TaskType.Investigate ? 0 : 1;
+        // Investigate first, then Contain, then Manage
+        return t switch
+        {
+            TaskType.Investigate => 0,
+            TaskType.Contain => 1,
+            TaskType.Manage => 2,
+            _ => 9
+        };
     }
 
     private static string ResolveContainableName(NodeState node, string containableId)
@@ -659,6 +677,17 @@ public class NodePanelView : MonoBehaviour
             if (c != null) return c.Name ?? "";
         }
         return node.Containables[0]?.Name ?? "";
+    }
+
+    private static string ResolveManagedAnomalyName(NodeState node, string managedAnomalyId)
+    {
+        if (node == null || node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return "";
+        if (!string.IsNullOrEmpty(managedAnomalyId))
+        {
+            var m = node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == managedAnomalyId);
+            if (m != null) return m.Name ?? "";
+        }
+        return "";
     }
 
     private static string BuildTaskStatusText(NodeTask t, bool hasSquad)

@@ -2,7 +2,8 @@
 // Purpose: Management panel for contained anomalies (NODE-SCOPED).
 // - Left: favorited managed anomalies of a specific node (NodeState.ManagedAnomalies)
 // - Right: agent list (reuses AgentPickerItemView) to assign managers
-// - Confirm writes ManagedAnomalyState.ManagerAgentIds; Sim awards daily NegEntropy if managers assigned.
+// - Confirm creates/updates a NodeTask (TaskType.Manage) and assigns agents via NodeTask.AssignedAgentIds.
+//   Sim awards daily NegEntropy based on active Manage tasks.
 //
 // Data scope note:
 // - Containables & post-containment management belong to the node that contained them.
@@ -169,7 +170,13 @@ public class AnomalyManagePanel : MonoBehaviour
 
             var btn = go.GetComponentInChildren<Button>(true);
             var label = go.GetComponentsInChildren<TMP_Text>(true).FirstOrDefault();
-            if (label) label.text = BuildAnomalyLabel(a);
+            int mgr = 0;
+            var nodeForLabel = (GameController.I != null && !string.IsNullOrEmpty(_nodeId)) ? GameController.I.GetNode(_nodeId) : null;
+            var mtForLabel = FindManageTask(nodeForLabel, a.Id);
+            if (mtForLabel?.AssignedAgentIds != null) mgr = mtForLabel.AssignedAgentIds.Count;
+            else if (a.ManagerAgentIds != null) mgr = a.ManagerAgentIds.Count; // legacy fallback
+
+            if (label) label.text = BuildAnomalyLabel(a, mgr);
 
             bool selected = (a.Id == _selectedAnomalyId);
             SetListItemSelectedVisual(go, selected);
@@ -183,10 +190,9 @@ public class AnomalyManagePanel : MonoBehaviour
         }
     }
 
-    private static string BuildAnomalyLabel(ManagedAnomalyState a)
+    private static string BuildAnomalyLabel(ManagedAnomalyState a, int mgr)
     {
         if (a == null) return "";
-        int mgr = a.ManagerAgentIds != null ? a.ManagerAgentIds.Count : 0;
         return $"Lv{a.Level} {a.Name}  (管理:{mgr})";
     }
 
@@ -205,14 +211,23 @@ public class AnomalyManagePanel : MonoBehaviour
         _selectedAnomalyId = anomalyId;
         _selectedAgentIds.Clear();
 
-        // Pull current assignment
+        // Pull current assignment (prefer Manage Task, fallback legacy field)
         var gc = GameController.I;
         var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
-        var m = FindManagedAnomaly(node, anomalyId);
-        if (m?.ManagerAgentIds != null)
+        var mt = FindManageTask(node, anomalyId);
+        if (mt?.AssignedAgentIds != null)
         {
-            foreach (var id in m.ManagerAgentIds)
+            foreach (var id in mt.AssignedAgentIds)
                 _selectedAgentIds.Add(id);
+        }
+        else
+        {
+            var m = FindManagedAnomaly(node, anomalyId);
+            if (m?.ManagerAgentIds != null)
+            {
+                foreach (var id in m.ManagerAgentIds)
+                    _selectedAgentIds.Add(id);
+            }
         }
 
         RefreshAll();
@@ -236,9 +251,12 @@ public class AnomalyManagePanel : MonoBehaviour
         if (anomaly == null)
             return;
 
-        // Sync selection from anomaly (in case changed elsewhere)
+        // Sync selection from Manage Task (source of truth), fallback legacy.
+        var mt = FindManageTask(node, anomaly.Id);
         _selectedAgentIds.Clear();
-        if (anomaly.ManagerAgentIds != null)
+        if (mt?.AssignedAgentIds != null)
+            foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
+        else if (anomaly.ManagerAgentIds != null)
             foreach (var id in anomaly.ManagerAgentIds) _selectedAgentIds.Add(id);
 
         foreach (var ag in gc.State.Agents)
@@ -247,15 +265,11 @@ public class AnomalyManagePanel : MonoBehaviour
 
             bool selected = _selectedAgentIds.Contains(ag.Id);
 
-            // Busy check:
-            // - Other node tasks (global)
+            // Busy check (global): any active task (including Manage) OR legacy management occupancy.
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
 
-            // - Other anomalies management (exclude current anomaly so we can edit its current selection)
-            bool busyManage = IsAgentManagingOtherAnomaly(gc.State, ag.Id, anomaly.Id);
-
             // Allow clicking to deselect even if currently busy (soft lock)
-            bool isBusyOther = (!selected) && (busyTask || busyManage);
+            bool isBusyOther = (!selected) && busyTask;
 
             var go = Instantiate(agentPickerItemPrefab, agentListContent);
             go.name = "Agent_" + ag.Id;
@@ -312,12 +326,24 @@ public class AnomalyManagePanel : MonoBehaviour
         var m = FindManagedAnomaly(node, _selectedAnomalyId);
         if (m == null) return;
 
-        // Write back
-        m.ManagerAgentIds = _selectedAgentIds.ToList();
+        // Write back as a formal Manage task.
+        var mt = gc.CreateManageTask(_nodeId, m.Id);
+        if (mt == null) return;
 
-        // Set StartDay on first assignment
-        if (m.StartDay <= 0 && m.ManagerAgentIds.Count > 0)
-            m.StartDay = gc.State.Day;
+        var newIds = _selectedAgentIds.ToList();
+
+        // If clearing selection, cancel/retreat the manage task to release occupancy.
+        if (newIds.Count == 0)
+        {
+            gc.CancelOrRetreatTask(mt.Id);
+        }
+        else
+        {
+            gc.AssignTask(mt.Id, newIds);
+
+            // Optional: set StartDay for UX (Sim will also set on first yield)
+            if (m.StartDay <= 0) m.StartDay = gc.State.Day;
+        }
 
         // Update UI
         RefreshAll();
@@ -338,7 +364,10 @@ public class AnomalyManagePanel : MonoBehaviour
             return;
         }
 
-        int mgr = m.ManagerAgentIds != null ? m.ManagerAgentIds.Count : 0;
+        int mgr = 0;
+        var mt = FindManageTask(node, m.Id);
+        if (mt?.AssignedAgentIds != null) mgr = mt.AssignedAgentIds.Count;
+        else if (m.ManagerAgentIds != null) mgr = m.ManagerAgentIds.Count; // legacy fallback
         string nodeName = "";
         if (gc != null && !string.IsNullOrEmpty(_nodeId))
         {
@@ -361,23 +390,15 @@ public class AnomalyManagePanel : MonoBehaviour
         return node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == anomalyId);
     }
 
-    private static bool IsAgentManagingOtherAnomaly(GameState s, string agentId, string excludeAnomalyId)
+    private static NodeTask FindManageTask(NodeState node, string anomalyId)
     {
-        if (s?.Nodes == null || string.IsNullOrEmpty(agentId)) return false;
+        if (node?.Tasks == null || string.IsNullOrEmpty(anomalyId)) return null;
 
-        foreach (var node in s.Nodes)
-        {
-            if (node == null || node.ManagedAnomalies == null) continue;
+        // Prefer active task
+        var active = node.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
+        if (active != null) return active;
 
-            foreach (var m in node.ManagedAnomalies)
-            {
-                if (m == null) continue;
-                if (!string.IsNullOrEmpty(excludeAnomalyId) && m.Id == excludeAnomalyId) continue;
-                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
-                if (m.ManagerAgentIds.Contains(agentId)) return true;
-            }
-        }
-
-        return false;
+        // Fallback: any manage task (history)
+        return node.Tasks.LastOrDefault(t => t != null && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
     }
 }

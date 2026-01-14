@@ -66,6 +66,17 @@ namespace Core
                     if (squad.Count == 0) continue;
 
                     float delta = CalcDailyProgressDelta(t, squad, rng);
+
+                    // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
+                    // They should never auto-complete.
+                    if (t.Type == TaskType.Manage)
+                    {
+                        t.Progress = Math.Max(t.Progress, 0f);
+                        t.Progress = Clamp01(t.Progress + delta);
+                        if (t.Progress >= 1f) t.Progress = 0.99f;
+                        continue;
+                    }
+
                     t.Progress = Clamp01(t.Progress + delta);
 
                     if (t.Progress >= 1f)
@@ -76,10 +87,11 @@ namespace Core
             }
 
             // 2.5) 收容后管理（负熵产出）
-            // 管理系统：被成功收容的异常会进入 NodeState.ManagedAnomalies（该节点“已收容异常/已收藏异常”）。
-            // 若某异常被分配了管理干员（ManagerAgentIds 非空），则每天结算产出负熵，并累加到全局货币 GameState.NegEntropy。
-            // 后续逃逸等影响也将基于节点数据实现。
-            StepManageAnomalies(s, rng);
+            // 管理系统已正式纳入 NodeTask：
+            // - Type==Manage 的 Active 任务代表“正在管理某个已收容异常”
+            // - 任务通过 TargetManagedAnomalyId 绑定到 NodeState.ManagedAnomalies
+            // - 每天根据管理小队属性产出负熵，累加到 GameState.NegEntropy，并写回 ManagedAnomalyState.TotalNegEntropy
+            StepManageTasks(s, rng);
 
             // 3) 恐慌 & 收入
             int activeAnomaly = s.Nodes.Count(n => n.HasAnomaly && n.Status != NodeStatus.Secured);
@@ -250,19 +262,25 @@ namespace Core
 
         static float CalcDailyProgressDelta(NodeTask t, List<AgentState> squad, Random rng)
         {
-            float baseDelta = 0.10f;
+            // Base daily progress.
+            // - Investigate/Contain: normal completion loop.
+            // - Manage: progress is only a "started" flag; keep delta small to avoid hitting 1.
+
+            float baseDelta = (t.Type == TaskType.Manage) ? 0.02f : 0.10f;
 
             int totalStat = 0;
             foreach (var a in squad)
             {
                 if (t.Type == TaskType.Investigate) totalStat += a.Perception;
-                else totalStat += a.Operation;
+                else if (t.Type == TaskType.Contain) totalStat += a.Operation;
+                else totalStat += (a.Resistance + a.Perception) / 2; // Manage
             }
 
-            float statBonus = totalStat * 0.01f;
+            float statBonus = totalStat * ((t.Type == TaskType.Manage) ? 0.002f : 0.01f);
             float noise = (float)(rng.NextDouble() * 0.02 - 0.01);
 
-            return Math.Max(0.05f, baseDelta + statBonus + noise);
+            float min = (t.Type == TaskType.Manage) ? 0.005f : 0.05f;
+            return Math.Max(min, baseDelta + statBonus + noise);
         }
 
         static float CalcSuccessRate(DecisionOption opt, List<AgentState> squad)
@@ -345,10 +363,10 @@ namespace Core
         }
 
         // =====================
-        // Management (NegEntropy)
+        // Management (NegEntropy) - formalized as NodeTask.Manage
         // =====================
 
-        static void StepManageAnomalies(GameState s, Random rng)
+        static void StepManageTasks(GameState s, Random rng)
         {
             if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
 
@@ -357,19 +375,26 @@ namespace Core
             foreach (var node in s.Nodes)
             {
                 if (node == null) continue;
+                if (node.Tasks == null || node.Tasks.Count == 0) continue;
                 if (node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) continue;
 
                 int nodeTotal = 0;
 
-                foreach (var m in node.ManagedAnomalies)
+                foreach (var t in node.Tasks)
                 {
-                    if (m == null) continue;
-                    if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue; // 未开始管理
+                    if (t == null) continue;
+                    if (t.State != TaskState.Active) continue;
+                    if (t.Type != TaskType.Manage) continue;
+                    if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
+                    if (string.IsNullOrEmpty(t.TargetManagedAnomalyId)) continue;
 
-                    // 首次开始管理时记录开始日
+                    var m = node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
+                    if (m == null) continue; // dangling task
+
+                    // First day of management
                     if (m.StartDay <= 0) m.StartDay = s.Day;
 
-                    var squad = GetAssignedAgents(s, m.ManagerAgentIds);
+                    var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
 
                     int yield = CalcDailyNegEntropyYield(m, squad, rng);
@@ -387,9 +412,7 @@ namespace Core
             }
 
             if (totalAllNodes > 0)
-            {
                 s.NegEntropy += totalAllNodes;
-            }
         }
 
         static int CalcDailyNegEntropyYield(ManagedAnomalyState m, List<AgentState> managers, Random rng)
