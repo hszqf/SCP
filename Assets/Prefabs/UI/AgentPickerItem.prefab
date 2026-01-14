@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7087918495945100070}
   - component: {fileID: 5183347360312206090}
   - component: {fileID: 1120503368642989573}
+  - component: {fileID: 1191648588066900927}
   m_Layer: 0
   m_Name: AgentPickerItem
   m_TagString: Untagged
@@ -139,11 +140,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AgentPickerItemView
   button: {fileID: 5183347360312206090}
-  accentBar: {fileID: 512857168880329875}
+  background: {fileID: 0}
   nameText: {fileID: 3127993555252484850}
   attrText: {fileID: 6745731795348752799}
   busyTagText: {fileID: 1403795549729221969}
-  selectedMark: {fileID: 3780119948908146349}
+  selectedIcon: {fileID: 0}
+--- !u!114 &1191648588066900927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613666048140394576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
+  m_PreferredHeight: 72
+  m_FlexibleWidth: 1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &2108072811393837221
 GameObject:
   m_ObjectHideFlags: 0
