@@ -58,29 +58,22 @@ public class AnomalyManagePanel : MonoBehaviour
 
     void OnEnable()
     {
-        // Some callers may only SetActive(true) without calling Show(nodeId).
-        // Ensure node context exists before refreshing.
-        ResolveNodeContextIfNeeded();
-        RefreshAll();
+        var root = UIPanelRoot.I;
+        _nodeId = root != null ? root.ManageNodeId : null;
+        RefreshUI();
     }
 
     public void Show()
     {
-        // If caller did not set nodeId explicitly, resolve from UIPanelRoot.
-        ResolveNodeContextIfNeeded();
-
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
-        RefreshAll();
+        RefreshUI();
     }
 
     // Optional explicit node binding (recommended if you call panel directly)
     public void Show(string nodeId)
     {
-        _nodeId = nodeId;
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-        RefreshAll();
+        ShowForNode(nodeId);
     }
 
     public void Hide()
@@ -88,33 +81,20 @@ public class AnomalyManagePanel : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    // --------------------
-    // Context
-    // --------------------
-
-    private void ResolveNodeContextIfNeeded()
+    public void ShowForNode(string nodeId)
     {
-        if (!string.IsNullOrEmpty(_nodeId)) return;
-
-        var root = FindObjectOfType<UIPanelRoot>();
-        if (root == null) return;
-
-        // Prefer manage context
-        _nodeId = root.ManageNodeId;
-
-        // Fallback: current node (so panel can still show something if ManageNodeId was not set)
-        if (string.IsNullOrEmpty(_nodeId))
-            _nodeId = root.CurrentNodeId;
+        _nodeId = nodeId;
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+        RefreshUI();
     }
 
     // --------------------
     // Refresh
     // --------------------
 
-    public void RefreshAll()
+    public void RefreshUI()
     {
-        ResolveNodeContextIfNeeded();
-
         var gc = GameController.I;
         if (gc == null) return;
 
@@ -124,6 +104,11 @@ public class AnomalyManagePanel : MonoBehaviour
         // Keep selection valid
         if (string.IsNullOrEmpty(_selectedAnomalyId) || !list.Any(x => x.Id == _selectedAnomalyId))
             _selectedAnomalyId = list.FirstOrDefault()?.Id;
+        if (list.Count == 0)
+        {
+            _selectedAnomalyId = null;
+            _selectedAgentIds.Clear();
+        }
 
         RebuildAnomalyList(list);
         RebuildAgentList();
@@ -231,7 +216,7 @@ public class AnomalyManagePanel : MonoBehaviour
             }
         }
 
-        RefreshAll();
+        RefreshUI();
     }
 
     private void RebuildAgentList()
@@ -347,7 +332,7 @@ public class AnomalyManagePanel : MonoBehaviour
         }
 
         // Update UI
-        RefreshAll();
+        RefreshUI();
         gc.Notify();
     }
 

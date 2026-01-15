@@ -39,6 +39,7 @@ public class UIPanelRoot : MonoBehaviour
     private AgentPickerView _agentPicker;
     private ConfirmDialog _confirmDialog;
     private GameObject _managePanel;
+    private AnomalyManagePanel _managePanelView;
 
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
@@ -260,6 +261,7 @@ public class UIPanelRoot : MonoBehaviour
             return;
         }
         _managePanel = Instantiate(managePanelPrefab, transform);
+        _managePanelView = _managePanel.GetComponent<AnomalyManagePanel>();
         _managePanel.SetActive(false);
     }
 
@@ -273,12 +275,12 @@ public class UIPanelRoot : MonoBehaviour
     // 兼容旧调用：若未传 nodeId，则默认使用当前打开的节点
     public void OpenManage()
     {
-        if (string.IsNullOrEmpty(_manageNodeId)) _manageNodeId = _currentNodeId;
-
         EnsureManagePanel();
         if (_managePanel)
         {
+            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
             _managePanel.SetActive(true);
+            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
             _managePanel.transform.SetAsLastSibling();
         }
     }
