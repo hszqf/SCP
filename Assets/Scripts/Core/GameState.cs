@@ -4,6 +4,7 @@
 // Notes:
 // - Legacy single-task fields are kept temporarily for compatibility with existing UI/code.
 // - New systems should only use NodeState.Tasks.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -173,3 +174,4 @@ namespace Core
         public List<string> News = new();
     }
 }
+// </EXPORT_BLOCK>

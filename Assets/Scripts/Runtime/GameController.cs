@@ -6,6 +6,7 @@
 // - Assign/Busy/Cancel/Retreat all operate on NodeTask.
 // - Legacy APIs (TryAssignInvestigate/TryAssignContain/ForceWithdraw(nodeId)) are kept so existing UI can compile.
 //   They intentionally operate on a single "current" task per type to avoid creating invisible tasks before UI is upgraded.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -438,3 +439,4 @@ public static class GameControllerTaskExt
         return AssignResult.Ok();
     }
 }
+// </EXPORT_BLOCK>

@@ -2,6 +2,7 @@
 // Source: Assets/Scripts/UI/AgentPickerView.cs
 // Updated for rule-set: 预定占用
 // - PreSelected agents stay BUSY (locked) even in current node.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -190,3 +191,4 @@ public class AgentPickerView : MonoBehaviour
         Hide();
     }
 }
+// </EXPORT_BLOCK>

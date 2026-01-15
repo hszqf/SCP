@@ -4,6 +4,7 @@
 // Notes:
 // - Random incident generation is currently disabled via ENABLE_RANDOM_EVENTS.
 // - Events (PendingEvent) apply progress deltas to the most recent matching active task on the node.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -458,3 +459,4 @@ namespace Core
         static int ClampInt(int v, int min, int max) => v < min ? min : (v > max ? max : v);
     }
 }
+// </EXPORT_BLOCK>

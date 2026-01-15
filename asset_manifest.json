@@ -1,0 +1,55 @@
+{
+  "type": "ProjectAgentExportSpec",
+  "version": 1,
+  "outputPath": "",
+  "exports": [
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/Runtime/GameController.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/Core/Sim.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/Core/GameState.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/UI/UIPanelRoot.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/UI/NodePanelView.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/UI/AgentPickerView.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/UI/AgentPickerItemView.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    },
+    {
+      "kind": "code_marker_block",
+      "file": "Assets/Scripts/UI/AnomalyManagePanel.cs",
+      "start": "// <EXPORT_BLOCK>",
+      "end": "// </EXPORT_BLOCK>"
+    }
+  ]
+}

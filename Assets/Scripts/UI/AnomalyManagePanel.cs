@@ -8,6 +8,7 @@
 // Data scope note:
 // - Containables & post-containment management belong to the node that contained them.
 // - Global currency NegEntropy is accumulated in GameState, but per-anomaly state is stored under NodeState.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -402,3 +403,4 @@ public class AnomalyManagePanel : MonoBehaviour
         return node.Tasks.LastOrDefault(t => t != null && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
     }
 }
+// </EXPORT_BLOCK>

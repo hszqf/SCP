@@ -10,6 +10,7 @@
 // - Busy check still uses GameControllerTaskExt.AreAgentsBusy (global task scan).
 // - Contain requires node.Containables.Count > 0; target selection picks a containable not already targeted by an active contain task when possible.
 // - UI still uses ConfirmDialog for info prompts.
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -355,3 +356,4 @@ public class UIPanelRoot : MonoBehaviour
         return node.Containables[0].Id;
     }
 }
+// </EXPORT_BLOCK>
