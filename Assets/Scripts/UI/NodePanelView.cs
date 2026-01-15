@@ -15,6 +15,7 @@
 //          - People (TMP_Text)
 //          - Btn_Action (Button)
 //             - Label (TMP_Text)
+// <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
@@ -792,3 +793,4 @@ public class NodePanelView : MonoBehaviour
         return null;
     }
 }
+// </EXPORT_BLOCK>

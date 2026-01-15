@@ -1,3 +1,4 @@
+// <EXPORT_BLOCK>
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -91,3 +92,4 @@ public class AgentPickerItemView : MonoBehaviour
         if (attrText) attrText.color = selected ? new Color(0.2f, 0.2f, 0.2f) : new Color(0.8f, 0.8f, 0.8f);
     }
 }
+// </EXPORT_BLOCK>
