@@ -352,11 +352,13 @@ public class UIPanelRoot : MonoBehaviour
         var taskId = _pickerTaskId;
         _pickerTaskId = null;
 
-        if (hidePicker && _agentPicker) _agentPicker.Hide();
-        if (string.IsNullOrEmpty(taskId) || GameController.I == null) return;
+        if (!string.IsNullOrEmpty(taskId) && GameController.I != null)
+        {
+            GameController.I.CancelOrRetreatTask(taskId);
+            RefreshNodePanel();
+        }
 
-        GameController.I.CancelOrRetreatTask(taskId);
-        RefreshNodePanel();
+        if (hidePicker && _agentPicker) _agentPicker.Hide();
     }
 
     // Pick a containable that is not already targeted by an active containment task when possible.
