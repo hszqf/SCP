@@ -285,7 +285,8 @@ public static class ValidateUIPrefabs
 
     private static Transform FindSuggestionTransform(GameObject root, string fieldName, Type expectedType)
     {
-        var candidates = GetCandidateTransforms(root, expectedType)
+        var candidates = GetComponentsOfType(root, expectedType)
+            .Select(component => component.transform)
             .ToList();
 
         if (candidates.Count == 0)
@@ -307,11 +308,11 @@ public static class ValidateUIPrefabs
         return candidates.Count == 1 ? candidates[0] : null;
     }
 
-    private static IEnumerable<Transform> GetCandidateTransforms(GameObject root, Type expectedType)
+    private static IEnumerable<Component> GetComponentsOfType(GameObject root, Type expectedType)
     {
         if (expectedType == typeof(GameObject))
         {
-            return root.GetComponentsInChildren<Transform>(true);
+            return root.GetComponentsInChildren<Transform>(true).Select(transform => transform.gameObject);
         }
 
         if (expectedType == typeof(Transform))
@@ -319,9 +320,7 @@ public static class ValidateUIPrefabs
             return root.GetComponentsInChildren<Transform>(true);
         }
 
-        return root.GetComponentsInChildren(expectedType, true)
-            .OfType<Component>()
-            .Select(component => component.transform);
+        return root.GetComponentsInChildren(expectedType, true).OfType<Component>();
     }
 
     private static string ExtractToken(string fieldName)
