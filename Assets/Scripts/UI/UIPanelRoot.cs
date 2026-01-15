@@ -42,6 +42,7 @@ public class UIPanelRoot : MonoBehaviour
 
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
+    private string _pickerTaskId;
 
     public string CurrentNodeId => _currentNodeId;
     public string ManageNodeId => _manageNodeId;
@@ -99,6 +100,7 @@ public class UIPanelRoot : MonoBehaviour
 
     public void CloseNode()
     {
+        ForceCancelPickerIfNeeded(true);
         if (_nodePanel) _nodePanel.Hide();
         _currentNodeId = null;
         // 注意：不要清理 _manageNodeId。管理面板可能仍在打开，需要保持其上下文。
@@ -153,6 +155,8 @@ public class UIPanelRoot : MonoBehaviour
         if (GameController.I == null) return;
         if (string.IsNullOrEmpty(_currentNodeId)) return;
 
+        ForceCancelPickerIfNeeded(true);
+
         if (!_agentPicker)
         {
             if (!agentPickerPrefab) return;
@@ -192,6 +196,14 @@ public class UIPanelRoot : MonoBehaviour
         }
 
         string taskId = createdTask.Id;
+        _pickerTaskId = taskId;
+
+        if (_agentPicker == null)
+        {
+            ShowInfo("派遣失败", "派遣界面未就绪");
+            ForceCancelPickerIfNeeded(false);
+            return;
+        }
 
         // Prepare data
         var agents = GameController.I.State.Agents;
@@ -222,11 +234,14 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 GameController.I.AssignTask(taskId, ids);
+                _pickerTaskId = null;
                 RefreshNodePanel();
             },
             onCancel: () =>
             {
                 // Cancel the newly created task if the user backs out of picker.
+                if (string.IsNullOrEmpty(_pickerTaskId)) return;
+                _pickerTaskId = null;
                 GameController.I.CancelOrRetreatTask(taskId);
                 RefreshNodePanel();
             },
@@ -320,19 +335,27 @@ public class UIPanelRoot : MonoBehaviour
 
     public void CloseAll()
     {
+        ForceCancelPickerIfNeeded(true);
         CloseNode();
         CloseEvent();
         CloseManage();
         if (_newsPanel) _newsPanel.Hide();
 
-        // If picker is being closed implicitly, also cancel its newly created task via onCancel callback.
-        // (AgentPickerView.Hide() is expected to invoke onCancel internally; if not, worst case the task remains Active+empty and will be ignored by Sim.)
-        if (_agentPicker) _agentPicker.Hide();
-
         if (_confirmDialog) _confirmDialog.Hide();
     }
 
     // ================== HELPERS ==================
+    void ForceCancelPickerIfNeeded(bool hidePicker = true)
+    {
+        var taskId = _pickerTaskId;
+        _pickerTaskId = null;
+
+        if (hidePicker && _agentPicker) _agentPicker.Hide();
+        if (string.IsNullOrEmpty(taskId) || GameController.I == null) return;
+
+        GameController.I.CancelOrRetreatTask(taskId);
+        RefreshNodePanel();
+    }
 
     // Pick a containable that is not already targeted by an active containment task when possible.
     string PickNextContainableId(NodeState node)
