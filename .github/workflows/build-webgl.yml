@@ -18,20 +18,59 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           lfs: true
 
-      - uses: actions/cache@v4
+      - name: Cache Library
+        uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ runner.os }}-WebGL
+          key: Library-${{ runner.os }}-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            Library-${{ runner.os }}-WebGL-
             Library-${{ runner.os }}-
             Library-
 
+      - name: Diagnostics - disk and docker
+        run: |
+          df -h
+          docker info
+
+      - name: Show Unity version
+        run: |
+          echo "ProjectVersion.txt:"
+          cat ProjectSettings/ProjectVersion.txt
+
+      - name: Detect Unity version
+        id: unityver
+        run: |
+          VER=$(grep -oP 'm_EditorVersion:\s*\K.*' ProjectSettings/ProjectVersion.txt | tr -d '\r')
+          if [ -z "$VER" ]; then
+            echo "Failed to read Unity version from ProjectSettings/ProjectVersion.txt"
+            exit 1
+          fi
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "Unity version: $VER"
+
+      - name: Resolve GameCI editor image tag (WebGL)
+        id: image
+        run: |
+          VER="${{ steps.unityver.outputs.ver }}"
+          # Query Docker Hub tags for unityci/editor and find the first match for ubuntu-<ver>-webgl*
+          TAG=$(curl -fsSL "https://registry.hub.docker.com/v2/repositories/unityci/editor/tags?page_size=100&name=ubuntu-${VER}-webgl" \
+            | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['results'][0]['name'] if d.get('results') else '')")
+          if [ -z "$TAG" ]; then
+            echo "No matching unityci/editor tag found for ubuntu-${VER}-webgl*"
+            echo "Hint: your Unity patch version may not have a published WebGL editor image yet."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $TAG"
+
       - name: Build WebGL
-        uses: game-ci/unity-builder@v3
+        uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -40,8 +79,12 @@ jobs:
           targetPlatform: WebGL
           buildsPath: build
           buildName: WebGL
+          # Pin to an existing docker image tag to avoid docker exit code 125 (manifest unknown)
+          customImage: unityci/editor:${{ steps.image.outputs.tag }}
 
-      # 关键：Pages 需要把“网站根目录”打包上传
+      - name: Disable Jekyll
+        run: touch build/WebGL/.nojekyll
+
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
