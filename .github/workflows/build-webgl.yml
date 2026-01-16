@@ -1,46 +1,48 @@
-name: Build Unity WebGL
+name: Build and Deploy WebGL
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # 确保你的主分支叫 main
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# 必须加上权限设置，否则无法发布网页
+permissions:
+  contents: write
 
+jobs:
+  buildAndDeploy:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      # 可选但强烈建议：缓存 Library，加速 50%+ 很常见
       - name: Cache Library
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: Library
-          key: Library-${{ runner.os }}-WebGL
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            Library-${{ runner.os }}-
             Library-
-      # 缓存写法参考 GameCI Builder 文档
-      # https://game.ci/docs/github/builder/  :contentReference[oaicite:3]{index=3}
 
+      # 编译步骤 (已删除不需要的 Email/Password)
       - name: Build WebGL
-        uses: game-ci/unity-builder@v3
+        uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: WebGL
-          # 可选：指定输出目录/名称（不填也行）
-          buildsPath: build
-          buildName: WebGL
+          buildsPath: build # 输出目录
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      # 补丁：解决 GitHub Pages 不支持 gzip/br 的问题
+      - name: Fix Content-Type
+        run: |
+          touch build/WebGL/.nojekyll
+
+      # 部署步骤
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          name: WebGL-Build
-          path: build/WebGL
+          folder: build/WebGL # GameCI 默认输出路径
+          branch: gh-pages
