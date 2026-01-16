@@ -23,6 +23,32 @@ jobs:
         with:
           lfs: true
 
+      # 关键：释放 GitHub-hosted runner 的磁盘
+      - name: Free disk space
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "Before cleanup:"
+          df -h
+
+          # 删除 runner 上占空间很大的预装组件（按常见经验：Android、.NET、Haskell、Swift、PowerShell 等）
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/share/swift || true
+
+          # 清理 apt 缓存
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          # 清理 docker 本地缓存（一般此时还不大，但做了无害）
+          docker system prune -af || true
+
+          echo "After cleanup:"
+          df -h
+
       - name: Cache Library
         uses: actions/cache@v4
         with:
@@ -33,20 +59,12 @@ jobs:
             Library-${{ runner.os }}-
             Library-
 
-      - name: Diagnostics - disk and docker
-        run: |
-          df -h
-          docker info
-
       - name: Show Unity version
         run: |
           echo "ProjectVersion.txt:"
           cat ProjectSettings/ProjectVersion.txt
 
-      # 先按 GameCI 默认镜像策略构建（避免 Docker Hub API 504）
-      - name: Build WebGL (default image strategy)
-        id: build_default
-        continue-on-error: true
+      - name: Build WebGL
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -57,51 +75,21 @@ jobs:
           buildsPath: build
           buildName: WebGL
 
-      # 如果默认构建失败，才尝试解析一个明确存在的镜像 tag 并重跑一次
-      - name: Detect Unity version
-        if: ${{ steps.build_default.outcome != 'success' }}
-        id: unityver
-        run: |
-          VER=$(grep -oP 'm_EditorVersion:\s*\K.*' ProjectSettings/ProjectVersion.txt | tr -d '\r')
-          if [ -z "$VER" ]; then
-            echo "Failed to read Unity version from ProjectSettings/ProjectVersion.txt"
-            exit 1
-          fi
-          echo "ver=$VER" >> "$GITHUB_OUTPUT"
-          echo "Unity version: $VER"
+      - name: Disable Jekyll
+        run: touch build/WebGL/.nojekyll
 
-      - name: Resolve GameCI editor image tag (WebGL) with retry
-        if: ${{ steps.build_default.outcome != 'success' }}
-        id: image
-        shell: bash
-        run: |
-          set -euo pipefail
-          VER="${{ steps.unityver.outputs.ver }}"
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/WebGL
 
-          # Docker Hub API 经常偶发 5xx，做重试 + 校验
-          URL="https://registry.hub.docker.com/v2/repositories/unityci/editor/tags?page_size=100&name=ubuntu-${VER}-webgl"
-          echo "Query: $URL"
-
-          JSON=""
-          for i in 1 2 3 4 5; do
-            echo "Attempt $i..."
-            # --retry 仅对部分错误生效，这里手动循环更可控
-            if JSON=$(curl -fsSL --connect-timeout 10 --max-time 20 "$URL"); then
-              if echo "$JSON" | python3 -c "import sys,json; json.load(sys.stdin); print('ok')" >/dev/null 2>&1; then
-                break
-              fi
-            fi
-            JSON=""
-            sleep $((i * 2))
-          done
-
-          if [ -z "$JSON" ]; then
-            echo "Failed to fetch valid JSON from Docker Hub after retries."
-            echo "Fallback: please pin customImage manually (see below)."
-            exit 1
-          fi
-
-          TAG=$(echo "$JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['results'][0]['name'] if d.get('results') else '')")
-          if [ -z "$TAG" ]; then
-            echo "No matching unityci/editor tag found for ubuntu-${VER}-webgl*"
-            echo "Your Unity patch version may not have a published WebGL editor im
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
