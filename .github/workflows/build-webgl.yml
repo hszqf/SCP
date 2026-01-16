@@ -43,7 +43,23 @@ jobs:
           echo "ProjectVersion.txt:"
           cat ProjectSettings/ProjectVersion.txt
 
+      # 先按 GameCI 默认镜像策略构建（避免 Docker Hub API 504）
+      - name: Build WebGL (default image strategy)
+        id: build_default
+        continue-on-error: true
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          buildsPath: build
+          buildName: WebGL
+
+      # 如果默认构建失败，才尝试解析一个明确存在的镜像 tag 并重跑一次
       - name: Detect Unity version
+        if: ${{ steps.build_default.outcome != 'success' }}
         id: unityver
         run: |
           VER=$(grep -oP 'm_EditorVersion:\s*\K.*' ProjectSettings/ProjectVersion.txt | tr -d '\r')
@@ -54,49 +70,38 @@ jobs:
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
           echo "Unity version: $VER"
 
-      - name: Resolve GameCI editor image tag (WebGL)
+      - name: Resolve GameCI editor image tag (WebGL) with retry
+        if: ${{ steps.build_default.outcome != 'success' }}
         id: image
+        shell: bash
         run: |
+          set -euo pipefail
           VER="${{ steps.unityver.outputs.ver }}"
-          # Query Docker Hub tags for unityci/editor and find the first match for ubuntu-<ver>-webgl*
-          TAG=$(curl -fsSL "https://registry.hub.docker.com/v2/repositories/unityci/editor/tags?page_size=100&name=ubuntu-${VER}-webgl" \
-            | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['results'][0]['name'] if d.get('results') else '')")
-          if [ -z "$TAG" ]; then
-            echo "No matching unityci/editor tag found for ubuntu-${VER}-webgl*"
-            echo "Hint: your Unity patch version may not have a published WebGL editor image yet."
+
+          # Docker Hub API 经常偶发 5xx，做重试 + 校验
+          URL="https://registry.hub.docker.com/v2/repositories/unityci/editor/tags?page_size=100&name=ubuntu-${VER}-webgl"
+          echo "Query: $URL"
+
+          JSON=""
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i..."
+            # --retry 仅对部分错误生效，这里手动循环更可控
+            if JSON=$(curl -fsSL --connect-timeout 10 --max-time 20 "$URL"); then
+              if echo "$JSON" | python3 -c "import sys,json; json.load(sys.stdin); print('ok')" >/dev/null 2>&1; then
+                break
+              fi
+            fi
+            JSON=""
+            sleep $((i * 2))
+          done
+
+          if [ -z "$JSON" ]; then
+            echo "Failed to fetch valid JSON from Docker Hub after retries."
+            echo "Fallback: please pin customImage manually (see below)."
             exit 1
           fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Resolved tag: $TAG"
 
-      - name: Build WebGL
-        uses: game-ci/unity-builder@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          targetPlatform: WebGL
-          buildsPath: build
-          buildName: WebGL
-          # Pin to an existing docker image tag to avoid docker exit code 125 (manifest unknown)
-          customImage: unityci/editor:${{ steps.image.outputs.tag }}
-
-      - name: Disable Jekyll
-        run: touch build/WebGL/.nojekyll
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: build/WebGL
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          TAG=$(echo "$JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['results'][0]['name'] if d.get('results') else '')")
+          if [ -z "$TAG" ]; then
+            echo "No matching unityci/editor tag found for ubuntu-${VER}-webgl*"
+            echo "Your Unity patch version may not have a published WebGL editor im
