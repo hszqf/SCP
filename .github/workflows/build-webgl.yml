@@ -23,60 +23,62 @@ jobs:
         with:
           lfs: true
 
-      - name: Free disk space
+      - name: Free disk space (only when needed)
         shell: bash
         run: |
           set -euxo pipefail
-          echo "Before cleanup:"
+          echo "Disk before:"
           df -h
-
+          AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
+          echo "Root available: ${AVAIL_GB}G"
+          if [ "$AVAIL_GB" -ge 25 ]; then
+            echo "Enough disk space, skip cleanup."
+            exit 0
+          fi
           sudo rm -rf /usr/local/lib/android || true
           sudo rm -rf /usr/share/dotnet || true
           sudo rm -rf /opt/ghc || true
           sudo rm -rf /usr/local/share/boost || true
           sudo rm -rf /usr/local/share/powershell || true
           sudo rm -rf /usr/share/swift || true
-
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
-
           docker system prune -af || true
-
-          echo "After cleanup:"
+          echo "Disk after:"
           df -h
 
-      - name: Move Docker data-root to /mnt
+      - name: Move Docker data-root to /mnt (only when needed)
         shell: bash
         run: |
           set -euxo pipefail
+          ROOT_DIR=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)
+          echo "DockerRootDir: $ROOT_DIR"
+          if [ "$ROOT_DIR" = "/mnt/docker" ]; then
+            echo "Docker data-root already on /mnt/docker, skip."
+            exit 0
+          fi
           sudo mkdir -p /mnt/docker
           sudo chmod 711 /mnt/docker
-
           sudo mkdir -p /etc/docker
           cat <<'EOF' | sudo tee /etc/docker/daemon.json
           {
             "data-root": "/mnt/docker"
           }
           EOF
-
           sudo systemctl restart docker
-          docker info | sed -n '1,140p'
+          docker info | sed -n '1,120p'
           df -h
 
       - name: Cache Library
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ runner.os }}-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ runner.os }}-WebGL-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}-${{ hashFiles('Packages/packages-lock.json') }}
           restore-keys: |
+            Library-${{ runner.os }}-WebGL-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}-
             Library-${{ runner.os }}-WebGL-
             Library-${{ runner.os }}-
             Library-
-
-      - name: Show Unity version
-        run: |
-          echo "ProjectVersion.txt:"
-          cat ProjectSettings/ProjectVersion.txt
 
       - name: Validate Unity secrets (no secret values printed)
         shell: bash
@@ -98,27 +100,37 @@ jobs:
           buildsPath: build
           buildName: WebGL
 
-      # Fix permissions: docker may create build output as root:root
       - name: Fix build output permissions
         shell: bash
         run: |
           set -euxo pipefail
-          sudo chown -R "$(id -u -n)":"$(id -g -n)" build
-          sudo chmod -R u+rwX,go+rX build
+          sudo chown -R "$(id -u -n)":"$(id -g -n)" build || true
+          sudo chmod -R u+rwX,go+rX build || true
+
+      - name: Locate WebGL root (folder containing index.html)
+        id: webglroot
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=$(find build -maxdepth 5 -name "index.html" -print -quit | xargs -r dirname || true)
+          if [ -z "$ROOT" ]; then
+            echo "ERROR: index.html not found under build/. WebGL build output is missing."
+            echo "==== ls -la build ===="
+            ls -la build || true
+            echo "==== find build (depth 3) ===="
+            find build -maxdepth 3 -type d -print || true
+            exit 1
+          fi
+          echo "WebGL root: $ROOT"
+          echo "path=$ROOT" >> "$GITHUB_OUTPUT"
 
       - name: Disable Jekyll
-        run: touch build/WebGL/.nojekyll
+        run: touch "${{ steps.webglroot.outputs.path }}/.nojekyll"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/WebGL
-
-      - name: Cleanup Docker (post build)
-        if: always()
-        run: |
-          docker system prune -af || true
-          df -h
+          path: ${{ steps.webglroot.outputs.path }}
 
   deploy:
     environment:
