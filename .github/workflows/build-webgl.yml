@@ -1,4 +1,4 @@
-name: Build & Deploy Unity WebGL to Pages (ULF only)
+name: Build & Deploy Unity WebGL to Pages
 
 on:
   push:
@@ -23,6 +23,7 @@ jobs:
         with:
           lfs: true
 
+      # Unity Docker images are large; free disk space first
       - name: Free disk space
         shell: bash
         run: |
@@ -45,6 +46,7 @@ jobs:
           echo "After cleanup:"
           df -h
 
+      # Move Docker storage to /mnt to reduce risk of /dev/root running out of space
       - name: Move Docker data-root to /mnt
         shell: bash
         run: |
@@ -60,7 +62,7 @@ jobs:
           EOF
 
           sudo systemctl restart docker
-          docker info | sed -n '1,120p'
+          docker info | sed -n '1,140p'
           df -h
 
       - name: Cache Library
@@ -78,17 +80,23 @@ jobs:
           echo "ProjectVersion.txt:"
           cat ProjectSettings/ProjectVersion.txt
 
-      - name: Validate Unity license secret (no secret values printed)
+      # Fail fast with clear messages if secrets are missing.
+      # This prints only which secret is missing, never the secret values.
+      - name: Validate Unity secrets (no secret values printed)
         shell: bash
         run: |
           set -euo pipefail
           [ -n "${{ secrets.UNITY_LICENSE }}" ] || (echo "Missing secret: UNITY_LICENSE" && exit 1)
-          echo "UNITY_LICENSE is present."
+          [ -n "${{ secrets.UNITY_EMAIL }}" ] || (echo "Missing secret: UNITY_EMAIL" && exit 1)
+          [ -n "${{ secrets.UNITY_PASSWORD }}" ] || (echo "Missing secret: UNITY_PASSWORD" && exit 1)
+          echo "Unity secrets look present."
 
-      - name: Build WebGL (ULF only)
+      - name: Build WebGL
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: WebGL
           buildsPath: build
