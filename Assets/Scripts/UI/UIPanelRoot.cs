@@ -315,7 +315,9 @@ public class UIPanelRoot : MonoBehaviour
         _eventPanel.gameObject.SetActive(true);
         _eventPanel.transform.SetAsLastSibling();
         _suppressAutoOpenEvent = true;
+        int pendingCount = node.PendingEvents.Count;
         var ev = node.PendingEvents[0];
+        Debug.Log($"[EventUI] Open node={nodeId} pending={pendingCount} eventId={ev?.EventId}");
         _eventPanel.Show(ev, optionId =>
         {
             _suppressAutoOpenEvent = true;
