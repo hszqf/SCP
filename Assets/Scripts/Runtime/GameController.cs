@@ -64,11 +64,19 @@ public class GameController : MonoBehaviour
         Notify();
     }
 
-    public (bool success, string text) ResolveEvent(string eventId, string optionId)
+    public (bool success, string text) ResolveEvent(string nodeId, string eventId, string optionId)
     {
-        var res = Sim.ResolveEvent(State, eventId, optionId, _rng);
+        var res = Sim.ResolveEvent(State, nodeId, eventId, optionId, _rng);
         Notify();
         return res;
+    }
+
+    // Legacy wrapper: locate node by eventId across all nodes.
+    public (bool success, string text) ResolveEvent(string eventId, string optionId)
+    {
+        var node = State.Nodes.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventId == eventId));
+        if (node == null) return (false, "事件不存在");
+        return ResolveEvent(node.Id, eventId, optionId);
     }
 
     // =====================

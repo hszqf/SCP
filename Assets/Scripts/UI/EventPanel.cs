@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -15,15 +16,29 @@ public class EventPanel : MonoBehaviour
     [SerializeField] private TMP_Text optionBText;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
 
-    private PendingEvent _evt;
+    private EventInstance _evt;
+    private readonly List<Button> _optionButtons = new();
+    private readonly List<TMP_Text> _optionTexts = new();
 
-    public void Show(PendingEvent evt)
+    private void Awake()
+    {
+        _optionButtons.Clear();
+        _optionTexts.Clear();
+
+        if (optionAButton) _optionButtons.Add(optionAButton);
+        if (optionBButton) _optionButtons.Add(optionBButton);
+        if (optionAText) _optionTexts.Add(optionAText);
+        if (optionBText) _optionTexts.Add(optionBText);
+    }
+
+    public void Show(EventInstance evt)
     {
         _evt = evt;
         gameObject.SetActive(true);
+        transform.SetAsLastSibling();
 
         // 绑定蒙版关闭
-        if (backgroundButton) 
+        if (backgroundButton)
         {
             backgroundButton.onClick.RemoveAllListeners();
             backgroundButton.onClick.AddListener(() => gameObject.SetActive(false));
@@ -32,39 +47,42 @@ public class EventPanel : MonoBehaviour
         if (titleText) titleText.text = evt.Title;
         if (bodyText) bodyText.text = evt.Desc;
 
-        // Option A
-        if (optionAButton)
-        {
-            optionAButton.onClick.RemoveAllListeners();
-            optionAButton.onClick.AddListener(() => OnOptionSelected(0));
-            if (optionAText) optionAText.text = evt.Options.Count > 0 ? evt.Options[0].Text : "Option A";
-        }
+        RefreshOptions(evt.Options);
+    }
 
-        // Option B
-        if (optionBButton)
+    private void RefreshOptions(List<EventOption> options)
+    {
+        if (options == null) options = new List<EventOption>();
+
+        for (int i = 0; i < _optionButtons.Count; i++)
         {
-            optionBButton.onClick.RemoveAllListeners();
-            if (evt.Options.Count > 1)
+            var btn = _optionButtons[i];
+            if (!btn) continue;
+
+            btn.onClick.RemoveAllListeners();
+
+            bool hasOption = i < options.Count && options[i] != null;
+            btn.gameObject.SetActive(hasOption);
+            if (!hasOption) continue;
+
+            int capturedIndex = i;
+            btn.onClick.AddListener(() => OnOptionSelected(capturedIndex));
+
+            if (i < _optionTexts.Count && _optionTexts[i])
             {
-                optionBButton.gameObject.SetActive(true);
-                optionBButton.onClick.AddListener(() => OnOptionSelected(1));
-                if (optionBText) optionBText.text = evt.Options[1].Text;
-            }
-            else
-            {
-                optionBButton.gameObject.SetActive(false);
+                _optionTexts[i].text = options[i].Text;
             }
         }
     }
 
     void OnOptionSelected(int index)
     {
-        if (_evt == null || index < 0 || index >= _evt.Options.Count) return;
-        
-        // 修正：使用 PendingEvent 里的 ID 调用 GameController
+        if (_evt == null || _evt.Options == null || index < 0 || index >= _evt.Options.Count) return;
+
         var opt = _evt.Options[index];
-        GameController.I.ResolveEvent(_evt.Id, opt.Id);
-        
+        if (opt == null) return;
+
+        GameController.I.ResolveEvent(_evt.NodeId, _evt.EventId, opt.OptionId);
         gameObject.SetActive(false);
     }
 }

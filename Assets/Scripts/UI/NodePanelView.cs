@@ -31,11 +31,13 @@ public class NodePanelView : MonoBehaviour
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text progressText;
+    [SerializeField] private TMP_Text eventCountText;
 
     [Header("Buttons")]
     [SerializeField] private Button investigateButton;
     [SerializeField] private Button containButton;
     [SerializeField] private Button manageButton; // 收容后管理（打开管理面板）
+    [SerializeField] private Button processEventButton; // 处理事件
     [SerializeField] private Button closeButton;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
 
@@ -117,6 +119,18 @@ public class NodePanelView : MonoBehaviour
             });
         }
 
+        if (!processEventButton)
+        {
+            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
+            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
+        }
+
+        if (processEventButton)
+        {
+            processEventButton.onClick.RemoveAllListeners();
+            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
+        }
+
         if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
@@ -158,6 +172,24 @@ public class NodePanelView : MonoBehaviour
         var n = GameController.I.GetNode(_nodeId);
         if (n == null) return;
 
+        if (!eventCountText)
+        {
+            var evtT = FindDeepChild(transform, "EventCountText");
+            if (evtT != null) eventCountText = evtT.GetComponent<TMP_Text>();
+        }
+
+        if (!processEventButton)
+        {
+            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
+            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
+        }
+
+        if (processEventButton && processEventButton.onClick.GetPersistentEventCount() == 0)
+        {
+            processEventButton.onClick.RemoveAllListeners();
+            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
+        }
+
         if (titleText) titleText.text = n.Name;
 
         string s = $"{n.Status}";
@@ -166,6 +198,19 @@ public class NodePanelView : MonoBehaviour
 
         UpdateDispatchButtons(n);
         UpdateManageButton(n);
+
+        int pendingEvents = n.PendingEvents != null ? n.PendingEvents.Count : 0;
+
+        if (eventCountText)
+        {
+            eventCountText.text = pendingEvents > 0 ? $"待处理事件：{pendingEvents}" : "待处理事件：0";
+        }
+
+        if (processEventButton)
+        {
+            processEventButton.gameObject.SetActive(pendingEvents > 0);
+            processEventButton.interactable = pendingEvents > 0;
+        }
 
         if (progressText)
         {
@@ -186,7 +231,7 @@ public class NodePanelView : MonoBehaviour
 
             int managed = n.ManagedAnomalies != null ? n.ManagedAnomalies.Count : 0;
             int neg = GameController.I.State.NegEntropy;
-            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg}";
+            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg} | 事件 {pendingEvents}";
         }
 
         CacheTaskListUIIfNeeded();

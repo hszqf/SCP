@@ -14,7 +14,7 @@ namespace Core
     // Keep for legacy UI and map display. In N-task model, task state is derived from NodeState.Tasks.
     public enum NodeStatus { Calm, Secured }
 
-    // Events still attach to a node; their kind affects which task type they modify.
+    // Legacy event kind (PendingEvent). New node events use EventSource/EventInstance.
     public enum EventKind { Investigate, Contain }
 
     public enum TaskType { Investigate, Contain, Manage }
@@ -112,6 +112,11 @@ namespace Core
 
         // ===== NEW: Unlimited tasks =====
         public List<NodeTask> Tasks = new();
+
+        // ===== Node-scoped state =====
+        public int LocalPanic = 0;
+        public int Population = 10;
+        public List<EventInstance> PendingEvents = new();
 
         // ===== Legacy fields (temporary) =====
         // Kept so existing UI/code can compile during migration. Do not use for new features.
