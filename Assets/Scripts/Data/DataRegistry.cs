@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Core;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Data
@@ -136,12 +136,12 @@ namespace Data
             try
             {
                 var json = File.ReadAllText(path);
-                var options = new JsonSerializerOptions
+                var settings = new JsonSerializerSettings
                 {
-                    IncludeFields = true,
-                    PropertyNameCaseInsensitive = true,
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Include,
                 };
-                Root = JsonSerializer.Deserialize<GameDataRoot>(json, options) ?? new GameDataRoot();
+                Root = JsonConvert.DeserializeObject<GameDataRoot>(json, settings) ?? new GameDataRoot();
             }
             catch (Exception ex)
             {
