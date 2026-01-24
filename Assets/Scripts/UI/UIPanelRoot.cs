@@ -312,17 +312,14 @@ public class UIPanelRoot : MonoBehaviour
         if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
         if (!_eventPanel) return;
 
-        _eventPanel.gameObject.SetActive(true);
-        _eventPanel.transform.SetAsLastSibling();
         _suppressAutoOpenEvent = true;
-        int pendingCount = node.PendingEvents.Count;
         var ev = node.PendingEvents[0];
-        Debug.Log($"[EventUI] Open node={nodeId} pending={pendingCount} eventId={ev?.EventId}");
+        Debug.Log($"[EventUI] OpenNodeEvent node={nodeId} eventId={ev.EventId} pending={node.PendingEvents.Count}");
         _eventPanel.Show(ev, optionId =>
         {
             _suppressAutoOpenEvent = true;
-            GameController.I.ResolveEvent(ev.NodeId, ev.EventId, optionId);
-        });
+            GameController.I.ResolveEvent(nodeId, ev.EventId, optionId);
+        }, onClose: null);
     }
 
     void TryAutoOpenEvent()
@@ -332,34 +329,25 @@ public class UIPanelRoot : MonoBehaviour
         if (_agentPicker && _agentPicker.IsShown) return;
         if (GameController.I == null || GameController.I.State?.Nodes == null) return;
 
-        if (!TryGetFirstPendingEvent(out _, out var ev)) return;
+        if (!TryGetFirstPendingEvent(out var foundNodeId, out _)) return;
 
-        if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
-
-        // Only open when currently closed
-        if (_eventPanel && !_eventPanel.gameObject.activeSelf)
+        if (!_eventPanel || !_eventPanel.gameObject.activeSelf)
         {
-            _eventPanel.gameObject.SetActive(true);
-            _eventPanel.transform.SetAsLastSibling();
-            _eventPanel.Show(ev, optionId =>
-            {
-                _suppressAutoOpenEvent = true;
-                GameController.I.ResolveEvent(ev.NodeId, ev.EventId, optionId);
-            });
+            OpenNodeEvent(foundNodeId);
         }
     }
 
-    private bool TryGetFirstPendingEvent(out NodeState node, out EventInstance ev)
+    private bool TryGetFirstPendingEvent(out string nodeId, out EventInstance ev)
     {
-        node = null;
+        nodeId = null;
         ev = null;
 
         foreach (var n in GameController.I.State.Nodes)
         {
             if (n?.PendingEvents == null || n.PendingEvents.Count == 0) continue;
-            node = n;
             ev = n.PendingEvents[0];
-            return ev != null;
+            nodeId = n.Id;
+            return !string.IsNullOrEmpty(nodeId) && ev != null;
         }
 
         return false;
