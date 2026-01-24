@@ -29,7 +29,16 @@ namespace Core
             // 0) 固定事件（最小 stub：固定日期投放到固定节点）
             if (s.Day == FIXED_EVENT_DAY)
             {
-                TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, "FixedDayTrigger");
+                var fixedNode = s.Nodes.FirstOrDefault(n => n != null && n.Id == FIXED_EVENT_NODE_ID);
+                int pendingBefore = fixedNode?.PendingEvents?.Count ?? 0;
+                bool allow = fixedNode != null && pendingBefore == 0;
+                string checkReason = fixedNode == null ? "nodeMissing" : (allow ? "trigger" : "pendingEvents");
+                Debug.Log($"[EventGenCheck] day={s.Day} node={FIXED_EVENT_NODE_ID} source=Fixed allow={allow} reason={checkReason}");
+
+                if (allow)
+                {
+                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, "FixedDayTrigger");
+                }
             }
 
             // 1) 异常生成（节点维度）
@@ -95,12 +104,27 @@ namespace Core
             {
                 if (node == null) continue;
 
+                int pendingBefore = node.PendingEvents?.Count ?? 0;
+
                 if (node.LocalPanic >= LOCAL_PANIC_HIGH_THRESHOLD)
                 {
-                    TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, $"LocalPanicHigh>={LOCAL_PANIC_HIGH_THRESHOLD}");
+                    bool allowLocalPanicHigh = pendingBefore == 0;
+                    string localPanicReason = allowLocalPanicHigh ? "trigger" : "pendingEvents";
+                    Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=LocalPanicHigh panic={node.LocalPanic} threshold={LOCAL_PANIC_HIGH_THRESHOLD} allow={allowLocalPanicHigh} reason={localPanicReason}");
+
+                    if (allowLocalPanicHigh)
+                    {
+                        TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, $"LocalPanicHigh>={LOCAL_PANIC_HIGH_THRESHOLD}");
+                        pendingBefore = node.PendingEvents?.Count ?? pendingBefore;
+                    }
                 }
 
-                if (rng.NextDouble() < RANDOM_EVENT_CHANCE)
+                double roll = rng.NextDouble();
+                bool allowRandom = pendingBefore == 0 && roll < RANDOM_EVENT_CHANCE;
+                string randomReason = pendingBefore > 0 ? "pendingEvents" : (roll < RANDOM_EVENT_CHANCE ? "trigger" : "rollTooHigh");
+                Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=Random roll={roll:0.00} p={RANDOM_EVENT_CHANCE:0.00} allow={allowRandom} reason={randomReason} pendingBefore={pendingBefore}");
+
+                if (allowRandom)
                 {
                     TryGenerateEvent(s, rng, EventSource.Random, node.Id, $"RandomRoll<{RANDOM_EVENT_CHANCE:0.00}");
                 }
