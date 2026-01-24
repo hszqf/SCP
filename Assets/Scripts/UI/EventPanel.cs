@@ -13,7 +13,6 @@ public class EventPanel : MonoBehaviour
     [SerializeField] private Transform optionsRoot;
     [SerializeField] private Button optionButtonTemplate;
     [SerializeField] private TMP_Text resultText;
-    [SerializeField] private GameObject contentRoot;
     [SerializeField] private Button closeButton;
 
     private EventInstance _eventInstance;
@@ -44,7 +43,6 @@ public class EventPanel : MonoBehaviour
         _onChoose = onChoose;
         _onClose = onClose;
 
-        contentRoot.SetActive(true);
         resultText.text = string.Empty;
         resultText.gameObject.SetActive(false);
 
@@ -118,7 +116,6 @@ public class EventPanel : MonoBehaviour
 
     private void ShowResult(string result)
     {
-        contentRoot.SetActive(false);
         resultText.text = result;
         resultText.gameObject.SetActive(true);
     }
@@ -142,7 +139,6 @@ public class EventPanel : MonoBehaviour
         if (!optionsRoot) missing.Add(nameof(optionsRoot));
         if (!optionButtonTemplate) missing.Add(nameof(optionButtonTemplate));
         if (!resultText) missing.Add(nameof(resultText));
-        if (!contentRoot) missing.Add(nameof(contentRoot));
         if (!closeButton) missing.Add(nameof(closeButton));
 
         if (missing.Count == 0) return true;
