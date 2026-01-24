@@ -9,80 +9,123 @@ public class EventPanel : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private TMP_Text titleText;
-    [SerializeField] private TMP_Text bodyText;
-    [SerializeField] private Button optionAButton;
-    [SerializeField] private Button optionBButton;
-    [SerializeField] private TMP_Text optionAText;
-    [SerializeField] private TMP_Text optionBText;
-    [SerializeField] private Button backgroundButton; // 蒙版按钮
+    [SerializeField] private TMP_Text descText;
+    [SerializeField] private Transform optionsRoot;
+    [SerializeField] private Button optionButtonTemplate;
+    [SerializeField] private Button closeButton;
 
-    private EventInstance _evt;
-    private readonly List<Button> _optionButtons = new();
-    private readonly List<TMP_Text> _optionTexts = new();
+    private EventInstance _eventInstance;
+    private Action<string> _onChoose;
+    private Action _onClose;
+    private readonly List<Button> _spawnedOptionButtons = new();
 
-    private void Awake()
+    public void Show(EventInstance ev, Action<string> onChoose, Action onClose = null)
     {
-        _optionButtons.Clear();
-        _optionTexts.Clear();
+        if (ev == null) return;
 
-        if (optionAButton) _optionButtons.Add(optionAButton);
-        if (optionBButton) _optionButtons.Add(optionBButton);
-        if (optionAText) _optionTexts.Add(optionAText);
-        if (optionBText) _optionTexts.Add(optionBText);
-    }
+        _eventInstance = ev;
+        _onChoose = onChoose;
+        _onClose = onClose;
 
-    public void Show(EventInstance evt)
-    {
-        _evt = evt;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
 
-        // 绑定蒙版关闭
-        if (backgroundButton)
+        if (titleText) titleText.text = ev.Title;
+        if (descText) descText.text = ev.Desc;
+
+        if (optionButtonTemplate)
         {
-            backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(() => gameObject.SetActive(false));
+            optionButtonTemplate.onClick.RemoveAllListeners();
+            optionButtonTemplate.gameObject.SetActive(false);
         }
 
-        if (titleText) titleText.text = evt.Title;
-        if (bodyText) bodyText.text = evt.Desc;
-
-        RefreshOptions(evt.Options);
+        ClearSpawnedOptions();
+        BuildOptions(ev.Options);
+        BindCloseButton();
+        LogShow(ev);
     }
 
-    private void RefreshOptions(List<EventOption> options)
+    public void Hide()
     {
-        if (options == null) options = new List<EventOption>();
-
-        for (int i = 0; i < _optionButtons.Count; i++)
-        {
-            var btn = _optionButtons[i];
-            if (!btn) continue;
-
-            btn.onClick.RemoveAllListeners();
-
-            bool hasOption = i < options.Count && options[i] != null;
-            btn.gameObject.SetActive(hasOption);
-            if (!hasOption) continue;
-
-            int capturedIndex = i;
-            btn.onClick.AddListener(() => OnOptionSelected(capturedIndex));
-
-            if (i < _optionTexts.Count && _optionTexts[i])
-            {
-                _optionTexts[i].text = options[i].Text;
-            }
-        }
-    }
-
-    void OnOptionSelected(int index)
-    {
-        if (_evt == null || _evt.Options == null || index < 0 || index >= _evt.Options.Count) return;
-
-        var opt = _evt.Options[index];
-        if (opt == null) return;
-
-        GameController.I.ResolveEvent(_evt.NodeId, _evt.EventId, opt.OptionId);
         gameObject.SetActive(false);
+    }
+
+    private void ClearSpawnedOptions()
+    {
+        if (!optionsRoot) return;
+
+        _spawnedOptionButtons.Clear();
+
+        var toDestroy = new List<GameObject>();
+        for (int i = 0; i < optionsRoot.childCount; i++)
+        {
+            var child = optionsRoot.GetChild(i);
+            if (!child) continue;
+            if (optionButtonTemplate && child == optionButtonTemplate.transform) continue;
+            toDestroy.Add(child.gameObject);
+        }
+
+        foreach (var go in toDestroy)
+        {
+            Destroy(go);
+        }
+    }
+
+    private void BuildOptions(List<EventOption> options)
+    {
+        if (!optionsRoot || !optionButtonTemplate) return;
+        options ??= new List<EventOption>();
+
+        foreach (var option in options)
+        {
+            if (option == null) continue;
+
+            var button = Instantiate(optionButtonTemplate, optionsRoot);
+            button.onClick.RemoveAllListeners();
+            button.gameObject.SetActive(true);
+
+            var label = button.GetComponentInChildren<TMP_Text>(true);
+            if (label) label.text = option.Text;
+
+            string optionId = option.OptionId;
+            button.onClick.AddListener(() =>
+            {
+                LogClick(optionId);
+                _onChoose?.Invoke(optionId);
+                Hide();
+            });
+
+            _spawnedOptionButtons.Add(button);
+        }
+    }
+
+    private void BindCloseButton()
+    {
+        if (!closeButton) return;
+        closeButton.onClick.RemoveAllListeners();
+        closeButton.onClick.AddListener(() =>
+        {
+            Hide();
+            _onClose?.Invoke();
+        });
+    }
+
+    private void LogShow(EventInstance ev)
+    {
+        int pendingCount = 0;
+        if (GameController.I != null && !string.IsNullOrEmpty(ev.NodeId))
+        {
+            var node = GameController.I.GetNode(ev.NodeId);
+            pendingCount = node?.PendingEvents?.Count ?? 0;
+        }
+
+        int optionCount = ev.Options?.Count ?? 0;
+        Debug.Log($"[EventUI] Show node={ev.NodeId} eventId={ev.EventId} options={optionCount} pendingCount={pendingCount}");
+    }
+
+    private void LogClick(string optionId)
+    {
+        if (_eventInstance == null) return;
+        Debug.Log($"[EventUI] Click option={optionId} node={_eventInstance.NodeId} eventId={_eventInstance.EventId}");
     }
 }

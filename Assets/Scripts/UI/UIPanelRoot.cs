@@ -44,6 +44,7 @@ public class UIPanelRoot : MonoBehaviour
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
     private string _pickerTaskId;
+    private bool _suppressAutoOpenEvent;
 
     public string CurrentNodeId => _currentNodeId;
     public string ManageNodeId => _manageNodeId;
@@ -313,11 +314,18 @@ public class UIPanelRoot : MonoBehaviour
 
         _eventPanel.gameObject.SetActive(true);
         _eventPanel.transform.SetAsLastSibling();
-        _eventPanel.Show(node.PendingEvents[0]);
+        _suppressAutoOpenEvent = true;
+        var ev = node.PendingEvents[0];
+        _eventPanel.Show(ev, optionId =>
+        {
+            _suppressAutoOpenEvent = true;
+            GameController.I.ResolveEvent(ev.NodeId, ev.EventId, optionId);
+        });
     }
 
     void TryAutoOpenEvent()
     {
+        if (_suppressAutoOpenEvent) return;
         // If a higher priority panel is shown, do not open events
         if (_agentPicker && _agentPicker.IsShown) return;
         if (GameController.I == null || GameController.I.State?.Nodes == null) return;
@@ -331,7 +339,11 @@ public class UIPanelRoot : MonoBehaviour
         {
             _eventPanel.gameObject.SetActive(true);
             _eventPanel.transform.SetAsLastSibling();
-            _eventPanel.Show(ev);
+            _eventPanel.Show(ev, optionId =>
+            {
+                _suppressAutoOpenEvent = true;
+                GameController.I.ResolveEvent(ev.NodeId, ev.EventId, optionId);
+            });
         }
     }
 
