@@ -54,7 +54,7 @@ public class GameController : MonoBehaviour
 
         foreach (var nodeDef in DataRegistry.Instance.NodesById.Values.OrderBy(n => n.nodeId))
         {
-            var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (0.5f, 0.5f);
+            var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (x: 0.5f, y: 0.5f);
             var nodeState = new NodeState
             {
                 Id = nodeDef.nodeId,
