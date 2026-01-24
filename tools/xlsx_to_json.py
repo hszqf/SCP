@@ -4,12 +4,135 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from openpyxl import load_workbook
 
 LIST_SPLIT = ";"
+LOGGER_NAME = "xlsx_to_json"
+LOG_LEVELS = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARN": logging.WARN,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+}
+
+REQUIRED_COLUMNS: dict[str, set[str]] = {
+    "Meta": {"schemaVersion", "dataVersion", "comment"},
+    "Balance": {"key", "value", "type", "comment"},
+    "Nodes": {"nodeId", "name", "tags", "startLocalPanic", "startPopulation", "startAnomalyIds"},
+    "Anomalies": {
+        "anomalyId",
+        "name",
+        "class",
+        "tags",
+        "baseThreat",
+        "investigateDifficulty",
+        "containDifficulty",
+        "manageRisk",
+    },
+    "TaskDefs": {
+        "taskDefId",
+        "taskType",
+        "name",
+        "baseDays",
+        "progressPerDay",
+        "agentSlotsMin",
+        "agentSlotsMax",
+        "yieldKey",
+        "yieldPerDay",
+    },
+    "Events": {
+        "eventDefId",
+        "source",
+        "causeType",
+        "weight",
+        "title",
+        "desc",
+        "blockPolicy",
+        "defaultAffects",
+        "autoResolveAfterDays",
+        "ignoreApplyMode",
+        "ignoreEffectId",
+    },
+    "EventOptions": {"eventDefId", "optionId", "text", "resultText", "affects", "effectId"},
+    "Effects": {"effectId", "comment"},
+    "EffectOps": {"effectId", "scope", "statKey", "op", "value", "min", "max", "comment"},
+    "EventTriggers": {
+        "eventDefId",
+        "minDay",
+        "maxDay",
+        "requiresNodeTagsAny",
+        "requiresNodeTagsAll",
+        "requiresAnomalyTagsAny",
+        "requiresSecured",
+        "minLocalPanic",
+        "taskType",
+        "onlyAffectOriginTask",
+    },
+}
+
+REQUIRED_SHEETS = tuple(REQUIRED_COLUMNS.keys())
+
+TASK_TYPES = {"Investigate", "Contain", "Manage"}
+EVENT_SOURCES = {
+    "Investigate",
+    "Contain",
+    "Manage",
+    "LocalPanicHigh",
+    "Fixed",
+    "SecuredManage",
+    "Random",
+}
+CAUSE_TYPES = {
+    "TaskInvestigate",
+    "TaskContain",
+    "TaskManage",
+    "Anomaly",
+    "LocalPanic",
+    "Fixed",
+    "Random",
+}
+BLOCK_POLICIES = {"None", "BlockOriginTask", "BlockAllTasksOnNode"}
+IGNORE_APPLY_MODES = {"ApplyOnceThenRemove", "ApplyDailyKeep", "NeverAuto"}
+AFFECT_SCOPES = {
+    "OriginTask",
+    "Node",
+    "Global",
+    "TaskType:Investigate",
+    "TaskType:Contain",
+    "TaskType:Manage",
+}
+ANOMALY_CLASSES = {"Safe", "Euclid", "Keter"}
+EFFECT_OPS = {"Add", "Mul", "Set", "ClampAdd"}
+
+
+@dataclass(slots=True)
+class SheetInfo:
+    name: str
+    headers: list[str]
+    rows: list[dict[str, Any]]
+
+    @property
+    def row_count(self) -> int:
+        return len(self.rows)
+
+
+def configure_logging(level_name: str) -> logging.Logger:
+    level = LOG_LEVELS.get(level_name.upper())
+    if level is None:
+        raise ValueError(f"Unsupported log level: {level_name}")
+    logging.basicConfig(level=level, format="[%(levelname)s] %(message)s")
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.setLevel(level)
+    return logger
 
 
 def split_list(value: Any) -> list[str]:
@@ -46,16 +169,16 @@ def to_bool(value: Any) -> bool | None:
     raise ValueError(f"Cannot parse bool from: {value!r}")
 
 
-def sheet_rows(ws) -> list[dict[str, Any]]:
+def sheet_rows(ws) -> tuple[list[str], list[dict[str, Any]]]:
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
-        return []
+        return [], []
     header = [str(col).strip() if col is not None else "" for col in rows[0]]
     result: list[dict[str, Any]] = []
     for row in rows[1:]:
         if row is None:
             continue
-        entry = {}
+        entry: dict[str, Any] = {}
         has_value = False
         for key, cell in zip(header, row):
             if not key:
@@ -64,11 +187,10 @@ def sheet_rows(ws) -> list[dict[str, Any]]:
             has_value = has_value or cell not in (None, "")
         if has_value:
             result.append(entry)
-    return result
+    return header, result
 
 
-def load_meta(ws) -> dict[str, Any]:
-    rows = sheet_rows(ws)
+def load_meta(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
         return {}
     row = rows[0]
@@ -79,9 +201,9 @@ def load_meta(ws) -> dict[str, Any]:
     }
 
 
-def load_balance(ws) -> dict[str, Any]:
+def load_balance(rows: list[dict[str, Any]]) -> dict[str, Any]:
     balance: dict[str, Any] = {}
-    for row in sheet_rows(ws):
+    for row in rows:
         key = str(row.get("key", "")).strip()
         if not key:
             continue
@@ -93,9 +215,9 @@ def load_balance(ws) -> dict[str, Any]:
     return balance
 
 
-def load_nodes(ws) -> list[dict[str, Any]]:
+def load_nodes(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     nodes: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         nodes.append(
             {
                 "nodeId": str(row.get("nodeId", "")).strip(),
@@ -109,9 +231,9 @@ def load_nodes(ws) -> list[dict[str, Any]]:
     return nodes
 
 
-def load_anomalies(ws) -> list[dict[str, Any]]:
+def load_anomalies(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     anomalies: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         anomalies.append(
             {
                 "anomalyId": str(row.get("anomalyId", "")).strip(),
@@ -127,9 +249,9 @@ def load_anomalies(ws) -> list[dict[str, Any]]:
     return anomalies
 
 
-def load_task_defs(ws) -> list[dict[str, Any]]:
+def load_task_defs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     task_defs: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         task_defs.append(
             {
                 "taskDefId": str(row.get("taskDefId", "")).strip(),
@@ -146,9 +268,9 @@ def load_task_defs(ws) -> list[dict[str, Any]]:
     return task_defs
 
 
-def load_events(ws) -> list[dict[str, Any]]:
+def load_events(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         events.append(
             {
                 "eventDefId": str(row.get("eventDefId", "")).strip(),
@@ -167,9 +289,9 @@ def load_events(ws) -> list[dict[str, Any]]:
     return events
 
 
-def load_event_options(ws) -> list[dict[str, Any]]:
+def load_event_options(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         options.append(
             {
                 "eventDefId": str(row.get("eventDefId", "")).strip(),
@@ -183,9 +305,9 @@ def load_event_options(ws) -> list[dict[str, Any]]:
     return options
 
 
-def load_effects(ws) -> list[dict[str, Any]]:
+def load_effects(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     effects: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         effects.append(
             {
                 "effectId": str(row.get("effectId", "")).strip(),
@@ -195,9 +317,9 @@ def load_effects(ws) -> list[dict[str, Any]]:
     return effects
 
 
-def load_effect_ops(ws) -> list[dict[str, Any]]:
+def load_effect_ops(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ops: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         entry = {
             "effectId": str(row.get("effectId", "")).strip(),
             "scope": str(row.get("scope", "")).strip(),
@@ -212,9 +334,9 @@ def load_effect_ops(ws) -> list[dict[str, Any]]:
     return ops
 
 
-def load_triggers(ws) -> list[dict[str, Any]]:
+def load_triggers(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     triggers: list[dict[str, Any]] = []
-    for row in sheet_rows(ws):
+    for row in rows:
         triggers.append(
             {
                 "eventDefId": str(row.get("eventDefId", "")).strip(),
@@ -232,33 +354,311 @@ def load_triggers(ws) -> list[dict[str, Any]]:
     return triggers
 
 
-def export_game_data(xlsx_path: Path, json_path: Path) -> None:
-    wb = load_workbook(xlsx_path)
+def _parse_cell(row: dict[str, Any], key: str, parser) -> Any:
+    try:
+        return parser(row.get(key))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{key}={row.get(key)!r} ({exc})") from exc
 
-    data = {
-        "meta": load_meta(wb["Meta"]),
-        "balance": load_balance(wb["Balance"]),
-        "nodes": load_nodes(wb["Nodes"]),
-        "anomalies": load_anomalies(wb["Anomalies"]),
-        "taskDefs": load_task_defs(wb["TaskDefs"]),
-        "events": load_events(wb["Events"]),
-        "eventOptions": load_event_options(wb["EventOptions"]),
-        "effects": load_effects(wb["Effects"]),
-        "effectOps": load_effect_ops(wb["EffectOps"]),
-        "eventTriggers": load_triggers(wb["EventTriggers"]),
+
+def _enum_issues(sheet: str, key: str, value: str, allowed: set[str], row_index: int) -> list[str]:
+    if not value or value in allowed:
+        return []
+    allowed_text = ", ".join(sorted(allowed))
+    return [f"{sheet}[row {row_index}].{key} invalid enum {value!r} (allowed: {allowed_text})"]
+
+
+def _scopes_issues(sheet: str, key: str, scopes: Iterable[str], row_index: int) -> list[str]:
+    issues: list[str] = []
+    for scope in scopes:
+        if scope and scope not in AFFECT_SCOPES:
+            allowed_text = ", ".join(sorted(AFFECT_SCOPES))
+            issues.append(f"{sheet}[row {row_index}].{key} invalid scope {scope!r} (allowed: {allowed_text})")
+    return issues
+
+
+def collect_sheet_info(wb, logger: logging.Logger) -> dict[str, SheetInfo]:
+    infos: dict[str, SheetInfo] = {}
+    for sheet_name in REQUIRED_SHEETS:
+        if sheet_name not in wb.sheetnames:
+            logger.error("sheet %-12s missing", sheet_name)
+            continue
+        ws = wb[sheet_name]
+        headers, rows = sheet_rows(ws)
+        logger.info("sheet %-12s present rows=%d", sheet_name, len(rows))
+        infos[sheet_name] = SheetInfo(sheet_name, headers, rows)
+    return infos
+
+
+def validate_workbook(infos: dict[str, SheetInfo]) -> list[str]:
+    issues: list[str] = []
+
+    missing_sheets = [sheet for sheet in REQUIRED_SHEETS if sheet not in infos]
+    for sheet in missing_sheets:
+        issues.append(f"Missing sheet: {sheet}")
+
+    if missing_sheets:
+        return issues
+
+    headers_map: dict[str, set[str]] = {
+        name: {header for header in info.headers if header} for name, info in infos.items()
+    }
+    for sheet, required in REQUIRED_COLUMNS.items():
+        missing_cols = sorted(required - headers_map.get(sheet, set()))
+        for col in missing_cols:
+            issues.append(f"Missing column: {sheet}.{col}")
+
+    if any(issue.startswith("Missing column") for issue in issues):
+        return issues
+
+    anomalies_rows = infos["Anomalies"].rows
+    effects_rows = infos["Effects"].rows
+    events_rows = infos["Events"].rows
+    options_rows = infos["EventOptions"].rows
+    effect_ops_rows = infos["EffectOps"].rows
+    triggers_rows = infos["EventTriggers"].rows
+
+    anomaly_ids = {str(row.get("anomalyId", "")).strip() for row in anomalies_rows if row.get("anomalyId")}
+    effect_ids = {str(row.get("effectId", "")).strip() for row in effects_rows if row.get("effectId")}
+    event_ids = {str(row.get("eventDefId", "")).strip() for row in events_rows if row.get("eventDefId")}
+
+    for idx, row in enumerate(anomalies_rows, start=2):
+        anomalies_class = str(row.get("class", "")).strip()
+        issues.extend(_enum_issues("Anomalies", "class", anomalies_class, ANOMALY_CLASSES, idx))
+
+    for idx, row in enumerate(infos["TaskDefs"].rows, start=2):
+        task_type = str(row.get("taskType", "")).strip()
+        issues.extend(_enum_issues("TaskDefs", "taskType", task_type, TASK_TYPES, idx))
+
+    for idx, row in enumerate(events_rows, start=2):
+        source = str(row.get("source", "")).strip()
+        cause_type = str(row.get("causeType", "")).strip()
+        block_policy = str(row.get("blockPolicy", "")).strip()
+        ignore_mode = str(row.get("ignoreApplyMode", "")).strip()
+        default_affects = split_list(row.get("defaultAffects"))
+
+        issues.extend(_enum_issues("Events", "source", source, EVENT_SOURCES, idx))
+        issues.extend(_enum_issues("Events", "causeType", cause_type, CAUSE_TYPES, idx))
+        issues.extend(_enum_issues("Events", "blockPolicy", block_policy, BLOCK_POLICIES, idx))
+        if ignore_mode:
+            issues.extend(_enum_issues("Events", "ignoreApplyMode", ignore_mode, IGNORE_APPLY_MODES, idx))
+        issues.extend(_scopes_issues("Events", "defaultAffects", default_affects, idx))
+
+        ignore_effect_id = str(row.get("ignoreEffectId", "")).strip()
+        if ignore_effect_id and ignore_effect_id not in effect_ids:
+            issues.append(f"Events[row {idx}] missing ignoreEffectId={ignore_effect_id}")
+
+    option_keys: set[tuple[str, str]] = set()
+    duplicate_keys: set[tuple[str, str]] = set()
+    for idx, row in enumerate(options_rows, start=2):
+        event_id = str(row.get("eventDefId", "")).strip()
+        option_id = str(row.get("optionId", "")).strip()
+        affects = split_list(row.get("affects"))
+        effect_id = str(row.get("effectId", "")).strip()
+
+        if event_id not in event_ids:
+            issues.append(f"EventOptions[row {idx}] missing eventDefId={event_id}")
+        if effect_id and effect_id not in effect_ids:
+            issues.append(f"EventOptions[row {idx}] missing effectId={effect_id}")
+        issues.extend(_scopes_issues("EventOptions", "affects", affects, idx))
+
+        key = (event_id, option_id)
+        if key in option_keys:
+            duplicate_keys.add(key)
+        option_keys.add(key)
+
+    for event_id, option_id in sorted(duplicate_keys):
+        issues.append(f"EventOptions duplicate key ({event_id},{option_id})")
+
+    for idx, row in enumerate(effect_ops_rows, start=2):
+        effect_id = str(row.get("effectId", "")).strip()
+        scope = str(row.get("scope", "")).strip()
+        op = str(row.get("op", "")).strip()
+
+        if effect_id not in effect_ids:
+            issues.append(f"EffectOps[row {idx}] missing effectId={effect_id}")
+        issues.extend(_scopes_issues("EffectOps", "scope", [scope], idx))
+        issues.extend(_enum_issues("EffectOps", "op", op, EFFECT_OPS, idx))
+
+    for idx, row in enumerate(triggers_rows, start=2):
+        event_id = str(row.get("eventDefId", "")).strip()
+        if event_id not in event_ids:
+            issues.append(f"EventTriggers[row {idx}] missing eventDefId={event_id}")
+
+        min_day = _parse_cell(row, "minDay", to_int)
+        max_day = _parse_cell(row, "maxDay", to_int)
+        min_local_panic = _parse_cell(row, "minLocalPanic", to_int)
+        task_type = str(row.get("taskType", "")).strip()
+
+        if min_day is not None and max_day is not None and min_day > max_day:
+            issues.append(f"EventTriggers[row {idx}] invalid day range: {min_day}>{max_day}")
+        if min_local_panic is not None and min_local_panic < 0:
+            issues.append(f"EventTriggers[row {idx}] minLocalPanic < 0")
+        if task_type:
+            issues.extend(_enum_issues("EventTriggers", "taskType", task_type, TASK_TYPES, idx))
+
+    for idx, row in enumerate(infos["Nodes"].rows, start=2):
+        start_anomaly_ids = split_list(row.get("startAnomalyIds"))
+        missing = [anomaly_id for anomaly_id in start_anomaly_ids if anomaly_id not in anomaly_ids]
+        for anomaly_id in missing:
+            issues.append(f"Nodes[row {idx}] missing startAnomalyId={anomaly_id}")
+
+    return issues
+
+
+def build_data(infos: dict[str, SheetInfo]) -> dict[str, Any]:
+    return {
+        "meta": load_meta(infos["Meta"].rows),
+        "balance": load_balance(infos["Balance"].rows),
+        "nodes": load_nodes(infos["Nodes"].rows),
+        "anomalies": load_anomalies(infos["Anomalies"].rows),
+        "taskDefs": load_task_defs(infos["TaskDefs"].rows),
+        "events": load_events(infos["Events"].rows),
+        "eventOptions": load_event_options(infos["EventOptions"].rows),
+        "effects": load_effects(infos["Effects"].rows),
+        "effectOps": load_effect_ops(infos["EffectOps"].rows),
+        "eventTriggers": load_triggers(infos["EventTriggers"].rows),
     }
 
-    json_path.parent.mkdir(parents=True, exist_ok=True)
-    json_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def find_git_root(start: Path) -> Path | None:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=start,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    root = completed.stdout.strip()
+    return Path(root) if root else None
+
+
+def resolve_project_root(explicit_root: str | None) -> Path:
+    if explicit_root:
+        return Path(explicit_root).expanduser().resolve()
+    script_root = find_git_root(Path(__file__).resolve().parent)
+    if script_root:
+        return script_root.resolve()
+    return Path.cwd().resolve()
+
+
+def resolve_path(root: Path, value: str | None, default_rel: str) -> Path:
+    raw = value or default_rel
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    return path.resolve()
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    legacy_xlsx: str | None = None
+    legacy_out: str | None = None
+    legacy_tail = argv[1:]
+    if len(legacy_tail) >= 2 and not legacy_tail[0].startswith("-") and not legacy_tail[1].startswith("-"):
+        legacy_xlsx, legacy_out = legacy_tail[0], legacy_tail[1]
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("legacy_xlsx", nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("legacy_out", nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("--xlsx", dest="xlsx", help="Path to game_data.xlsx")
+    parser.add_argument("--out", dest="out", help="Path to output game_data.json")
+    parser.add_argument(
+        "--project-root",
+        dest="project_root",
+        help="Repository root; defaults to git root or current working directory.",
+    )
+    parser.add_argument(
+        "--log-level",
+        dest="log_level",
+        default="INFO",
+        choices=sorted({"DEBUG", "INFO", "WARN", "ERROR"}),
+        help="Logging level (default: INFO)",
+    )
+    parser.add_argument(
+        "--validate-only",
+        "--dry-run",
+        dest="validate_only",
+        action="store_true",
+        help="Validate workbook without writing output JSON.",
+    )
+    parser.add_argument(
+        "--no-pretty",
+        dest="no_pretty",
+        action="store_true",
+        help="Emit compact JSON instead of pretty-printed JSON.",
+    )
+
+    args = parser.parse_args(argv[1:])
+
+    if not args.xlsx:
+        args.xlsx = legacy_xlsx or args.legacy_xlsx
+    if not args.out:
+        args.out = legacy_out or args.legacy_out
+
+    return args
+
+
+def run(argv: list[str]) -> int:
+    args = parse_args(argv)
+    try:
+        logger = configure_logging(args.log_level)
+    except ValueError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        return 1
+
+    start_time = time.perf_counter()
+
+    project_root = resolve_project_root(args.project_root)
+    logger.info("project_root=%s", project_root)
+
+    xlsx_path = resolve_path(project_root, args.xlsx, "GameData/Local/game_data.xlsx")
+    out_path = resolve_path(project_root, args.out, "Assets/StreamingAssets/game_data.json")
+
+    logger.info("xlsx=%s", xlsx_path)
+    logger.info("out=%s", out_path)
+
+    if not xlsx_path.exists():
+        logger.error("XLSX does not exist: %s", xlsx_path)
+        return 1
+
+    try:
+        workbook = load_workbook(xlsx_path, data_only=True)
+        infos = collect_sheet_info(workbook, logger)
+        issues = validate_workbook(infos)
+        if issues:
+            logger.error("validate=FAIL issues=%d", len(issues))
+            for issue in issues:
+                logger.error(" - %s", issue)
+            return 2
+        logger.info("validate=OK")
+
+        data = build_data(infos)
+        indent = None if args.no_pretty else 2
+        json_text = json.dumps(data, ensure_ascii=False, indent=indent)
+        json_bytes = json_text.encode("utf-8")
+        logger.info("json_bytes=%d", len(json_bytes))
+
+        if args.validate_only:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info("SUCCESS validate_only elapsed_ms=%.2f", elapsed_ms)
+            return 0
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(json_bytes)
+        size_bytes = out_path.stat().st_size
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        logger.info("SUCCESS out_bytes=%d elapsed_ms=%.2f", size_bytes, elapsed_ms)
+        return 0
+    except Exception:
+        logger.exception("Unhandled exception during export")
+        return 3
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("xlsx", type=Path, help="Path to game_data.xlsx")
-    parser.add_argument("json", type=Path, help="Path to output game_data.json")
-    args = parser.parse_args()
-
-    export_game_data(args.xlsx, args.json)
+    sys.exit(run(sys.argv))
 
 
 if __name__ == "__main__":
