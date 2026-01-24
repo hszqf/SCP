@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using Core;
 using UnityEngine;
 
@@ -106,7 +107,7 @@ namespace Data
         public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
         public Dictionary<string, List<EventTrigger>> TriggersByEventId { get; private set; } = new();
-        public Dictionary<string, BalanceRow> Balance { get; private set; } = new();
+        public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
 
         public int LocalPanicHighThreshold { get; private set; } = 6;
         public double RandomEventBaseProb { get; private set; } = 0.15d;
@@ -135,7 +136,12 @@ namespace Data
             try
             {
                 var json = File.ReadAllText(path);
-                Root = JsonUtility.FromJson<GameDataRoot>(json) ?? new GameDataRoot();
+                var options = new JsonSerializerOptions
+                {
+                    IncludeFields = true,
+                    PropertyNameCaseInsensitive = true,
+                };
+                Root = JsonSerializer.Deserialize<GameDataRoot>(json, options) ?? new GameDataRoot();
             }
             catch (Exception ex)
             {
@@ -149,10 +155,7 @@ namespace Data
 
         private void BuildIndexes()
         {
-            Balance = (Root.balance ?? new List<BalanceRow>())
-                .Where(b => b != null && !string.IsNullOrEmpty(b.key))
-                .GroupBy(b => b.key)
-                .ToDictionary(g => g.Key, g => g.Last());
+            Balance = Root.balance ?? new Dictionary<string, BalanceValue>();
 
             NodesById = (Root.nodes ?? new List<NodeDef>())
                 .Where(n => n != null && !string.IsNullOrEmpty(n.nodeId))

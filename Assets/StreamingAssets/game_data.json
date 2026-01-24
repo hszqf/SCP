@@ -4,32 +4,28 @@
     "dataVersion": "2026.01.24a",
     "comment": "Minimal sample for data pipeline"
   },
-  "balance": [
-    {
-      "key": "LocalPanicHighThreshold",
+  "balance": {
+    "LocalPanicHighThreshold": {
       "value": "6",
       "type": "int",
       "comment": "Local panic trigger"
     },
-    {
-      "key": "RandomEventBaseProb",
+    "RandomEventBaseProb": {
       "value": "0.35",
       "type": "float",
       "comment": "Random event probability"
     },
-    {
-      "key": "DefaultAutoResolveAfterDays",
+    "DefaultAutoResolveAfterDays": {
       "value": "0",
       "type": "int",
       "comment": "Unused in v0"
     },
-    {
-      "key": "DefaultIgnoreApplyMode",
+    "DefaultIgnoreApplyMode": {
       "value": "ApplyDailyKeep",
       "type": "enum",
       "comment": "Default ignore mode"
     }
-  ],
+  },
   "nodes": [
     {
       "nodeId": "N1",

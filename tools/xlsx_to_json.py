@@ -79,20 +79,17 @@ def load_meta(ws) -> dict[str, Any]:
     }
 
 
-def load_balance(ws) -> list[dict[str, Any]]:
-    balance: list[dict[str, Any]] = []
+def load_balance(ws) -> dict[str, Any]:
+    balance: dict[str, Any] = {}
     for row in sheet_rows(ws):
         key = str(row.get("key", "")).strip()
         if not key:
             continue
-        balance.append(
-            {
-                "key": key,
-                "value": "" if row.get("value") is None else str(row.get("value")),
-                "type": "" if row.get("type") is None else str(row.get("type")),
-                "comment": "" if row.get("comment") is None else str(row.get("comment")),
-            }
-        )
+        balance[key] = {
+            "value": "" if row.get("value") is None else str(row.get("value")),
+            "type": "" if row.get("type") is None else str(row.get("type")),
+            "comment": "" if row.get("comment") is None else str(row.get("comment")),
+        }
     return balance
 
 

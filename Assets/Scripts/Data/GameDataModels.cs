@@ -7,7 +7,7 @@ namespace Data
     public class GameDataRoot
     {
         public MetaRow meta = new();
-        public List<BalanceRow> balance = new();
+        public Dictionary<string, BalanceValue> balance = new();
         public List<NodeDef> nodes = new();
         public List<AnomalyDef> anomalies = new();
         public List<TaskDef> taskDefs = new();
@@ -27,9 +27,8 @@ namespace Data
     }
 
     [Serializable]
-    public class BalanceRow
+    public class BalanceValue
     {
-        public string key;
         public string value;
         public string type;
         public string comment;
