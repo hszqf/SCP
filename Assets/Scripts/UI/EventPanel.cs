@@ -19,27 +19,34 @@ public class EventPanel : MonoBehaviour
     private Action _onClose;
     private readonly List<Button> _spawnedOptionButtons = new();
 
+    private void OnEnable()
+    {
+        Debug.Log("[EventUI] EventPanel.OnEnable");
+    }
+
     public void Show(EventInstance ev, Action<string> onChoose, Action onClose = null)
     {
-        if (ev == null) return;
+        Debug.Log($"[EventUI] Show node={ev?.NodeId ?? "<null>"} eventId={ev?.EventId ?? "<null>"} titleLen={(ev?.Title?.Length ?? -1)} descLen={(ev?.Desc?.Length ?? -1)} options={(ev?.Options == null ? -1 : ev.Options.Count)}");
+        if (ev == null)
+        {
+            Debug.LogError("[EventUI] Show called with null EventInstance");
+            return;
+        }
 
-        Debug.Log($"[EventUI] Show node={ev.NodeId} eventId={ev.EventId} titleLen={ev.Title?.Length} descLen={ev.Desc?.Length} options={ev.Options?.Count}");
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+
+        if (!ValidateRefsOrThrow()) return;
 
         _eventInstance = ev;
         _onChoose = onChoose;
         _onClose = onClose;
 
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
+        titleText.text = ev.Title;
+        descText.text = ev.Desc;
 
-        if (titleText) titleText.text = ev.Title;
-        if (descText) descText.text = ev.Desc;
-
-        if (optionButtonTemplate)
-        {
-            optionButtonTemplate.onClick.RemoveAllListeners();
-            optionButtonTemplate.gameObject.SetActive(false);
-        }
+        optionButtonTemplate.onClick.RemoveAllListeners();
+        optionButtonTemplate.gameObject.SetActive(false);
 
         ClearSpawnedOptions();
         BuildOptions(ev.Options);
@@ -110,6 +117,21 @@ public class EventPanel : MonoBehaviour
             Hide();
             _onClose?.Invoke();
         });
+    }
+
+    private bool ValidateRefsOrThrow()
+    {
+        var missing = new List<string>();
+        if (!titleText) missing.Add(nameof(titleText));
+        if (!descText) missing.Add(nameof(descText));
+        if (!optionsRoot) missing.Add(nameof(optionsRoot));
+        if (!optionButtonTemplate) missing.Add(nameof(optionButtonTemplate));
+        if (!closeButton) missing.Add(nameof(closeButton));
+
+        if (missing.Count == 0) return true;
+
+        Debug.LogError($"[EventUI] Missing refs: {string.Join(", ", missing)}");
+        return false;
     }
 
     private void LogShow(EventInstance ev)
