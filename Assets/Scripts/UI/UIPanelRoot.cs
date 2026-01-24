@@ -318,7 +318,8 @@ public class UIPanelRoot : MonoBehaviour
         _eventPanel.Show(ev, optionId =>
         {
             _suppressAutoOpenEvent = true;
-            GameController.I.ResolveEvent(nodeId, ev.EventId, optionId);
+            var res = GameController.I.ResolveEvent(nodeId, ev.EventId, optionId);
+            return res.text;
         }, onClose: null);
     }
 

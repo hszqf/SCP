@@ -34,6 +34,7 @@ namespace Core
     {
         public string OptionId;
         public string Text;
+        public string ResultText;
         public EventEffect Effects = new EventEffect();
     }
 
@@ -105,6 +106,7 @@ namespace Core
             {
                 OptionId = opt.OptionId,
                 Text = opt.Text,
+                ResultText = opt.ResultText,
                 Effects = CloneEffect(opt.Effects)
             };
         }
