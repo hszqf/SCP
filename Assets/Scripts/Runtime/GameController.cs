@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
+using Data;
 using UnityEngine;
 
 public class GameController : MonoBehaviour
@@ -35,6 +36,7 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
+        _ = DataRegistry.Instance;
         Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
@@ -42,10 +44,42 @@ public class GameController : MonoBehaviour
         State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6 });
         State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4 });
 
-        // ---- 初始节点（先写死）----
-        State.Nodes.Add(new NodeState { Id = "N1", Name = "节点1", X = 0.35f, Y = 0.42f });
-        State.Nodes.Add(new NodeState { Id = "N2", Name = "节点2", X = 0.62f, Y = 0.33f });
-        State.Nodes.Add(new NodeState { Id = "N3", Name = "节点3", X = 0.48f, Y = 0.58f });
+        // ---- 初始节点（从 DataRegistry 读取，坐标仍由代码提供）----
+        var nodeCoords = new Dictionary<string, (float x, float y)>
+        {
+            ["N1"] = (0.35f, 0.42f),
+            ["N2"] = (0.62f, 0.33f),
+            ["N3"] = (0.48f, 0.58f),
+        };
+
+        foreach (var nodeDef in DataRegistry.Instance.NodesById.Values.OrderBy(n => n.nodeId))
+        {
+            var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (0.5f, 0.5f);
+            var nodeState = new NodeState
+            {
+                Id = nodeDef.nodeId,
+                Name = nodeDef.name,
+                X = coord.x,
+                Y = coord.y,
+                LocalPanic = Math.Max(0, nodeDef.startLocalPanic),
+                Population = Math.Max(0, nodeDef.startPopulation),
+                Tags = nodeDef.tags ?? new List<string>(),
+                ActiveAnomalyIds = nodeDef.startAnomalyIds ?? new List<string>(),
+            };
+            nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
+            if (nodeState.HasAnomaly)
+            {
+                foreach (var anomalyId in nodeState.ActiveAnomalyIds)
+                {
+                    if (DataRegistry.Instance.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
+                    {
+                        nodeState.AnomalyLevel = Math.Max(nodeState.AnomalyLevel, Math.Max(1, anomalyDef.baseThreat));
+                    }
+                }
+            }
+
+            State.Nodes.Add(nodeState);
+        }
 
         MigrateLegacyManageOccupancyIfNeeded();
         Notify();
@@ -85,7 +119,7 @@ public class GameController : MonoBehaviour
     // Legacy wrapper: locate node by eventId across all nodes.
     public (bool success, string text) ResolveEvent(string eventId, string optionId)
     {
-        var node = State.Nodes.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventId == eventId));
+        var node = State.Nodes.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventInstanceId == eventId));
         if (node == null) return (false, "事件不存在");
         return ResolveEvent(node.Id, eventId, optionId);
     }

@@ -38,6 +38,7 @@ namespace Core
         public string Id;
         public string Name;
         public int Level = 1;
+        public string AnomalyId;
     }
 
     // 收容后进入“已收藏异常”，可被分配干员进行长期管理，按天产出负熵。
@@ -47,6 +48,8 @@ namespace Core
         public string Id;
         public string Name;
         public int Level = 1;
+        public string AnomalyId;
+        public string AnomalyClass;
 
         // 左侧“已收藏异常”列表使用（后续可做收藏/取消收藏筛选）
         public bool Favorited = true;
@@ -93,6 +96,7 @@ namespace Core
     {
         public string Id;
         public string Name;
+        public List<string> Tags = new();
 
         // 0..1 百分比坐标：左下(0,0) 右上(1,1)
         public float X;
@@ -103,6 +107,7 @@ namespace Core
 
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
+        public List<string> ActiveAnomalyIds = new();
 
         // 调查产出：可收容目标列表（调查完成后写入）
         public List<ContainableItem> Containables = new();

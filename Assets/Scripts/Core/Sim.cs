@@ -1,14 +1,12 @@
-// Canvas-maintained file: Core/Sim (v3 - N tasks)
+// Canvas-maintained file: Core/Sim (v4 - data driven events)
 // Source: Assets/Scripts/Core/Sim.cs
-// Goal: StepDay progresses ALL active tasks in NodeState.Tasks (unlimited investigate/contain tasks).
-// Notes:
-// - Node events now attach to NodeState.PendingEvents.
-// - PendingEvent (legacy) is kept for compatibility but not used by this MVP flow.
+// Goal: Load all game data from DataRegistry and drive events/effects via config.
 // <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Data;
 using UnityEngine;
 using Random = System.Random;
 
@@ -16,8 +14,6 @@ namespace Core
 {
     public static class Sim
     {
-        private const int LOCAL_PANIC_HIGH_THRESHOLD = 6;
-        private const double RANDOM_EVENT_CHANCE = 0.45; // 开发期调高，便于验收
         private const int FIXED_EVENT_DAY = 3;
         private const string FIXED_EVENT_NODE_ID = "N1";
 
@@ -25,6 +21,8 @@ namespace Core
 
         public static void StepDay(GameState s, Random rng)
         {
+            var registry = DataRegistry.Instance;
+
             s.Day += 1;
             s.News.Add($"Day {s.Day}: 日结算开始");
 
@@ -39,20 +37,24 @@ namespace Core
 
                 if (allow)
                 {
-                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, "FixedDayTrigger");
+                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, CauseType.Fixed, reason: "FixedDayTrigger");
                 }
             }
 
             // 1) 异常生成（节点维度）
             foreach (var n in s.Nodes)
             {
+                if (n == null) continue;
                 if (n.Status == NodeStatus.Calm && !n.HasAnomaly)
                 {
                     if (rng.NextDouble() < 0.15)
                     {
-                        n.HasAnomaly = true;
-                        n.AnomalyLevel = Math.Max(1, n.AnomalyLevel);
-                        s.News.Add($"- {n.Name} 出现异常迹象");
+                        var anomalyId = PickRandomAnomalyId(registry, rng);
+                        if (!string.IsNullOrEmpty(anomalyId))
+                        {
+                            EnsureActiveAnomaly(n, anomalyId, registry);
+                            s.News.Add($"- {n.Name} 出现异常迹象：{anomalyId}");
+                        }
                     }
                 }
             }
@@ -60,13 +62,9 @@ namespace Core
             // 2) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Nodes)
             {
-                if (n.Tasks == null || n.Tasks.Count == 0) continue;
+                if (n?.Tasks == null || n.Tasks.Count == 0) continue;
 
-                // 如果该节点有待处理事件：本日暂停该节点所有任务推进（保持原先阻塞语义）
-                if (HasPendingNodeEvents(n))
-                    continue;
-
-                // 推进所有 Active 任务
+                // 推进所有 Active 任务（按事件阻塞策略判断）
                 for (int i = 0; i < n.Tasks.Count; i++)
                 {
                     var t = n.Tasks[i];
@@ -74,10 +72,13 @@ namespace Core
                     if (t.State != TaskState.Active) continue;
                     if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
 
+                    if (IsTaskBlockedByEvents(s, n, t, registry))
+                        continue;
+
                     var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
 
-                    float delta = CalcDailyProgressDelta(t, squad, rng);
+                    float delta = CalcDailyProgressDelta(t, squad, rng, registry);
 
                     // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
                     // They should never auto-complete.
@@ -93,13 +94,13 @@ namespace Core
 
                     if (t.Progress >= 1f)
                     {
-                        CompleteTask(s, n, t, rng);
+                        CompleteTask(s, n, t, rng, registry);
                     }
                 }
             }
 
             // 2.5) 收容后管理（负熵产出）
-            StepManageTasks(s, rng);
+            StepManageTasks(s, rng, registry);
 
             // 3) 事件来源（过天触发）：本地恐慌高 / 随机
             foreach (var node in s.Nodes)
@@ -108,32 +109,32 @@ namespace Core
 
                 int pendingBefore = node.PendingEvents?.Count ?? 0;
 
-                if (node.LocalPanic >= LOCAL_PANIC_HIGH_THRESHOLD)
+                if (node.LocalPanic >= registry.LocalPanicHighThreshold)
                 {
                     bool allowLocalPanicHigh = pendingBefore == 0;
                     string localPanicReason = allowLocalPanicHigh ? "trigger" : "pendingEvents";
-                    Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=LocalPanicHigh panic={node.LocalPanic} threshold={LOCAL_PANIC_HIGH_THRESHOLD} allow={allowLocalPanicHigh} reason={localPanicReason}");
+                    Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=LocalPanicHigh panic={node.LocalPanic} threshold={registry.LocalPanicHighThreshold} allow={allowLocalPanicHigh} reason={localPanicReason}");
 
                     if (allowLocalPanicHigh)
                     {
-                        TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, $"LocalPanicHigh>={LOCAL_PANIC_HIGH_THRESHOLD}");
+                        TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, CauseType.LocalPanic, reason: $"LocalPanicHigh>={registry.LocalPanicHighThreshold}");
                         pendingBefore = node.PendingEvents?.Count ?? pendingBefore;
                     }
                 }
 
                 double roll = rng.NextDouble();
-                bool allowRandom = pendingBefore == 0 && roll < RANDOM_EVENT_CHANCE;
-                string randomReason = pendingBefore > 0 ? "pendingEvents" : (roll < RANDOM_EVENT_CHANCE ? "trigger" : "rollTooHigh");
-                Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=Random roll={roll:0.00} p={RANDOM_EVENT_CHANCE:0.00} allow={allowRandom} reason={randomReason} pendingBefore={pendingBefore}");
+                bool allowRandom = pendingBefore == 0 && roll < registry.RandomEventBaseProb;
+                string randomReason = pendingBefore > 0 ? "pendingEvents" : (roll < registry.RandomEventBaseProb ? "trigger" : "rollTooHigh");
+                Debug.Log($"[EventGenCheck] day={s.Day} node={node.Id} source=Random roll={roll:0.00} p={registry.RandomEventBaseProb:0.00} allow={allowRandom} reason={randomReason} pendingBefore={pendingBefore}");
 
                 if (allowRandom)
                 {
-                    TryGenerateEvent(s, rng, EventSource.Random, node.Id, $"RandomRoll<{RANDOM_EVENT_CHANCE:0.00}");
+                    TryGenerateEvent(s, rng, EventSource.Random, node.Id, CauseType.Random, reason: $"RandomRoll<{registry.RandomEventBaseProb:0.00}");
                 }
             }
 
-            // 4) 不处理的后果（事件不会自动清除）
-            ApplyIgnorePenaltyOnDayEnd(s);
+            // 4) 不处理的后果（按 IgnoreApplyMode 执行）
+            ApplyIgnorePenaltyOnDayEnd(s, registry);
 
             // 5) 恐慌 & 收入（全局）
             int activeAnomaly = s.Nodes.Count(n => n.HasAnomaly && n.Status != NodeStatus.Secured);
@@ -143,62 +144,113 @@ namespace Core
             s.News.Add($"Day {s.Day} 结束");
         }
 
-        public static (bool success, string text) ResolveEvent(GameState s, string nodeId, string eventId, string optionId, Random rng)
+        public static (bool success, string text) ResolveEvent(GameState s, string nodeId, string eventInstanceId, string optionId, Random rng)
         {
+            var registry = DataRegistry.Instance;
             var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
             if (node == null) return (false, "节点不存在");
             if (node.PendingEvents == null || node.PendingEvents.Count == 0) return (false, "节点无事件");
 
-            var ev = node.PendingEvents.FirstOrDefault(e => e != null && e.EventId == eventId);
+            var ev = node.PendingEvents.FirstOrDefault(e => e != null && e.EventInstanceId == eventInstanceId);
             if (ev == null) return (false, "事件不存在");
+            if (!registry.TryGetEvent(ev.EventDefId, out var eventDef)) return (false, "事件配置不存在");
+            if (!registry.TryGetOption(ev.EventDefId, optionId, out var optionDef)) return (false, "选项不存在");
 
-            var opt = ev.Options?.FirstOrDefault(o => o != null && o.OptionId == optionId);
-            if (opt == null) return (false, "选项不存在");
+            var originTask = TryGetOriginTask(s, ev.SourceTaskId, out var originNode) ? originNode?.Tasks?.FirstOrDefault(t => t != null && t.Id == ev.SourceTaskId) : null;
 
-            ApplyEffect(s, node, opt.Effects);
+            var affects = ResolveAffects(eventDef, optionDef, registry);
+            var ctx = new EffectContext
+            {
+                State = s,
+                Node = node,
+                OriginTask = originTask,
+                EventDefId = ev.EventDefId,
+                OptionId = optionId,
+            };
+            EffectOpExecutor.ApplyEffect(optionDef.effectId, ctx, affects);
 
             node.PendingEvents.Remove(ev);
 
             int pendingAfter = node.PendingEvents.Count;
-            Debug.Log($"[EventResolve] day={s.Day} node={node.Id} eventId={ev.EventId} option={opt.OptionId} effects={opt.Effects} pendingCountAfter={pendingAfter}");
+            Debug.Log($"[EventResolve] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} eventDefId={ev.EventDefId} option={optionDef.optionId} pendingCountAfter={pendingAfter}");
 
-            s.News.Add($"- {node.Name} 事件处理：{ev.Title} -> {opt.Text}");
+            s.News.Add($"- {node.Name} 事件处理：{eventDef.title} -> {optionDef.text}");
 
-            var resultText = string.IsNullOrEmpty(opt.ResultText) ? BuildEffectSummary(opt.Effects) : opt.ResultText;
-            if (string.IsNullOrEmpty(resultText)) resultText = opt.Text;
+            var resultText = string.IsNullOrEmpty(optionDef.resultText) ? BuildEffectSummary(optionDef.effectId, affects) : optionDef.resultText;
+            if (string.IsNullOrEmpty(resultText)) resultText = optionDef.text;
             if (string.IsNullOrEmpty(resultText)) resultText = "事件已处理";
             return (true, resultText);
         }
 
-        public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, string reason)
+        public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, CauseType causeType, string reason, NodeTask sourceTask = null, string sourceAnomalyId = null)
         {
+            var registry = DataRegistry.Instance;
             var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
             if (node == null) return false;
 
-            var instance = EventTemplates.CreateInstance(source, nodeId, s.Day, rng);
-            if (instance == null) return false;
+            var eventDef = PickEventDef(registry, s, node, source, sourceTask, rng);
+            if (eventDef == null) return false;
 
+            var instance = EventInstanceFactory.Create(eventDef.eventDefId, nodeId, s.Day, causeType, sourceTask?.Id, sourceAnomalyId);
             AddEventToNode(node, instance);
 
             int pendingCount = node.PendingEvents.Count;
-            Debug.Log($"[EventGen] day={s.Day} source={source} node={nodeId} eventId={instance.EventId} pendingCount={pendingCount} reason={reason}");
-            s.News.Add($"- {node.Name} 发生事件：{instance.Title}");
+            Debug.Log($"[EventGen] day={s.Day} source={source} node={nodeId} eventDefId={eventDef.eventDefId} eventInstanceId={instance.EventInstanceId} pendingCount={pendingCount} reason={reason}");
+            s.News.Add($"- {node.Name} 发生事件：{eventDef.title}");
             return true;
         }
 
-        public static bool ApplyIgnorePenaltyOnDayEnd(GameState s)
+        public static bool ApplyIgnorePenaltyOnDayEnd(GameState s, DataRegistry registry)
         {
             bool anyApplied = false;
             foreach (var node in s.Nodes)
             {
-                if (!HasPendingNodeEvents(node)) continue;
+                if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
 
+                var toRemove = new List<EventInstance>();
                 foreach (var ev in node.PendingEvents)
                 {
-                    if (ev == null || ev.IgnorePenalty == null) continue;
-                    ApplyEffect(s, node, ev.IgnorePenalty);
-                    anyApplied = true;
-                    Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventId={ev.EventId} penalty={ev.IgnorePenalty} localPanic={node.LocalPanic} pop={node.Population}");
+                    if (ev == null) continue;
+                    if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
+
+                    var ignoreMode = registry.GetIgnoreApplyMode(def);
+                    if (ignoreMode == IgnoreApplyMode.NeverAuto) continue;
+                    if (string.IsNullOrEmpty(def.ignoreEffectId)) continue;
+
+                    var originTask = TryGetOriginTask(s, ev.SourceTaskId, out var originNode)
+                        ? originNode?.Tasks?.FirstOrDefault(t => t != null && t.Id == ev.SourceTaskId)
+                        : null;
+
+                    var affects = GetDefaultAffects(def);
+                    var ctx = new EffectContext
+                    {
+                        State = s,
+                        Node = node,
+                        OriginTask = originTask,
+                        EventDefId = ev.EventDefId,
+                        OptionId = "__ignore__",
+                    };
+
+                    if (ignoreMode == IgnoreApplyMode.ApplyOnceThenRemove)
+                    {
+                        if (ev.IgnoreAppliedOnce) continue;
+                        EffectOpExecutor.ApplyEffect(def.ignoreEffectId, ctx, affects);
+                        ev.IgnoreAppliedOnce = true;
+                        toRemove.Add(ev);
+                        anyApplied = true;
+                        Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} mode={ignoreMode} removed=true");
+                    }
+                    else if (ignoreMode == IgnoreApplyMode.ApplyDailyKeep)
+                    {
+                        EffectOpExecutor.ApplyEffect(def.ignoreEffectId, ctx, affects);
+                        anyApplied = true;
+                        Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} mode={ignoreMode} removed=false");
+                    }
+                }
+
+                if (toRemove.Count > 0)
+                {
+                    foreach (var ev in toRemove) node.PendingEvents.Remove(ev);
                 }
             }
 
@@ -206,9 +258,22 @@ namespace Core
             return anyApplied;
         }
 
-        private static bool HasPendingNodeEvents(NodeState node)
+        private static bool IsTaskBlockedByEvents(GameState state, NodeState node, NodeTask task, DataRegistry registry)
         {
-            return node != null && node.PendingEvents != null && node.PendingEvents.Count > 0;
+            if (node?.PendingEvents == null || node.PendingEvents.Count == 0) return false;
+
+            foreach (var ev in node.PendingEvents)
+            {
+                if (ev == null) continue;
+                if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
+                if (!DataRegistry.TryParseBlockPolicy(def.blockPolicy, out var policy, out _)) continue;
+
+                if (policy == BlockPolicy.BlockAllTasksOnNode) return true;
+                if (policy == BlockPolicy.BlockOriginTask && !string.IsNullOrEmpty(ev.SourceTaskId) && ev.SourceTaskId == task.Id)
+                    return true;
+            }
+
+            return false;
         }
 
         private static void AddEventToNode(NodeState node, EventInstance ev)
@@ -217,44 +282,179 @@ namespace Core
             node.PendingEvents.Add(ev);
         }
 
-        private static void ApplyEffect(GameState s, NodeState node, EventEffect eff)
+        private static List<AffectScope> ResolveAffects(EventDef eventDef, EventOptionDef optionDef, DataRegistry registry)
         {
-            if (eff == null) return;
+            if (optionDef?.affects != null && optionDef.affects.Count > 0 &&
+                DataRegistry.TryParseAffectScopes(optionDef.affects, out var optionScopes, out _))
+            {
+                return optionScopes;
+            }
 
-            node.LocalPanic = Math.Max(0, node.LocalPanic + eff.LocalPanicDelta);
-            node.Population = Math.Max(0, node.Population + eff.PopulationDelta);
-
-            s.Panic = ClampInt(s.Panic + eff.GlobalPanicDelta, 0, 100);
-            s.Money += eff.MoneyDelta;
-            s.NegEntropy = Math.Max(0, s.NegEntropy + eff.NegEntropyDelta);
+            return GetDefaultAffects(eventDef);
         }
 
-        private static string BuildEffectSummary(EventEffect eff)
+        private static List<AffectScope> GetDefaultAffects(EventDef eventDef)
         {
-            if (eff == null) return string.Empty;
+            if (eventDef?.defaultAffects != null && eventDef.defaultAffects.Count > 0 &&
+                DataRegistry.TryParseAffectScopes(eventDef.defaultAffects, out var scopes, out _))
+            {
+                return scopes;
+            }
+
+            return new List<AffectScope> { new(AffectScopeKind.Node) };
+        }
+
+        private static string BuildEffectSummary(string effectId, IReadOnlyCollection<AffectScope> affects)
+        {
+            if (string.IsNullOrEmpty(effectId)) return string.Empty;
+            var registry = DataRegistry.Instance;
+            if (!registry.EffectOpsByEffectId.TryGetValue(effectId, out var ops) || ops == null || ops.Count == 0)
+                return string.Empty;
+
+            HashSet<string> allowed = affects != null && affects.Count > 0
+                ? new HashSet<string>(affects.Select(a => a.Raw))
+                : null;
 
             var parts = new List<string>();
-            AddDelta(parts, "本地恐慌", eff.LocalPanicDelta);
-            AddDelta(parts, "人口", eff.PopulationDelta);
-            AddDelta(parts, "全局恐慌", eff.GlobalPanicDelta);
-            AddDelta(parts, "资金", eff.MoneyDelta);
-            AddDelta(parts, "负熵", eff.NegEntropyDelta);
+            foreach (var op in ops)
+            {
+                if (op == null) continue;
+                if (allowed != null && !allowed.Contains(op.Scope.Raw)) continue;
+
+                string label = op.StatKey switch
+                {
+                    var k when string.Equals(k, "LocalPanic", StringComparison.OrdinalIgnoreCase) => "本地恐慌",
+                    var k when string.Equals(k, "Population", StringComparison.OrdinalIgnoreCase) => "人口",
+                    var k when string.Equals(k, "WorldPanic", StringComparison.OrdinalIgnoreCase) || string.Equals(k, "Panic", StringComparison.OrdinalIgnoreCase) => "全局恐慌",
+                    var k when string.Equals(k, "Money", StringComparison.OrdinalIgnoreCase) => "资金",
+                    var k when string.Equals(k, "NegEntropy", StringComparison.OrdinalIgnoreCase) => "负熵",
+                    var k when string.Equals(k, "TaskProgressDelta", StringComparison.OrdinalIgnoreCase) => "任务进度",
+                    _ => op.StatKey,
+                };
+
+                string scopeLabel = op.Scope.Kind switch
+                {
+                    AffectScopeKind.Node => string.Empty,
+                    AffectScopeKind.Global => "(全局)",
+                    AffectScopeKind.OriginTask => "(来源任务)",
+                    AffectScopeKind.TaskType when op.Scope.TaskType.HasValue => $"(任务类型:{op.Scope.TaskType.Value})",
+                    _ => string.Empty,
+                };
+
+                string valueLabel = op.Op == EffectOpType.Set
+                    ? $"={op.Value:+0;-0;0}"
+                    : $"{(op.Value >= 0 ? "+" : string.Empty)}{op.Value:0}";
+
+                parts.Add($"{label}{scopeLabel} {valueLabel}");
+            }
 
             return parts.Count == 0 ? string.Empty : string.Join("，", parts);
         }
 
-        private static void AddDelta(List<string> parts, string label, int delta)
+        private static EventDef PickEventDef(DataRegistry registry, GameState state, NodeState node, EventSource source, NodeTask sourceTask, Random rng)
         {
-            if (delta == 0) return;
-            var sign = delta > 0 ? "+" : string.Empty;
-            parts.Add($"{label} {sign}{delta}");
+            var candidates = new List<(EventDef def, int weight)>();
+
+            foreach (var ev in registry.Root.events ?? new List<EventDef>())
+            {
+                if (ev == null || string.IsNullOrEmpty(ev.eventDefId)) continue;
+                if (!DataRegistry.TryParseEventSource(ev.source, out var evSource, out _)) continue;
+                if (evSource != source) continue;
+
+                if (!IsEventEligible(registry, state, node, ev, sourceTask)) continue;
+                candidates.Add((ev, Math.Max(1, ev.weight)));
+            }
+
+            if (candidates.Count == 0) return null;
+
+            int totalWeight = candidates.Sum(c => c.weight);
+            int roll = rng.Next(totalWeight);
+            foreach (var candidate in candidates)
+            {
+                roll -= candidate.weight;
+                if (roll < 0) return candidate.def;
+            }
+
+            return candidates[0].def;
+        }
+
+        private static bool IsEventEligible(DataRegistry registry, GameState state, NodeState node, EventDef ev, NodeTask sourceTask)
+        {
+            if (!registry.TriggersByEventId.TryGetValue(ev.eventDefId, out var triggers) || triggers == null || triggers.Count == 0)
+                return true;
+
+            foreach (var trigger in triggers)
+            {
+                if (trigger == null) continue;
+                if (DoesTriggerMatch(registry, state, node, trigger, sourceTask)) return true;
+            }
+
+            return false;
+        }
+
+        private static bool DoesTriggerMatch(DataRegistry registry, GameState state, NodeState node, EventTrigger trigger, NodeTask sourceTask)
+        {
+            if (node == null) return false;
+
+            if (trigger.MinDay.HasValue && state.Day < trigger.MinDay.Value) return false;
+            if (trigger.MaxDay.HasValue && state.Day > trigger.MaxDay.Value) return false;
+            if (trigger.MinLocalPanic.HasValue && node.LocalPanic < trigger.MinLocalPanic.Value) return false;
+            if (trigger.RequiresSecured.HasValue && (node.Status == NodeStatus.Secured) != trigger.RequiresSecured.Value) return false;
+
+            if (trigger.TaskType.HasValue)
+            {
+                if (sourceTask == null || sourceTask.Type != trigger.TaskType.Value) return false;
+            }
+
+            if (trigger.OnlyAffectOriginTask == true && sourceTask == null) return false;
+
+            if (!MatchesTagRequirement(node.Tags, trigger.RequiresNodeTagsAll, requireAll: true)) return false;
+            if (!MatchesTagRequirement(node.Tags, trigger.RequiresNodeTagsAny, requireAll: false)) return false;
+
+            if (trigger.RequiresAnomalyTagsAny != null && trigger.RequiresAnomalyTagsAny.Count > 0)
+            {
+                var anomalyTags = GetActiveAnomalyTags(node, registry);
+                if (!MatchesTagRequirement(anomalyTags, trigger.RequiresAnomalyTagsAny, requireAll: false)) return false;
+            }
+
+            return true;
+        }
+
+        private static bool MatchesTagRequirement(IEnumerable<string> subjectTags, List<string> requiredTags, bool requireAll)
+        {
+            if (requiredTags == null || requiredTags.Count == 0) return true;
+            var set = new HashSet<string>((subjectTags ?? Array.Empty<string>()).Where(t => !string.IsNullOrWhiteSpace(t)));
+            if (set.Count == 0) return false;
+
+            if (requireAll)
+            {
+                return requiredTags.All(set.Contains);
+            }
+
+            return requiredTags.Any(set.Contains);
+        }
+
+        private static List<string> GetActiveAnomalyTags(NodeState node, DataRegistry registry)
+        {
+            var tags = new HashSet<string>();
+            foreach (var anomalyId in node.ActiveAnomalyIds ?? new List<string>())
+            {
+                if (string.IsNullOrEmpty(anomalyId)) continue;
+                if (!registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly)) continue;
+                foreach (var tag in anomaly.tags ?? new List<string>())
+                {
+                    if (!string.IsNullOrWhiteSpace(tag)) tags.Add(tag);
+                }
+            }
+
+            return tags.ToList();
         }
 
         // =====================
         // Task completion rules
         // =====================
 
-        static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng)
+        static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng, DataRegistry registry)
         {
             task.Progress = 1f;
             task.State = TaskState.Completed;
@@ -267,12 +467,17 @@ namespace Core
             {
                 if (node.Containables == null) node.Containables = new List<ContainableItem>();
 
+                string anomalyId = GetOrCreateAnomalyForNode(node, registry, rng);
+                var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
+                int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
+
                 // 每完成一次调查，都产出一个可收容目标（支持无限调查）
                 var item = new ContainableItem
                 {
                     Id = $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}",
-                    Name = $"未编号异常（{node.Name}）",
-                    Level = Math.Max(1, node.AnomalyLevel)
+                    Name = anomaly != null ? $"{anomaly.name} 线索（{node.Name}）" : $"未编号异常（{node.Name}）",
+                    Level = level,
+                    AnomalyId = anomalyId,
                 };
                 node.Containables.Add(item);
 
@@ -280,10 +485,10 @@ namespace Core
                 node.Status = NodeStatus.Calm;
                 node.HasAnomaly = true;
 
-                s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1");
-                TryGenerateEvent(s, rng, EventSource.Investigate, node.Id, "InvestigateComplete");
+                s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1 ({anomalyId})");
+                TryGenerateEvent(s, rng, EventSource.Investigate, node.Id, CauseType.TaskInvestigate, reason: "InvestigateComplete", sourceTask: task, sourceAnomalyId: anomalyId);
             }
-            else
+            else if (task.Type == TaskType.Contain)
             {
                 // Containment consumes one containable
                 ContainableItem target = null;
@@ -299,17 +504,18 @@ namespace Core
                         node.Containables.Remove(target);
                 }
 
-                int level = (target != null) ? Math.Max(1, target.Level) : Math.Max(1, node.AnomalyLevel);
+                string anomalyId = target?.AnomalyId ?? GetOrCreateAnomalyForNode(node, registry, rng);
+                var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
+                int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
                 int reward = 200 + 50 * level;
 
                 s.Money += reward;
                 s.Panic = Math.Max(0, s.Panic - 5);
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
-                TryGenerateEvent(s, rng, EventSource.Contain, node.Id, "ContainComplete");
+                TryGenerateEvent(s, rng, EventSource.Contain, node.Id, CauseType.TaskContain, reason: "ContainComplete", sourceTask: task, sourceAnomalyId: anomalyId);
 
                 // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
-                // 注意：在并行收容/目标缺失等情况下，target 可能为 null，但我们仍然需要记录一个“已收容异常”，否则管理系统无法进入。
                 {
                     ContainableItem recordItem = target;
                     if (recordItem == null)
@@ -321,18 +527,18 @@ namespace Core
                         recordItem = new ContainableItem
                         {
                             Id = rid,
-                            Name = $"已收容异常（{node.Name}）",
-                            Level = level
+                            Name = anomaly != null ? anomaly.name : $"已收容异常（{node.Name}）",
+                            Level = level,
+                            AnomalyId = anomalyId,
                         };
 
                         s.News.Add($"- {node.Name} 收容成功：目标信息缺失，已用占位记录写入收藏列表");
                     }
 
-                    EnsureManagedAnomalyRecorded(node, recordItem);
+                    EnsureManagedAnomalyRecorded(node, recordItem, anomaly);
                 }
 
                 // 若已无可收容目标且无进行中的收容任务，则节点可视为“清空异常”。
-                // 但如果还有进行中的调查（有小队）在该节点跑动，则不应标记为 Secured，避免 UI/体验出现“已收容但还在调查”的割裂。
                 bool hasMoreContainables = node.Containables != null && node.Containables.Count > 0;
                 bool hasActiveContainTask = node.Tasks != null && node.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain);
                 bool hasActiveInvestigateWithSquad = node.Tasks != null && node.Tasks.Any(t =>
@@ -345,6 +551,7 @@ namespace Core
                 if (!hasMoreContainables && !hasActiveContainTask)
                 {
                     node.HasAnomaly = false;
+                    node.ActiveAnomalyIds?.Clear();
                     node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
                 }
                 else
@@ -352,6 +559,10 @@ namespace Core
                     node.Status = NodeStatus.Calm;
                     node.HasAnomaly = true;
                 }
+            }
+            else if (task.Type == TaskType.Manage)
+            {
+                TryGenerateEvent(s, rng, EventSource.Manage, node.Id, CauseType.TaskManage, reason: "ManageTick", sourceTask: task, sourceAnomalyId: task.TargetManagedAnomalyId);
             }
         }
 
@@ -365,13 +576,13 @@ namespace Core
             return s.Agents.Where(a => a != null && assignedIds.Contains(a.Id)).ToList();
         }
 
-        static float CalcDailyProgressDelta(NodeTask t, List<AgentState> squad, Random rng)
+        static float CalcDailyProgressDelta(NodeTask t, List<AgentState> squad, Random rng, DataRegistry registry)
         {
             // Base daily progress.
             // - Investigate/Contain: normal completion loop.
             // - Manage: progress is only a "started" flag; keep delta small to avoid hitting 1.
 
-            float baseDelta = (t.Type == TaskType.Manage) ? 0.02f : 0.10f;
+            float baseDelta = (t.Type == TaskType.Manage) ? 0.02f : registry.GetTaskProgressPerDay(t.Type, 0.10f);
 
             int totalStat = 0;
             foreach (var a in squad)
@@ -392,7 +603,7 @@ namespace Core
         // Management (NegEntropy) - formalized as NodeTask.Manage
         // =====================
 
-        static void StepManageTasks(GameState s, Random rng)
+        static void StepManageTasks(GameState s, Random rng, DataRegistry registry)
         {
             if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
 
@@ -438,7 +649,7 @@ namespace Core
 
                 if (node.Status == NodeStatus.Secured && nodeTotal > 0)
                 {
-                    TryGenerateEvent(s, rng, EventSource.SecuredManage, node.Id, "SecuredManageYield");
+                    TryGenerateEvent(s, rng, EventSource.SecuredManage, node.Id, CauseType.TaskManage, reason: "SecuredManageYield");
                 }
             }
 
@@ -466,27 +677,92 @@ namespace Core
             return Math.Max(1, baseYield + bonus + noise);
         }
 
-        static void EnsureManagedAnomalyRecorded(NodeState node, ContainableItem item)
+        static void EnsureManagedAnomalyRecorded(NodeState node, ContainableItem item, AnomalyDef anomaly)
         {
-            if (node == null || item == null) return;
             if (node.ManagedAnomalies == null) node.ManagedAnomalies = new List<ManagedAnomalyState>();
+            if (item == null) return;
 
-            bool exists = node.ManagedAnomalies.Any(x => x != null && x.Id == item.Id);
-            if (exists) return;
+            var existing = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.Id == item.Id);
+            if (existing != null)
+            {
+                existing.Level = Math.Max(existing.Level, item.Level);
+                if (!string.IsNullOrEmpty(item.AnomalyId)) existing.AnomalyId = item.AnomalyId;
+                if (!string.IsNullOrEmpty(anomaly?.@class)) existing.AnomalyClass = anomaly.@class;
+                return;
+            }
 
             node.ManagedAnomalies.Add(new ManagedAnomalyState
             {
                 Id = item.Id,
                 Name = item.Name,
                 Level = Math.Max(1, item.Level),
+                AnomalyId = item.AnomalyId,
+                AnomalyClass = anomaly?.@class,
                 Favorited = true,
                 StartDay = 0,
-                TotalNegEntropy = 0
+                TotalNegEntropy = 0,
             });
         }
 
-        static float Clamp01(float v) => v < 0 ? 0 : (v > 1 ? 1 : v);
-        static int ClampInt(int v, int min, int max) => v < min ? min : (v > max ? max : v);
+        private static bool TryGetOriginTask(GameState s, string taskId, out NodeState node)
+        {
+            node = null;
+            if (string.IsNullOrEmpty(taskId) || s?.Nodes == null) return false;
+
+            foreach (var n in s.Nodes)
+            {
+                if (n?.Tasks == null) continue;
+                if (n.Tasks.Any(t => t != null && t.Id == taskId))
+                {
+                    node = n;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void EnsureActiveAnomaly(NodeState node, string anomalyId, DataRegistry registry)
+        {
+            if (node.ActiveAnomalyIds == null) node.ActiveAnomalyIds = new List<string>();
+            if (!node.ActiveAnomalyIds.Contains(anomalyId)) node.ActiveAnomalyIds.Add(anomalyId);
+            node.HasAnomaly = node.ActiveAnomalyIds.Count > 0;
+
+            if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly))
+            {
+                node.AnomalyLevel = Math.Max(node.AnomalyLevel, Math.Max(1, anomaly.baseThreat));
+            }
+        }
+
+        private static string GetOrCreateAnomalyForNode(NodeState node, DataRegistry registry, Random rng)
+        {
+            if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0)
+                return node.ActiveAnomalyIds[0];
+
+            var anomalyId = PickRandomAnomalyId(registry, rng);
+            if (!string.IsNullOrEmpty(anomalyId))
+            {
+                EnsureActiveAnomaly(node, anomalyId, registry);
+                return anomalyId;
+            }
+
+            return null;
+        }
+
+        private static string PickRandomAnomalyId(DataRegistry registry, Random rng)
+        {
+            var all = registry.AnomaliesById.Keys.ToList();
+            if (all.Count == 0) return null;
+            int idx = rng.Next(all.Count);
+            return all[idx];
+        }
+
+        // =====================
+        // Math helpers
+        // =====================
+
+        static float Clamp01(float v) => Mathf.Clamp01(v);
+        static int ClampInt(int v, int min, int max) => Mathf.Clamp(v, min, max);
     }
 }
 // </EXPORT_BLOCK>
