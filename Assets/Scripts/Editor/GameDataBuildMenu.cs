@@ -31,6 +31,17 @@ public static class GameDataBuildMenu
             return;
         }
 
+        if (!EnsurePythonDependency(repoRoot, python, "openpyxl"))
+        {
+            EditorUtility.DisplayDialog(
+                "GameData Build Failed",
+                "Required Python package 'openpyxl' is missing and could not be installed automatically.\n" +
+                "Install it manually with:\npython -m pip install openpyxl",
+                "OK"
+            );
+            return;
+        }
+
         if (!File.Exists(xlsx))
         {
             EditorUtility.DisplayDialog("GameData", $"XLSX not found:\n{xlsx}", "OK");
@@ -140,6 +151,27 @@ public static class GameDataBuildMenu
         stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
         exitCode = p.ExitCode;
+    }
+
+    private static bool EnsurePythonDependency(string repoRoot, string pythonExe, string packageName)
+    {
+        RunProcess(repoRoot, pythonExe, $"-m pip show {packageName}", out var showStdout, out var showStderr, out var showExitCode);
+        LogOutput(showStdout, false);
+        LogOutput(showStderr, showExitCode != 0);
+        if (showExitCode == 0) return true;
+
+        Debug.Log($"[GameData] Installing missing Python dependency: {packageName}");
+        RunProcess(
+            repoRoot,
+            pythonExe,
+            $"-m pip install {packageName}",
+            out var installStdout,
+            out var installStderr,
+            out var installExitCode
+        );
+        LogOutput(installStdout, false);
+        LogOutput(installStderr, installExitCode != 0);
+        return installExitCode == 0;
     }
 
     private static void LogOutput(string text, bool isError)
