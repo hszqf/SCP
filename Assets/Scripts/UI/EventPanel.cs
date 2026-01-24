@@ -23,6 +23,8 @@ public class EventPanel : MonoBehaviour
     {
         if (ev == null) return;
 
+        Debug.Log($"[EventUI] Show node={ev.NodeId} eventId={ev.EventId} titleLen={ev.Title?.Length} descLen={ev.Desc?.Length} options={ev.Options?.Count}");
+
         _eventInstance = ev;
         _onChoose = onChoose;
         _onClose = onClose;
