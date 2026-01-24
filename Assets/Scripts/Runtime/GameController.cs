@@ -202,7 +202,8 @@ public class GameController : MonoBehaviour
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
-        GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(",", agentIds)})");
+
+        GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(\",\", agentIds)})");
         Notify();
     }
 
@@ -278,7 +279,8 @@ public static class GameControllerTaskExt
         var busy = DeriveBusyAgentIdsFromTasks(gc);
         bool anyBusy = agentIds.Any(id => !string.IsNullOrEmpty(id) && busy.Contains(id));
         if (anyBusy)
-            LogBusySnapshot(gc, $"AreAgentsBusy(check:{string.Join(",", agentIds)})");
+
+            LogBusySnapshot(gc, $"AreAgentsBusy(check:{string.Join(\",\", agentIds)})");
         return anyBusy;
     }
 
@@ -396,7 +398,9 @@ public static class GameControllerTaskExt
 
         // Assign squad
         current.AssignedAgentIds = new List<string>(agentIds);
-        LogBusySnapshot(gc, $"TryAssignLegacyCurrentTask(node:{nodeId}, type:{type}, agents:{string.Join(",", agentIds)})");
+
+        LogBusySnapshot(gc, $"TryAssignLegacyCurrentTask(node:{nodeId}, type:{type}, agents:{string.Join(\",\", agentIds)})");
+
         return AssignResult.Ok();
     }
 
@@ -507,7 +511,9 @@ public static class GameControllerTaskExt
                     var legacySet = new HashSet<string>(legacyAgents);
                     if (!taskSet.SetEquals(legacySet))
                     {
-                        Debug.LogWarning($"[LegacyManageMigration] Existing task differs anomaly:{anomaly.Id} task:[{string.Join(",", taskSet)}] legacy:[{string.Join(",", legacySet)}]");
+
+                        Debug.LogWarning($"[LegacyManageMigration] Existing task differs anomaly:{anomaly.Id} task:[{string.Join(\",\", taskSet)}] legacy:[{string.Join(\",\", legacySet)}]");
+
                     }
 #endif
                     anomaly.ManagerAgentIds.Clear();
@@ -527,14 +533,18 @@ public static class GameControllerTaskExt
                         AssignedAgentIds = new List<string>(legacyAgents)
                     };
                     node.Tasks.Add(task);
-                    Debug.Log($"[LegacyManageMigration] Created manage task for anomaly:{anomaly.Id} agents:{string.Join(",", legacyAgents)}");
+
+                    Debug.Log($"[LegacyManageMigration] Created manage task for anomaly:{anomaly.Id} agents:{string.Join(\",\", legacyAgents)}");
+
                 }
                 else
                 {
                     if (task.AssignedAgentIds == null) task.AssignedAgentIds = new List<string>();
                     foreach (var id in legacyAgents)
                         if (!task.AssignedAgentIds.Contains(id)) task.AssignedAgentIds.Add(id);
-                    Debug.Log($"[LegacyManageMigration] Patched manage task:{task.Id} anomaly:{anomaly.Id} agents:{string.Join(",", task.AssignedAgentIds)}");
+
+                    Debug.Log($"[LegacyManageMigration] Patched manage task:{task.Id} anomaly:{anomaly.Id} agents:{string.Join(\",\", task.AssignedAgentIds)}");
+
                 }
 
                 anomaly.ManagerAgentIds.Clear();
