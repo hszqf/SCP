@@ -25,7 +25,14 @@ public class NodeButton : MonoBehaviour
 
     void OnClick()
     {
-        if (UIPanelRoot.I) UIPanelRoot.I.OpenNode(NodeId);
+        if (UIPanelRoot.I == null || GameController.I == null || string.IsNullOrEmpty(NodeId))
+            return;
+
+        var node = GameController.I.GetNode(NodeId);
+        if (node != null && node.PendingEvents != null && node.PendingEvents.Count > 0)
+            UIPanelRoot.I.OpenNodeEvent(NodeId);
+        else
+            UIPanelRoot.I.OpenNode(NodeId);
     }
 
     public void Set(string nodeId, string _unusedText)
