@@ -12,10 +12,12 @@ public class EventPanel : MonoBehaviour
     [SerializeField] private TMP_Text descText;
     [SerializeField] private Transform optionsRoot;
     [SerializeField] private Button optionButtonTemplate;
+    [SerializeField] private TMP_Text resultText;
+    [SerializeField] private GameObject contentRoot;
     [SerializeField] private Button closeButton;
 
     private EventInstance _eventInstance;
-    private Action<string> _onChoose;
+    private Func<string, string> _onChoose;
     private Action _onClose;
     private readonly List<Button> _spawnedOptionButtons = new();
 
@@ -24,7 +26,7 @@ public class EventPanel : MonoBehaviour
         Debug.Log("[EventUI] EventPanel.OnEnable");
     }
 
-    public void Show(EventInstance ev, Action<string> onChoose, Action onClose = null)
+    public void Show(EventInstance ev, Func<string, string> onChoose, Action onClose = null)
     {
         Debug.Log($"[EventUI] Show node={ev?.NodeId ?? "<null>"} eventId={ev?.EventId ?? "<null>"} titleLen={(ev?.Title?.Length ?? -1)} descLen={(ev?.Desc?.Length ?? -1)} options={(ev?.Options == null ? -1 : ev.Options.Count)}");
         if (ev == null)
@@ -41,6 +43,10 @@ public class EventPanel : MonoBehaviour
         _eventInstance = ev;
         _onChoose = onChoose;
         _onClose = onClose;
+
+        contentRoot.SetActive(true);
+        resultText.text = string.Empty;
+        resultText.gameObject.SetActive(false);
 
         titleText.text = ev.Title;
         descText.text = ev.Desc;
@@ -97,15 +103,24 @@ public class EventPanel : MonoBehaviour
             if (label) label.text = option.Text;
 
             string optionId = option.OptionId;
-            button.onClick.AddListener(() =>
-            {
-                LogClick(optionId);
-                _onChoose?.Invoke(optionId);
-                Hide();
-            });
+            button.onClick.AddListener(() => OnOptionClicked(optionId));
 
             _spawnedOptionButtons.Add(button);
         }
+    }
+
+    private void OnOptionClicked(string optionId)
+    {
+        LogClick(optionId);
+        var result = _onChoose?.Invoke(optionId);
+        ShowResult(string.IsNullOrEmpty(result) ? "事件已处理" : result);
+    }
+
+    private void ShowResult(string result)
+    {
+        contentRoot.SetActive(false);
+        resultText.text = result;
+        resultText.gameObject.SetActive(true);
     }
 
     private void BindCloseButton()
@@ -126,6 +141,8 @@ public class EventPanel : MonoBehaviour
         if (!descText) missing.Add(nameof(descText));
         if (!optionsRoot) missing.Add(nameof(optionsRoot));
         if (!optionButtonTemplate) missing.Add(nameof(optionButtonTemplate));
+        if (!resultText) missing.Add(nameof(resultText));
+        if (!contentRoot) missing.Add(nameof(contentRoot));
         if (!closeButton) missing.Add(nameof(closeButton));
 
         if (missing.Count == 0) return true;

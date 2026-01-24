@@ -137,7 +137,11 @@ namespace Core
             Debug.Log($"[EventResolve] day={s.Day} node={node.Id} eventId={ev.EventId} option={opt.OptionId} effects={opt.Effects} pendingCountAfter={pendingAfter}");
 
             s.News.Add($"- {node.Name} 事件处理：{ev.Title} -> {opt.Text}");
-            return (true, opt.Text);
+
+            var resultText = string.IsNullOrEmpty(opt.ResultText) ? BuildEffectSummary(opt.Effects) : opt.ResultText;
+            if (string.IsNullOrEmpty(resultText)) resultText = opt.Text;
+            if (string.IsNullOrEmpty(resultText)) resultText = "事件已处理";
+            return (true, resultText);
         }
 
         public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, string reason)
@@ -192,6 +196,27 @@ namespace Core
             s.Panic = ClampInt(s.Panic + eff.GlobalPanicDelta, 0, 100);
             s.Money += eff.MoneyDelta;
             s.NegEntropy = Math.Max(0, s.NegEntropy + eff.NegEntropyDelta);
+        }
+
+        private static string BuildEffectSummary(EventEffect eff)
+        {
+            if (eff == null) return string.Empty;
+
+            var parts = new List<string>();
+            AddDelta(parts, "本地恐慌", eff.LocalPanicDelta);
+            AddDelta(parts, "人口", eff.PopulationDelta);
+            AddDelta(parts, "全局恐慌", eff.GlobalPanicDelta);
+            AddDelta(parts, "资金", eff.MoneyDelta);
+            AddDelta(parts, "负熵", eff.NegEntropyDelta);
+
+            return parts.Count == 0 ? string.Empty : string.Join("，", parts);
+        }
+
+        private static void AddDelta(List<string> parts, string label, int delta)
+        {
+            if (delta == 0) return;
+            var sign = delta > 0 ? "+" : string.Empty;
+            parts.Add($"{label} {sign}{delta}");
         }
 
         // =====================
