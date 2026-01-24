@@ -35,6 +35,7 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
+        Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
         State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4 });
@@ -50,6 +51,14 @@ public class GameController : MonoBehaviour
         Notify();
     }
 
+    private void OnDestroy()
+    {
+        if (I == this)
+        {
+            Sim.OnIgnorePenaltyApplied -= HandleIgnorePenaltyApplied;
+        }
+    }
+
     public void Notify() => OnStateChanged?.Invoke();
 
     public NodeState GetNode(string nodeId)
@@ -62,12 +71,14 @@ public class GameController : MonoBehaviour
     {
         Sim.StepDay(State, _rng);
         Notify();
+        RefreshMapNodes();
     }
 
     public (bool success, string text) ResolveEvent(string nodeId, string eventId, string optionId)
     {
         var res = Sim.ResolveEvent(State, nodeId, eventId, optionId, _rng);
         Notify();
+        RefreshMapNodes();
         return res;
     }
 
@@ -221,6 +232,17 @@ public class GameController : MonoBehaviour
         _legacyManageMigrated = true;
         GameControllerTaskExt.MigrateLegacyManageOccupancy(this);
         GameControllerTaskExt.LogBusySnapshot(this, "LegacyManageMigration");
+    }
+
+    private void RefreshMapNodes()
+    {
+        MapNodeSpawner.I?.RefreshMapNodes();
+        UIPanelRoot.I?.RefreshNodePanel();
+    }
+
+    private void HandleIgnorePenaltyApplied()
+    {
+        RefreshMapNodes();
     }
 
     // =====================
