@@ -2,26 +2,34 @@
 // Source: Assets/Scripts/Core/Sim.cs
 // Goal: StepDay progresses ALL active tasks in NodeState.Tasks (unlimited investigate/contain tasks).
 // Notes:
-// - Random incident generation is currently disabled via ENABLE_RANDOM_EVENTS.
-// - Events (PendingEvent) apply progress deltas to the most recent matching active task on the node.
+// - Node events now attach to NodeState.PendingEvents.
+// - PendingEvent (legacy) is kept for compatibility but not used by this MVP flow.
 // <EXPORT_BLOCK>
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Core
 {
     public static class Sim
     {
-        // Toggle: pause random incident generation during StepDay.
-        // Set to true to re-enable. (Existing pending events are still resolved via EventPanel.)
-        private const bool ENABLE_RANDOM_EVENTS = false;
+        private const int LOCAL_PANIC_HIGH_THRESHOLD = 6;
+        private const double RANDOM_EVENT_CHANCE = 0.45; // 开发期调高，便于验收
+        private const int FIXED_EVENT_DAY = 3;
+        private const string FIXED_EVENT_NODE_ID = "N1";
 
         public static void StepDay(GameState s, Random rng)
         {
             s.Day += 1;
             s.News.Add($"Day {s.Day}: 日结算开始");
+
+            // 0) 固定事件（最小 stub：固定日期投放到固定节点）
+            if (s.Day == FIXED_EVENT_DAY)
+            {
+                TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, "FixedDayTrigger");
+            }
 
             // 1) 异常生成（节点维度）
             foreach (var n in s.Nodes)
@@ -42,18 +50,9 @@ namespace Core
             {
                 if (n.Tasks == null || n.Tasks.Count == 0) continue;
 
-                // 如果该节点有待处理事件：本日暂停该节点所有任务推进（保持你原先的阻塞语义）
-                if (s.PendingEvents.Any(e => e.NodeId == n.Id))
+                // 如果该节点有待处理事件：本日暂停该节点所有任务推进（保持原先阻塞语义）
+                if (HasPendingNodeEvents(n))
                     continue;
-
-                // 12% 概率事件（可开关）
-                if (ENABLE_RANDOM_EVENTS && rng.NextDouble() < 0.12)
-                {
-                    var ev = GenerateEvent(n);
-                    s.PendingEvents.Add(ev);
-                    s.News.Add($"- {n.Name} 发生突发事件：{ev.Title}");
-                    continue;
-                }
 
                 // 推进所有 Active 任务
                 for (int i = 0; i < n.Tasks.Count; i++)
@@ -82,19 +81,34 @@ namespace Core
 
                     if (t.Progress >= 1f)
                     {
-                        CompleteTask(s, n, t);
+                        CompleteTask(s, n, t, rng);
                     }
                 }
             }
 
             // 2.5) 收容后管理（负熵产出）
-            // 管理系统已正式纳入 NodeTask：
-            // - Type==Manage 的 Active 任务代表“正在管理某个已收容异常”
-            // - 任务通过 TargetManagedAnomalyId 绑定到 NodeState.ManagedAnomalies
-            // - 每天根据管理小队属性产出负熵，累加到 GameState.NegEntropy，并写回 ManagedAnomalyState.TotalNegEntropy
             StepManageTasks(s, rng);
 
-            // 3) 恐慌 & 收入
+            // 3) 事件来源（过天触发）：本地恐慌高 / 随机
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+
+                if (node.LocalPanic >= LOCAL_PANIC_HIGH_THRESHOLD)
+                {
+                    TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, $"LocalPanicHigh>={LOCAL_PANIC_HIGH_THRESHOLD}");
+                }
+
+                if (rng.NextDouble() < RANDOM_EVENT_CHANCE)
+                {
+                    TryGenerateEvent(s, rng, EventSource.Random, node.Id, $"RandomRoll<{RANDOM_EVENT_CHANCE:0.00}");
+                }
+            }
+
+            // 4) 不处理的后果（事件不会自动清除）
+            ApplyIgnorePenaltyOnDayEnd(s);
+
+            // 5) 恐慌 & 收入（全局）
             int activeAnomaly = s.Nodes.Count(n => n.HasAnomaly && n.Status != NodeStatus.Secured);
             s.Panic = ClampInt(s.Panic + activeAnomaly, 0, 100);
             s.Money += 50;
@@ -102,57 +116,88 @@ namespace Core
             s.News.Add($"Day {s.Day} 结束");
         }
 
-        public static (bool success, string text) ResolveEvent(GameState s, string eventId, string optionId, Random rng)
+        public static (bool success, string text) ResolveEvent(GameState s, string nodeId, string eventId, string optionId, Random rng)
         {
-            var ev = s.PendingEvents.FirstOrDefault(e => e.Id == eventId);
+            var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
+            if (node == null) return (false, "节点不存在");
+            if (node.PendingEvents == null || node.PendingEvents.Count == 0) return (false, "节点无事件");
+
+            var ev = node.PendingEvents.FirstOrDefault(e => e != null && e.EventId == eventId);
             if (ev == null) return (false, "事件不存在");
 
-            var opt = ev.Options.FirstOrDefault(o => o.Id == optionId);
+            var opt = ev.Options?.FirstOrDefault(o => o != null && o.OptionId == optionId);
             if (opt == null) return (false, "选项不存在");
 
-            var node = s.Nodes.FirstOrDefault(n => n.Id == ev.NodeId);
-            if (node == null) return (false, "节点不存在");
+            ApplyEffect(s, node, opt.Effects);
 
-            // 优先找与事件 Kind 匹配、且本节点最近创建的一条 Active 任务
-            var task = PickTaskForEvent(node, ev.Kind);
+            node.PendingEvents.Remove(ev);
 
-            // 若无匹配任务，则事件只结算资源/恐慌，不动进度（可接受的最小语义）
-            var agents = (task != null)
-                ? GetAssignedAgents(s, task.AssignedAgentIds)
-                : new List<AgentState>();
+            int pendingAfter = node.PendingEvents.Count;
+            Debug.Log($"[EventResolve] day={s.Day} node={node.Id} eventId={ev.EventId} option={opt.OptionId} effects={opt.Effects} pendingCountAfter={pendingAfter}");
 
-            float rate = CalcSuccessRate(opt, agents);
-            bool success = rng.NextDouble() < rate;
+            s.News.Add($"- {node.Name} 事件处理：{ev.Title} -> {opt.Text}");
+            return (true, opt.Text);
+        }
 
-            if (success)
+        public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, string reason)
+        {
+            var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
+            if (node == null) return false;
+
+            var instance = EventTemplates.CreateInstance(source, nodeId, s.Day, rng);
+            if (instance == null) return false;
+
+            AddEventToNode(node, instance);
+
+            int pendingCount = node.PendingEvents.Count;
+            Debug.Log($"[EventGen] day={s.Day} source={source} node={nodeId} eventId={instance.EventId} pendingCount={pendingCount} reason={reason}");
+            s.News.Add($"- {node.Name} 发生事件：{instance.Title}");
+            return true;
+        }
+
+        public static void ApplyIgnorePenaltyOnDayEnd(GameState s)
+        {
+            foreach (var node in s.Nodes)
             {
-                s.Money += opt.MoneyOnSuccess;
-                s.Panic = ClampInt(s.Panic + opt.PanicOnSuccess, 0, 100);
-                if (task != null) task.Progress = Clamp01(task.Progress + opt.ProgressDeltaOnSuccess);
+                if (!HasPendingNodeEvents(node)) continue;
+
+                foreach (var ev in node.PendingEvents)
+                {
+                    if (ev == null || ev.IgnorePenalty == null) continue;
+                    ApplyEffect(s, node, ev.IgnorePenalty);
+                    Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventId={ev.EventId} penalty={ev.IgnorePenalty} localPanic={node.LocalPanic} pop={node.Population}");
+                }
             }
-            else
-            {
-                s.Money += opt.MoneyOnFail;
-                s.Panic = ClampInt(s.Panic + opt.PanicOnFail, 0, 100);
-                if (task != null) task.Progress = Clamp01(task.Progress + opt.ProgressDeltaOnFail);
-            }
+        }
 
-            string resultText = $"{(success ? "成功" : "失败")}（成功率 {Math.Round(rate * 100)}%）: {opt.Text}";
-            s.News.Add($"- {node.Name} 事件结果：{resultText}");
+        private static bool HasPendingNodeEvents(NodeState node)
+        {
+            return node != null && node.PendingEvents != null && node.PendingEvents.Count > 0;
+        }
 
-            // 若事件导致进度直接完成，则同日立即完成该任务
-            if (task != null && task.State == TaskState.Active && task.Progress >= 1f)
-                CompleteTask(s, node, task);
+        private static void AddEventToNode(NodeState node, EventInstance ev)
+        {
+            if (node.PendingEvents == null) node.PendingEvents = new List<EventInstance>();
+            node.PendingEvents.Add(ev);
+        }
 
-            s.PendingEvents.Remove(ev);
-            return (success, resultText);
+        private static void ApplyEffect(GameState s, NodeState node, EventEffect eff)
+        {
+            if (eff == null) return;
+
+            node.LocalPanic = Math.Max(0, node.LocalPanic + eff.LocalPanicDelta);
+            node.Population = Math.Max(0, node.Population + eff.PopulationDelta);
+
+            s.Panic = ClampInt(s.Panic + eff.GlobalPanicDelta, 0, 100);
+            s.Money += eff.MoneyDelta;
+            s.NegEntropy = Math.Max(0, s.NegEntropy + eff.NegEntropyDelta);
         }
 
         // =====================
         // Task completion rules
         // =====================
 
-        static void CompleteTask(GameState s, NodeState node, NodeTask task)
+        static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng)
         {
             task.Progress = 1f;
             task.State = TaskState.Completed;
@@ -179,6 +224,7 @@ namespace Core
                 node.HasAnomaly = true;
 
                 s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1");
+                TryGenerateEvent(s, rng, EventSource.Investigate, node.Id, "InvestigateComplete");
             }
             else
             {
@@ -203,6 +249,7 @@ namespace Core
                 s.Panic = Math.Max(0, s.Panic - 5);
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
+                TryGenerateEvent(s, rng, EventSource.Contain, node.Id, "ContainComplete");
 
                 // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
                 // 注意：在并行收容/目标缺失等情况下，target 可能为 null，但我们仍然需要记录一个“已收容异常”，否则管理系统无法进入。
@@ -284,85 +331,6 @@ namespace Core
             return Math.Max(min, baseDelta + statBonus + noise);
         }
 
-        static float CalcSuccessRate(DecisionOption opt, List<AgentState> squad)
-        {
-            // 没人：用 base
-            if (squad == null || squad.Count == 0) return opt.BaseSuccess;
-
-            int maxVal = 0;
-            foreach (var a in squad)
-            {
-                int val = opt.CheckAttr switch
-                {
-                    "Perception" => a.Perception,
-                    "Operation" => a.Operation,
-                    "Resistance" => a.Resistance,
-                    "Power" => a.Power,
-                    _ => 0
-                };
-                if (val > maxVal) maxVal = val;
-            }
-
-            float rate = opt.BaseSuccess + (maxVal - opt.Threshold) * 0.05f;
-            return Clamp01(rate);
-        }
-
-        static NodeTask PickTaskForEvent(NodeState node, EventKind kind)
-        {
-            if (node == null || node.Tasks == null) return null;
-            TaskType want = (kind == EventKind.Investigate) ? TaskType.Investigate : TaskType.Contain;
-
-            // 最近创建的优先（CreatedDay 越大越新；若没填则按列表末尾）
-            NodeTask best = null;
-            int bestDay = int.MinValue;
-
-            foreach (var t in node.Tasks)
-            {
-                if (t == null) continue;
-                if (t.State != TaskState.Active) continue;
-                if (t.Type != want) continue;
-
-                int cd = t.CreatedDay;
-                if (cd >= bestDay)
-                {
-                    bestDay = cd;
-                    best = t;
-                }
-            }
-
-            // fallback：列表从后往前找
-            if (best == null)
-            {
-                for (int i = node.Tasks.Count - 1; i >= 0; i--)
-                {
-                    var t = node.Tasks[i];
-                    if (t != null && t.State == TaskState.Active && t.Type == want)
-                        return t;
-                }
-            }
-
-            return best;
-        }
-
-        static PendingEvent GenerateEvent(NodeState n)
-        {
-            // 选择事件类型：优先调查任务，其次收容任务
-            bool hasInv = n.Tasks != null && n.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate);
-            bool inv = hasInv;
-
-            var ev = new PendingEvent
-            {
-                Id = "EV_" + Guid.NewGuid().ToString("N")[..8],
-                NodeId = n.Id,
-                Kind = inv ? EventKind.Investigate : EventKind.Contain,
-                Title = inv ? "目击者失控" : "收容设施异常震动",
-                Desc = inv ? "当地目击者情绪激动，可能引发恐慌扩散。" : "设施监测到异常震动，继续操作可能扩大损失。"
-            };
-            ev.Options.Add(new DecisionOption { Id = "A", Text = inv ? "安抚" : "加固", CheckAttr = inv ? "Perception" : "Resistance", Threshold = 6 });
-            ev.Options.Add(new DecisionOption { Id = "B", Text = inv ? "驱散" : "推进", CheckAttr = inv ? "Power" : "Operation", Threshold = 7 });
-            return ev;
-        }
-
         // =====================
         // Management (NegEntropy) - formalized as NodeTask.Manage
         // =====================
@@ -409,6 +377,11 @@ namespace Core
                 {
                     totalAllNodes += nodeTotal;
                     s.News.Add($"- {node.Name} 管理产出：+{nodeTotal} 负熵");
+                }
+
+                if (node.Status == NodeStatus.Secured && nodeTotal > 0)
+                {
+                    TryGenerateEvent(s, rng, EventSource.SecuredManage, node.Id, "SecuredManageYield");
                 }
             }
 

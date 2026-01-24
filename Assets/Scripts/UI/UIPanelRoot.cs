@@ -302,13 +302,27 @@ public class UIPanelRoot : MonoBehaviour
         }
     }
 
+    public void OpenNodeEvent(string nodeId)
+    {
+        if (GameController.I == null || string.IsNullOrEmpty(nodeId)) return;
+        var node = GameController.I.GetNode(nodeId);
+        if (node == null || node.PendingEvents == null || node.PendingEvents.Count == 0) return;
+
+        if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
+        if (!_eventPanel) return;
+
+        _eventPanel.gameObject.SetActive(true);
+        _eventPanel.transform.SetAsLastSibling();
+        _eventPanel.Show(node.PendingEvents[0]);
+    }
+
     void TryAutoOpenEvent()
     {
         // If a higher priority panel is shown, do not open events
         if (_agentPicker && _agentPicker.IsShown) return;
+        if (GameController.I == null || GameController.I.State?.Nodes == null) return;
 
-        var list = GameController.I.State.PendingEvents;
-        if (list == null || list.Count == 0) return;
+        if (!TryGetFirstPendingEvent(out _, out var ev)) return;
 
         if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
 
@@ -317,8 +331,24 @@ public class UIPanelRoot : MonoBehaviour
         {
             _eventPanel.gameObject.SetActive(true);
             _eventPanel.transform.SetAsLastSibling();
-            _eventPanel.Show(list[0]);
+            _eventPanel.Show(ev);
         }
+    }
+
+    private bool TryGetFirstPendingEvent(out NodeState node, out EventInstance ev)
+    {
+        node = null;
+        ev = null;
+
+        foreach (var n in GameController.I.State.Nodes)
+        {
+            if (n?.PendingEvents == null || n.PendingEvents.Count == 0) continue;
+            node = n;
+            ev = n.PendingEvents[0];
+            return ev != null;
+        }
+
+        return false;
     }
 
     public void CloseEvent()
