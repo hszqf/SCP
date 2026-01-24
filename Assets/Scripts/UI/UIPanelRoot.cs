@@ -314,11 +314,11 @@ public class UIPanelRoot : MonoBehaviour
 
         _suppressAutoOpenEvent = true;
         var ev = node.PendingEvents[0];
-        Debug.Log($"[EventUI] OpenNodeEvent node={nodeId} eventId={ev.EventId} pending={node.PendingEvents.Count}");
+        Debug.Log($"[EventUI] OpenNodeEvent node={nodeId} eventInstanceId={ev.EventInstanceId} pending={node.PendingEvents.Count}");
         _eventPanel.Show(ev, optionId =>
         {
             _suppressAutoOpenEvent = true;
-            var res = GameController.I.ResolveEvent(nodeId, ev.EventId, optionId);
+            var res = GameController.I.ResolveEvent(nodeId, ev.EventInstanceId, optionId);
             return res.text;
         }, onClose: null);
     }

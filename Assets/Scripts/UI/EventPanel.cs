@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,6 +17,8 @@ public class EventPanel : MonoBehaviour
     [SerializeField] private Button closeButton;
 
     private EventInstance _eventInstance;
+    private EventDef _eventDef;
+    private List<EventOptionDef> _options = new();
     private Func<string, string> _onChoose;
     private Action _onClose;
     private readonly List<Button> _spawnedOptionButtons = new();
@@ -27,10 +30,17 @@ public class EventPanel : MonoBehaviour
 
     public void Show(EventInstance ev, Func<string, string> onChoose, Action onClose = null)
     {
-        Debug.Log($"[EventUI] Show node={ev?.NodeId ?? "<null>"} eventId={ev?.EventId ?? "<null>"} titleLen={(ev?.Title?.Length ?? -1)} descLen={(ev?.Desc?.Length ?? -1)} options={(ev?.Options == null ? -1 : ev.Options.Count)}");
+        var registry = DataRegistry.Instance;
+        Debug.Log($"[EventUI] Show node={ev?.NodeId ?? "<null>"} eventInstanceId={ev?.EventInstanceId ?? "<null>"} eventDefId={ev?.EventDefId ?? "<null>"}");
         if (ev == null)
         {
             Debug.LogError("[EventUI] Show called with null EventInstance");
+            return;
+        }
+
+        if (!registry.TryGetEvent(ev.EventDefId, out var eventDef))
+        {
+            Debug.LogError($"[EventUI] Missing event def for {ev.EventDefId}");
             return;
         }
 
@@ -40,20 +50,24 @@ public class EventPanel : MonoBehaviour
         if (!ValidateRefsOrThrow()) return;
 
         _eventInstance = ev;
+        _eventDef = eventDef;
         _onChoose = onChoose;
         _onClose = onClose;
+
+        registry.OptionsByEvent.TryGetValue(ev.EventDefId, out _options);
+        _options ??= new List<EventOptionDef>();
 
         resultText.text = string.Empty;
         resultText.gameObject.SetActive(false);
 
-        titleText.text = ev.Title;
-        descText.text = ev.Desc;
+        titleText.text = eventDef.title;
+        descText.text = eventDef.desc;
 
         optionButtonTemplate.onClick.RemoveAllListeners();
         optionButtonTemplate.gameObject.SetActive(false);
 
         ClearSpawnedOptions();
-        BuildOptions(ev.Options);
+        BuildOptions(_options);
         BindCloseButton();
         LogShow(ev);
     }
@@ -84,10 +98,10 @@ public class EventPanel : MonoBehaviour
         }
     }
 
-    private void BuildOptions(List<EventOption> options)
+    private void BuildOptions(List<EventOptionDef> options)
     {
         if (!optionsRoot || !optionButtonTemplate) return;
-        options ??= new List<EventOption>();
+        options ??= new List<EventOptionDef>();
 
         foreach (var option in options)
         {
@@ -98,9 +112,9 @@ public class EventPanel : MonoBehaviour
             button.gameObject.SetActive(true);
 
             var label = button.GetComponentInChildren<TMP_Text>(true);
-            if (label) label.text = option.Text;
+            if (label) label.text = option.text;
 
-            string optionId = option.OptionId;
+            string optionId = option.optionId;
             button.onClick.AddListener(() => OnOptionClicked(optionId));
 
             _spawnedOptionButtons.Add(button);
@@ -156,13 +170,13 @@ public class EventPanel : MonoBehaviour
             pendingCount = node?.PendingEvents?.Count ?? 0;
         }
 
-        int optionCount = ev.Options?.Count ?? 0;
-        Debug.Log($"[EventUI] Show node={ev.NodeId} eventId={ev.EventId} options={optionCount} pendingCount={pendingCount}");
+        int optionCount = _options?.Count ?? 0;
+        Debug.Log($"[EventUI] Show node={ev.NodeId} eventInstanceId={ev.EventInstanceId} eventDefId={ev.EventDefId} options={optionCount} pendingCount={pendingCount}");
     }
 
     private void LogClick(string optionId)
     {
-        if (_eventInstance == null) return;
-        Debug.Log($"[EventUI] Click option={optionId} node={_eventInstance.NodeId} eventId={_eventInstance.EventId}");
+        if (_eventInstance == null || _eventDef == null) return;
+        Debug.Log($"[EventUI] Click option={optionId} node={_eventInstance.NodeId} eventInstanceId={_eventInstance.EventInstanceId} eventDefId={_eventInstance.EventDefId}");
     }
 }
