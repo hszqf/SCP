@@ -96,6 +96,7 @@ public class AgentPickerView : MonoBehaviour
     public void Hide()
     {
         gameObject.SetActive(false);
+        GameControllerTaskExt.LogBusySnapshot(GameController.I, "AgentPickerView.Hide");
     }
 
     void RefreshList(IEnumerable<AgentState> agents, Func<string, bool> isBusyOtherNode)
@@ -187,6 +188,7 @@ public class AgentPickerView : MonoBehaviour
     void OnCancelClicked()
     {
         // 取消就是不做任何改动，直接关闭
+        GameControllerTaskExt.LogBusySnapshot(GameController.I, "AgentPickerView.OnCancelClicked");
         _onCancel?.Invoke();
         Hide();
     }

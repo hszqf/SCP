@@ -26,6 +26,8 @@ public class GameController : MonoBehaviour
     [Header("Debug Seed (same seed => same run)")]
     [SerializeField] private int seed = 12345;
 
+    private bool _legacyManageMigrated;
+
     private void Awake()
     {
         if (I != null) { Destroy(gameObject); return; }
@@ -44,6 +46,7 @@ public class GameController : MonoBehaviour
         State.Nodes.Add(new NodeState { Id = "N2", Name = "节点2", X = 0.62f, Y = 0.33f });
         State.Nodes.Add(new NodeState { Id = "N3", Name = "节点3", X = 0.48f, Y = 0.58f });
 
+        MigrateLegacyManageOccupancyIfNeeded();
         Notify();
     }
 
@@ -87,6 +90,7 @@ public class GameController : MonoBehaviour
             Progress = 0f,
         };
         n.Tasks.Add(t);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateInvestigateTask(node:{nodeId})");
         return t;
     }
 
@@ -113,6 +117,7 @@ public class GameController : MonoBehaviour
             TargetContainableId = target,
         };
         n.Tasks.Add(t);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateContainTask(node:{nodeId}, target:{target})");
         return t;
     }
 
@@ -143,6 +148,7 @@ public class GameController : MonoBehaviour
             TargetManagedAnomalyId = target,
         };
         n.Tasks.Add(t);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateManageTask(node:{nodeId}, anomaly:{target})");
         return t;
     }
 
@@ -176,17 +182,11 @@ public class GameController : MonoBehaviour
         t.Progress = 0f;
         t.State = TaskState.Cancelled;
 
-        // Compatibility: if this is a Manage task, also clear legacy ManagerAgentIds on the target anomaly.
-        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
-        {
-            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
-            if (m != null && m.ManagerAgentIds != null) m.ManagerAgentIds.Clear();
-        }
-
         // Node status: only coarse
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
+        GameControllerTaskExt.LogBusySnapshot(this, $"CancelOrRetreatTask(task:{taskId})");
         Notify();
         return true;
     }
@@ -198,23 +198,20 @@ public class GameController : MonoBehaviour
 
         t.AssignedAgentIds = new List<string>(agentIds);
 
-        // Compatibility: if this is a Manage task, mirror to legacy ManagerAgentIds on the target anomaly.
-        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
-        {
-            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
-            if (m != null)
-            {
-                if (m.ManagerAgentIds == null) m.ManagerAgentIds = new List<string>();
-                m.ManagerAgentIds.Clear();
-                m.ManagerAgentIds.AddRange(agentIds);
-            }
-        }
-
         // Node-level bookkeeping
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
+        GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(\",\", agentIds)})");
         Notify();
+    }
+
+    private void MigrateLegacyManageOccupancyIfNeeded()
+    {
+        if (_legacyManageMigrated) return;
+        _legacyManageMigrated = true;
+        GameControllerTaskExt.MigrateLegacyManageOccupancy(this);
+        GameControllerTaskExt.LogBusySnapshot(this, "LegacyManageMigration");
     }
 
     // =====================
@@ -278,52 +275,11 @@ public static class GameControllerTaskExt
         if (gc == null || gc.State?.Nodes == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 
-        // 1) Busy by any ACTIVE task squad (any node)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.Tasks == null) continue;
-            foreach (var t in node.Tasks)
-            {
-                if (t == null) continue;
-                if (t.State != TaskState.Active) continue;
-                if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
-
-                if (t.AssignedAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        // 2) Busy by anomaly management via ACTIVE Manage tasks (formalized)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.Tasks == null) continue;
-            foreach (var t in node.Tasks)
-            {
-                if (t == null) continue;
-                if (t.State != TaskState.Active) continue;
-                if (t.Type != TaskType.Manage) continue;
-                if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
-
-                if (t.AssignedAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        // 3) Compatibility: legacy ManagerAgentIds (should be phased out)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.ManagedAnomalies == null) continue;
-            foreach (var m in node.ManagedAnomalies)
-            {
-                if (m == null) continue;
-                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
-
-                if (m.ManagerAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        return false;
+        var busy = DeriveBusyAgentIdsFromTasks(gc);
+        bool anyBusy = agentIds.Any(id => !string.IsNullOrEmpty(id) && busy.Contains(id));
+        if (anyBusy)
+            LogBusySnapshot(gc, $"AreAgentsBusy(check:{string.Join(\",\", agentIds)})");
+        return anyBusy;
     }
 
     // ---------- Legacy: task started? ----------
@@ -360,7 +316,11 @@ public static class GameControllerTaskExt
         if (any && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
-        if (any) gc.Notify();
+        if (any)
+        {
+            GameControllerTaskExt.LogBusySnapshot(gc, $"ForceWithdraw(node:{nodeId})");
+            gc.Notify();
+        }
         return any;
     }
 
@@ -436,7 +396,150 @@ public static class GameControllerTaskExt
 
         // Assign squad
         current.AssignedAgentIds = new List<string>(agentIds);
+        LogBusySnapshot(gc, $"TryAssignLegacyCurrentTask(node:{nodeId}, type:{type}, agents:{string.Join(\",\", agentIds)})");
         return AssignResult.Ok();
+    }
+
+    // ---------- Busy derivation & debug ----------
+
+    public static HashSet<string> DeriveBusyAgentIdsFromTasks(GameController gc)
+    {
+        var result = new HashSet<string>();
+        if (gc?.State?.Nodes == null) return result;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.Tasks == null) continue;
+            foreach (var t in node.Tasks)
+            {
+                if (t == null || t.State != TaskState.Active) continue;
+                if (t.AssignedAgentIds == null) continue;
+                foreach (var id in t.AssignedAgentIds)
+                    if (!string.IsNullOrEmpty(id)) result.Add(id);
+            }
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, HashSet<string>> CollectLegacyManageAgentIds(GameController gc)
+    {
+        var legacyByAnomaly = new Dictionary<string, HashSet<string>>();
+        if (gc?.State?.Nodes == null) return legacyByAnomaly;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.ManagedAnomalies == null) continue;
+            foreach (var m in node.ManagedAnomalies)
+            {
+                if (m == null || string.IsNullOrEmpty(m.Id)) continue;
+                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
+
+                if (!legacyByAnomaly.TryGetValue(m.Id, out var set))
+                {
+                    set = new HashSet<string>();
+                    legacyByAnomaly[m.Id] = set;
+                }
+
+                foreach (var id in m.ManagerAgentIds)
+                    if (!string.IsNullOrEmpty(id)) set.Add(id);
+            }
+        }
+
+        return legacyByAnomaly;
+    }
+
+    public static void LogBusySnapshot(GameController gc, string context)
+    {
+        if (gc == null) return;
+        var busy = DeriveBusyAgentIdsFromTasks(gc);
+        var list = string.Join(",", busy.OrderBy(x => x));
+        Debug.Log($"[BusySnapshot] {context} => count={busy.Count} ids=[{list}]");
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var legacy = CollectLegacyManageAgentIds(gc);
+        if (legacy.Count == 0) return;
+
+        var legacyFlat = new HashSet<string>(legacy.SelectMany(kv => kv.Value));
+        if (!busy.SetEquals(legacyFlat))
+        {
+            var legacyList = string.Join(",", legacyFlat.OrderBy(x => x));
+            Debug.LogWarning($"[BusySnapshot] Legacy mismatch at {context} => task=[{list}] legacy=[{legacyList}]");
+        }
+#endif
+    }
+
+    public static void MigrateLegacyManageOccupancy(GameController gc)
+    {
+        if (gc?.State?.Nodes == null) return;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.ManagedAnomalies == null) continue;
+            if (node.Tasks == null) node.Tasks = new List<NodeTask>();
+
+            foreach (var anomaly in node.ManagedAnomalies)
+            {
+                if (anomaly == null || string.IsNullOrEmpty(anomaly.Id)) continue;
+                if (anomaly.ManagerAgentIds == null || anomaly.ManagerAgentIds.Count == 0) continue;
+
+                var legacyAgents = anomaly.ManagerAgentIds
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct()
+                    .ToList();
+                if (legacyAgents.Count == 0)
+                {
+                    anomaly.ManagerAgentIds.Clear();
+                    continue;
+                }
+
+                var task = node.Tasks.LastOrDefault(t =>
+                    t != null &&
+                    t.State == TaskState.Active &&
+                    t.Type == TaskType.Manage &&
+                    t.TargetManagedAnomalyId == anomaly.Id);
+
+                bool taskHasAgents = task?.AssignedAgentIds != null && task.AssignedAgentIds.Count > 0;
+                if (taskHasAgents)
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    var taskSet = new HashSet<string>(task.AssignedAgentIds.Where(id => !string.IsNullOrEmpty(id)));
+                    var legacySet = new HashSet<string>(legacyAgents);
+                    if (!taskSet.SetEquals(legacySet))
+                    {
+                        Debug.LogWarning($"[LegacyManageMigration] Existing task differs anomaly:{anomaly.Id} task:[{string.Join(\",\", taskSet)}] legacy:[{string.Join(\",\", legacySet)}]");
+                    }
+#endif
+                    anomaly.ManagerAgentIds.Clear();
+                    continue;
+                }
+
+                if (task == null)
+                {
+                    task = new NodeTask
+                    {
+                        Id = "T_" + Guid.NewGuid().ToString("N")[..10],
+                        Type = TaskType.Manage,
+                        State = TaskState.Active,
+                        CreatedDay = gc.State.Day,
+                        Progress = 0f,
+                        TargetManagedAnomalyId = anomaly.Id,
+                        AssignedAgentIds = new List<string>(legacyAgents)
+                    };
+                    node.Tasks.Add(task);
+                    Debug.Log($"[LegacyManageMigration] Created manage task for anomaly:{anomaly.Id} agents:{string.Join(\",\", legacyAgents)}");
+                }
+                else
+                {
+                    if (task.AssignedAgentIds == null) task.AssignedAgentIds = new List<string>();
+                    foreach (var id in legacyAgents)
+                        if (!task.AssignedAgentIds.Contains(id)) task.AssignedAgentIds.Add(id);
+                    Debug.Log($"[LegacyManageMigration] Patched manage task:{task.Id} anomaly:{anomaly.Id} agents:{string.Join(\",\", task.AssignedAgentIds)}");
+                }
+
+                anomaly.ManagerAgentIds.Clear();
+            }
+        }
     }
 }
 // </EXPORT_BLOCK>

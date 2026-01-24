@@ -79,6 +79,7 @@ public class AnomalyManagePanel : MonoBehaviour
     public void Hide()
     {
         gameObject.SetActive(false);
+        GameControllerTaskExt.LogBusySnapshot(GameController.I, "AnomalyManagePanel.Hide");
     }
 
     public void ShowForNode(string nodeId)
@@ -160,7 +161,6 @@ public class AnomalyManagePanel : MonoBehaviour
             var nodeForLabel = (GameController.I != null && !string.IsNullOrEmpty(_nodeId)) ? GameController.I.GetNode(_nodeId) : null;
             var mtForLabel = FindManageTask(nodeForLabel, a.Id);
             if (mtForLabel?.AssignedAgentIds != null) mgr = mtForLabel.AssignedAgentIds.Count;
-            else if (a.ManagerAgentIds != null) mgr = a.ManagerAgentIds.Count; // legacy fallback
 
             if (label) label.text = BuildAnomalyLabel(a, mgr);
 
@@ -206,15 +206,6 @@ public class AnomalyManagePanel : MonoBehaviour
             foreach (var id in mt.AssignedAgentIds)
                 _selectedAgentIds.Add(id);
         }
-        else
-        {
-            var m = FindManagedAnomaly(node, anomalyId);
-            if (m?.ManagerAgentIds != null)
-            {
-                foreach (var id in m.ManagerAgentIds)
-                    _selectedAgentIds.Add(id);
-            }
-        }
 
         RefreshUI();
     }
@@ -242,8 +233,6 @@ public class AnomalyManagePanel : MonoBehaviour
         _selectedAgentIds.Clear();
         if (mt?.AssignedAgentIds != null)
             foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
-        else if (anomaly.ManagerAgentIds != null)
-            foreach (var id in anomaly.ManagerAgentIds) _selectedAgentIds.Add(id);
 
         foreach (var ag in gc.State.Agents)
         {
@@ -353,7 +342,6 @@ public class AnomalyManagePanel : MonoBehaviour
         int mgr = 0;
         var mt = FindManageTask(node, m.Id);
         if (mt?.AssignedAgentIds != null) mgr = mt.AssignedAgentIds.Count;
-        else if (m.ManagerAgentIds != null) mgr = m.ManagerAgentIds.Count; // legacy fallback
         string nodeName = "";
         if (gc != null && !string.IsNullOrEmpty(_nodeId))
         {
