@@ -21,6 +21,8 @@ namespace Core
         private const int FIXED_EVENT_DAY = 3;
         private const string FIXED_EVENT_NODE_ID = "N1";
 
+        public static event Action OnIgnorePenaltyApplied;
+
         public static void StepDay(GameState s, Random rng)
         {
             s.Day += 1;
@@ -184,8 +186,9 @@ namespace Core
             return true;
         }
 
-        public static void ApplyIgnorePenaltyOnDayEnd(GameState s)
+        public static bool ApplyIgnorePenaltyOnDayEnd(GameState s)
         {
+            bool anyApplied = false;
             foreach (var node in s.Nodes)
             {
                 if (!HasPendingNodeEvents(node)) continue;
@@ -194,9 +197,13 @@ namespace Core
                 {
                     if (ev == null || ev.IgnorePenalty == null) continue;
                     ApplyEffect(s, node, ev.IgnorePenalty);
+                    anyApplied = true;
                     Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventId={ev.EventId} penalty={ev.IgnorePenalty} localPanic={node.LocalPanic} pop={node.Population}");
                 }
             }
+
+            if (anyApplied) OnIgnorePenaltyApplied?.Invoke();
+            return anyApplied;
         }
 
         private static bool HasPendingNodeEvents(NodeState node)

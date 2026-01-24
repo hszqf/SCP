@@ -3,9 +3,16 @@ using UnityEngine;
 
 public class MapNodeSpawner : MonoBehaviour
 {
+    public static MapNodeSpawner I { get; private set; }
+
     [SerializeField] private RectTransform mapRect;      // MapImage 的 RectTransform
     [SerializeField] private RectTransform nodeLayer;    // NodeLayer
     [SerializeField] private NodeButton nodePrefab;
+
+    private void Awake()
+    {
+        I = this;
+    }
 
     private void Start()
     {
@@ -30,8 +37,13 @@ public class MapNodeSpawner : MonoBehaviour
         }
     }
 
+    public void RefreshMapNodes()
+    {
+        Build();
+    }
+
     private void Refresh()
     {
-        // 以后你可以根据状态改颜色/图标，这里先不做
+        RefreshMapNodes();
     }
 }
