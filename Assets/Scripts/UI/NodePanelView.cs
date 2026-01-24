@@ -194,12 +194,13 @@ public class NodePanelView : MonoBehaviour
 
         string s = $"{n.Status}";
         if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
+        if (n.HasPendingEvent) s += " <color=#FFA500>[ATTENTION]</color>";
         if (statusText) statusText.text = s;
 
         UpdateDispatchButtons(n);
         UpdateManageButton(n);
 
-        int pendingEvents = n.PendingEvents != null ? n.PendingEvents.Count : 0;
+        int pendingEvents = n.HasPendingEvent ? n.PendingEvents.Count : 0;
 
         if (eventCountText)
         {

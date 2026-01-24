@@ -110,7 +110,7 @@ public class NodeButton : MonoBehaviour
             }
         }
 
-        int pendingEvents = node.PendingEvents != null ? node.PendingEvents.Count : 0;
+        int pendingEvents = node.HasPendingEvent ? node.PendingEvents.Count : 0;
         if (pendingEvents > 0)
         {
             sb.Append($"\n<color=#FFA500>E:{pendingEvents}</color>");

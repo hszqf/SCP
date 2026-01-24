@@ -117,6 +117,7 @@ namespace Core
         public int LocalPanic = 0;
         public int Population = 10;
         public List<EventInstance> PendingEvents = new();
+        public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
 
         // ===== Legacy fields (temporary) =====
         // Kept so existing UI/code can compile during migration. Do not use for new features.

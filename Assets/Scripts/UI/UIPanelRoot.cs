@@ -324,17 +324,8 @@ public class UIPanelRoot : MonoBehaviour
 
     void TryAutoOpenEvent()
     {
-        if (_suppressAutoOpenEvent) return;
-        // If a higher priority panel is shown, do not open events
-        if (_agentPicker && _agentPicker.IsShown) return;
-        if (GameController.I == null || GameController.I.State?.Nodes == null) return;
-
-        if (!TryGetFirstPendingEvent(out var foundNodeId, out _)) return;
-
-        if (!_eventPanel || !_eventPanel.gameObject.activeSelf)
-        {
-            OpenNodeEvent(foundNodeId);
-        }
+        // Auto-open is disabled. Events should only be opened via manual entry points.
+        return;
     }
 
     private bool TryGetFirstPendingEvent(out string nodeId, out EventInstance ev)
