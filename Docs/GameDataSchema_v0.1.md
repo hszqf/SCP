@@ -4,6 +4,20 @@ V0 数据结构定稿（Schema v0.1，Excel→JSON）
 
 A. 约定与规范
 
+A0. GameData 表格协议（导表/运行时一致）
+
+每个 sheet 前 3 行固定：
+
+1) 第 1 行：备注，可空，导出时忽略。
+
+2) 第 2 行：字段名（# 开头列不导出）。
+
+3) 第 3 行：类型（int/float/string/bool 及数组，数组用 string[]/int[]/float[]）。
+
+第 4 行起为数据。导出时按 sheet 分割到 JSON 的 tables 字段中。运行时每张表都基于第一列（id 列）构建 ById 索引（第一列必须唯一）。
+
+一对多表（EventOptions/EffectOps/EventTriggers）第一列必须是 rowId（唯一），再按外键列做 GroupBy 索引；禁止用外键当第一列，避免覆盖。
+
 A1. ID 规范（强制）
 
 nodeId：N1 / N2 / ...
@@ -315,4 +329,3 @@ E. V0 校验规则（启动时一次性报错，别静默失败）
 逻辑校验（V0 最重要）：
 
 任何会 BlockOriginTask 的事件，必须允许 effectOps 里对 OriginTask.Progress 做 Add（否则永远阻塞没有意义）。
-
