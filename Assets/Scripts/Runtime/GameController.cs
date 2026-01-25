@@ -147,6 +147,61 @@ public class GameController : MonoBehaviour
         return ResolveEvent(node.Id, eventId, optionId);
     }
 
+    public bool TryHireAgent(int cost, out AgentState agent)
+    {
+        agent = null;
+        if (cost < 0) cost = 0;
+        if (State == null) return false;
+        if (State.Money < cost) return false;
+
+        int clampMoneyMin = DataRegistry.Instance.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+        int moneyAfter = Math.Max(clampMoneyMin, State.Money - cost);
+        State.Money = moneyAfter;
+
+        string agentId = GenerateNextAgentId();
+        agent = new AgentState
+        {
+            Id = agentId,
+            Name = $"Agent {agentId}",
+            Perception = 5,
+            Operation = 5,
+            Resistance = 5,
+            Power = 5,
+        };
+
+        State.Agents.Add(agent);
+        Debug.Log($"[Hire] cost={cost} moneyAfter={moneyAfter} agentId={agentId}");
+        Notify();
+        RefreshMapNodes();
+        return true;
+    }
+
+    private string GenerateNextAgentId()
+    {
+        int max = 0;
+        if (State?.Agents != null)
+        {
+            foreach (var a in State.Agents)
+            {
+                if (a == null || string.IsNullOrEmpty(a.Id)) continue;
+                if (!a.Id.StartsWith("A", StringComparison.OrdinalIgnoreCase)) continue;
+                var raw = a.Id.Substring(1);
+                if (int.TryParse(raw, out var value))
+                    max = Math.Max(max, value);
+            }
+        }
+
+        int next = max + 1;
+        string candidate = $"A{next}";
+        while (State?.Agents?.Any(a => a != null && a.Id == candidate) == true)
+        {
+            next++;
+            candidate = $"A{next}";
+        }
+
+        return candidate;
+    }
+
     // =====================
     // N-task APIs (new)
     // =====================

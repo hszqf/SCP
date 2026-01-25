@@ -143,6 +143,7 @@ namespace Core
             int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
             float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
 
+            int moneyBefore = s.Money;
             int income = 0;
             int maintenance = 0;
             int safeNodeCount = 0;
@@ -154,6 +155,7 @@ namespace Core
 
                 income += Mathf.FloorToInt(node.Population * popToMoneyRate);
 
+                // Safe node definition (current): no uncontained anomalies on this node.
                 bool hasUncontained = node.Status != NodeStatus.Secured && node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
                 if (!hasUncontained) safeNodeCount++;
 
@@ -185,23 +187,27 @@ namespace Core
             }
 
             int wage = (s.Agents?.Count ?? 0) * wagePerAgentPerDay;
-            s.Money += income - wage - maintenance;
-            if (s.Money < clampMoneyMin) s.Money = clampMoneyMin;
+            int optionCost = 0; // TODO: hook event option costs if/when EffectOps expose them.
+            int moneyAfter = moneyBefore + income - wage - maintenance - optionCost;
+            if (moneyAfter < clampMoneyMin) moneyAfter = clampMoneyMin;
+            s.Money = moneyAfter;
 
-            Debug.Log($"[Economy] day={s.Day} income={income} wage={wage} maintenance={maintenance} money={s.Money}");
+            Debug.Log($"[Economy] day={s.Day} income={income} wage={wage} maint={maintenance} option={optionCost} moneyBefore={moneyBefore} moneyAfter={moneyAfter}");
 
             float dailyDecay = registry.GetBalanceFloatWithWarn("DailyWorldPanicDecay", 0f);
             float decayPerSafeNode = registry.GetBalanceFloatWithWarn("WorldPanicDecayPerSafeNodePerDay", 0f);
             float worldPanicDecay = dailyDecay + safeNodeCount * decayPerSafeNode;
-            s.WorldPanic += worldPanicAdd - worldPanicDecay;
-            if (s.WorldPanic < clampWorldPanicMin) s.WorldPanic = clampWorldPanicMin;
-
-            Debug.Log($"[WorldPanic] day={s.Day} add={worldPanicAdd:0.##} decay={worldPanicDecay:0.##} worldPanic={s.WorldPanic:0.##}");
+            float worldPanicBefore = s.WorldPanic;
+            float worldPanicAfter = worldPanicBefore + worldPanicAdd - worldPanicDecay;
+            if (worldPanicAfter < clampWorldPanicMin) worldPanicAfter = clampWorldPanicMin;
+            s.WorldPanic = worldPanicAfter;
 
             float failThreshold = registry.GetBalanceFloatWithWarn("WorldPanicFailThreshold", 0f);
+            Debug.Log($"[WorldPanic] day={s.Day} add={worldPanicAdd:0.##} decay={worldPanicDecay:0.##} safe={safeNodeCount} before={worldPanicBefore:0.##} after={worldPanicAfter:0.##} threshold={failThreshold:0.##}");
+
             if (s.WorldPanic >= failThreshold && GameController.I != null)
             {
-                GameController.I.MarkGameOver($"WorldPanic {s.WorldPanic:0.##} >= threshold {failThreshold:0.##}");
+                GameController.I.MarkGameOver($"reason=WorldPanic day={s.Day} value={s.WorldPanic:0.##} threshold={failThreshold:0.##}");
             }
 
             s.News.Add($"Day {s.Day} 结束");
