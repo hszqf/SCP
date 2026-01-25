@@ -75,9 +75,15 @@ namespace Core
                         continue;
                     }
 
-                    t.Progress = Clamp01(t.Progress + delta);
+                    int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(t.Type, 1));
+                    float before = t.Progress;
+                    t.Progress = Mathf.Clamp(t.Progress + delta, 0f, baseDays);
+                    if (Math.Abs(t.Progress - before) > 0.0001f)
+                    {
+                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+                    }
 
-                    if (t.Progress >= 1f)
+                    if (t.Progress >= baseDays)
                     {
                         CompleteTask(s, n, t, rng, registry);
                     }
@@ -564,7 +570,8 @@ namespace Core
 
         static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng, DataRegistry registry)
         {
-            task.Progress = 1f;
+            int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(task.Type, 1));
+            task.Progress = baseDays;
             task.State = TaskState.Completed;
             task.CompletedDay = s.Day;
 

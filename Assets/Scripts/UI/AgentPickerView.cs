@@ -29,6 +29,8 @@ public class AgentPickerView : MonoBehaviour
     private Action<List<string>> _onConfirm;
     private Action _onCancel;
     private bool _multiSelect;
+    private int _slotsMin = 1;
+    private int _slotsMax = int.MaxValue;
 
     public bool IsShown => gameObject.activeSelf;
 
@@ -66,6 +68,8 @@ public class AgentPickerView : MonoBehaviour
         IEnumerable<AgentState> agents,
         IEnumerable<string> preSelected,
         Func<string, bool> isBusyOtherNode,
+        int slotsMin,
+        int slotsMax,
         Action<List<string>> onConfirm,
         Action onCancel,
         bool multiSelect = true)
@@ -74,6 +78,9 @@ public class AgentPickerView : MonoBehaviour
         _onConfirm = onConfirm;
         _onCancel = onCancel;
         _multiSelect = multiSelect;
+        _slotsMin = Mathf.Max(1, slotsMin);
+        _slotsMax = (slotsMax <= 0) ? int.MaxValue : slotsMax;
+        if (_slotsMax < _slotsMin) _slotsMax = _slotsMin;
 
         _selected.Clear();
         _baseline.Clear();
@@ -133,7 +140,15 @@ public class AgentPickerView : MonoBehaviour
         if (_multiSelect)
         {
             if (_selected.Contains(agentId)) _selected.Remove(agentId);
-            else _selected.Add(agentId);
+            else
+            {
+                if (_selected.Count >= _slotsMax)
+                {
+                    Debug.LogWarning($"[TaskDef] slot selection exceeds max. mode={_mode} slotsMax={_slotsMax}");
+                    return;
+                }
+                _selected.Add(agentId);
+            }
 
             foreach (var it in _items)
                 if (it && it.AgentId == agentId) it.SetSelected(_selected.Contains(agentId));
@@ -169,7 +184,9 @@ public class AgentPickerView : MonoBehaviour
     {
         if (!confirmButton) return;
         bool dirty = HasChanges();
-        confirmButton.interactable = dirty && _selected.Count > 0;
+        bool withinMin = _selected.Count >= _slotsMin;
+        bool withinMax = _selected.Count <= _slotsMax;
+        confirmButton.interactable = dirty && withinMin && withinMax;
     }
 
     void OnConfirmClicked()
@@ -178,6 +195,12 @@ public class AgentPickerView : MonoBehaviour
         if (!HasChanges())
         {
             Hide();
+            return;
+        }
+
+        if (_selected.Count < _slotsMin || _selected.Count > _slotsMax)
+        {
+            Debug.LogWarning($"[TaskDef] slot selection invalid. mode={_mode} count={_selected.Count} slotsMin={_slotsMin} slotsMax={_slotsMax}");
             return;
         }
 

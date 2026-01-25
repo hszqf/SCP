@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -345,7 +346,7 @@ public class NodePanelView : MonoBehaviour
             {
                 bool hasSquad = invMain.AssignedAgentIds != null && invMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && invMain.Progress <= EPS) _invStatus.text = "状态：待开始";
-                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(invMain.Progress * 100)}%）";
+                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(invMain) * 100)}%）";
                 else _invStatus.text = "状态：未指派";
 
                 if (inv.Count > 1) _invStatus.text += $"（+{inv.Count - 1}）";
@@ -365,7 +366,7 @@ public class NodePanelView : MonoBehaviour
             {
                 bool hasSquad = conMain.AssignedAgentIds != null && conMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && conMain.Progress <= EPS) _conStatus.text = "状态：待开始";
-                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(conMain.Progress * 100)}%）";
+                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(conMain) * 100)}%）";
                 else _conStatus.text = "状态：未指派";
 
                 if (con.Count > 1) _conStatus.text += $"（+{con.Count - 1}）";
@@ -750,7 +751,7 @@ public class NodePanelView : MonoBehaviour
 
         if (t.Progress <= EPS) return "状态：待开始";
 
-        return $"状态：进行中（{(int)(t.Progress * 100)}%）";
+        return $"状态：进行中（{(int)(GetTaskProgress01(t) * 100)}%）";
     }
 
     private static TaskActionMode GetActionMode(NodeTask t, bool hasSquad)
@@ -762,6 +763,14 @@ public class NodePanelView : MonoBehaviour
         if (t.Type == TaskType.Manage) return TaskActionMode.Cancel;
 
         return (t.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
+    }
+
+    private static float GetTaskProgress01(NodeTask task)
+    {
+        if (task == null) return 0f;
+        if (task.Type == TaskType.Manage) return 0f;
+        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        return Mathf.Clamp01(task.Progress / baseDays);
     }
 
     private string BuildActionLabel(TaskActionMode mode, string taskId)

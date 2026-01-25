@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
+using Data;
 using UnityEngine;
 
 public class UIPanelRoot : MonoBehaviour
@@ -176,9 +177,11 @@ public class UIPanelRoot : MonoBehaviour
 
         // Create a NEW task for this dispatch action.
         NodeTask createdTask = null;
+        TaskType taskType = TaskType.Investigate;
         if (mode == AgentPickerView.Mode.Investigate)
         {
             createdTask = GameController.I.CreateInvestigateTask(_currentNodeId);
+            taskType = TaskType.Investigate;
         }
         else
         {
@@ -191,6 +194,7 @@ public class UIPanelRoot : MonoBehaviour
 
             string targetId = PickNextContainableId(node);
             createdTask = GameController.I.CreateContainTask(_currentNodeId, targetId);
+            taskType = TaskType.Contain;
         }
 
         if (createdTask == null)
@@ -214,6 +218,8 @@ public class UIPanelRoot : MonoBehaviour
         var pre = new List<string>(); // new task => no preselected agents
 
         _agentPicker.transform.SetAsLastSibling();
+        var registry = DataRegistry.Instance;
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(taskType, 1, int.MaxValue);
         _agentPicker.Show(
             mode,
             _currentNodeId,
@@ -222,6 +228,8 @@ public class UIPanelRoot : MonoBehaviour
             // Busy means: already assigned to ANY active task (any node) OR managing ANY anomaly (any node).
             // Do NOT ignore current node here; otherwise agents could be double-assigned within the same node.
             isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, null),
+            slotsMin: slotsMin,
+            slotsMax: slotsMax,
             onConfirm: (ids) =>
             {
                 if (ids == null || ids.Count == 0)
