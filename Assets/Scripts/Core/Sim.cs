@@ -26,22 +26,7 @@ namespace Core
             s.Day += 1;
             s.News.Add($"Day {s.Day}: 日结算开始");
 
-            // 0) 固定事件（最小 stub：固定日期投放到固定节点）
-            if (s.Day == FIXED_EVENT_DAY)
-            {
-                var fixedNode = s.Nodes.FirstOrDefault(n => n != null && n.Id == FIXED_EVENT_NODE_ID);
-                int pendingBefore = fixedNode?.PendingEvents?.Count ?? 0;
-                bool allow = fixedNode != null && pendingBefore == 0;
-                string checkReason = fixedNode == null ? "nodeMissing" : (allow ? "trigger" : "pendingEvents");
-                Debug.Log($"[EventGenCheck] day={s.Day} node={FIXED_EVENT_NODE_ID} source=Fixed allow={allow} reason={checkReason}");
-
-                if (allow)
-                {
-                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, reason: "FixedDayTrigger");
-                }
-            }
-
-            // 1) 异常生成（节点维度）
+            // 0) 异常生成（节点维度）
             foreach (var n in s.Nodes)
             {
                 if (n == null) continue;
@@ -59,7 +44,7 @@ namespace Core
                 }
             }
 
-            // 2) 推进任务（任务维度：同节点可并行 N 个任务）
+            // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Nodes)
             {
                 if (n?.Tasks == null || n.Tasks.Count == 0) continue;
@@ -99,10 +84,31 @@ namespace Core
                 }
             }
 
-            // 2.5) 收容后管理（负熵产出）
+            // 1.5) 收容后管理（负熵产出）
             StepManageTasks(s, rng, registry);
 
-            // 3) 事件来源（过天触发）：本地恐慌高 / 随机
+            // 2) 不处理的后果（按 IgnoreApplyMode 执行）
+            ApplyIgnorePenaltyOnDayEnd(s, registry);
+
+            // 2.5) 事件自动关闭（按 autoResolveAfterDays）
+            AutoResolvePendingEventsOnDayEnd(s, registry);
+
+            // 3) 固定事件（最小 stub：固定日期投放到固定节点）
+            if (s.Day == FIXED_EVENT_DAY)
+            {
+                var fixedNode = s.Nodes.FirstOrDefault(n => n != null && n.Id == FIXED_EVENT_NODE_ID);
+                int pendingBefore = fixedNode?.PendingEvents?.Count ?? 0;
+                bool allow = fixedNode != null && pendingBefore == 0;
+                string checkReason = fixedNode == null ? "nodeMissing" : (allow ? "trigger" : "pendingEvents");
+                Debug.Log($"[EventGenCheck] day={s.Day} node={FIXED_EVENT_NODE_ID} source=Fixed allow={allow} reason={checkReason}");
+
+                if (allow)
+                {
+                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, reason: "FixedDayTrigger");
+                }
+            }
+
+            // 3.5) 事件来源（过天触发）：本地恐慌高 / 随机
             foreach (var node in s.Nodes)
             {
                 if (node == null) continue;
@@ -133,13 +139,7 @@ namespace Core
                 }
             }
 
-            // 4) 不处理的后果（按 IgnoreApplyMode 执行）
-            ApplyIgnorePenaltyOnDayEnd(s, registry);
-
-            // 4.5) 事件自动关闭（按 autoResolveAfterDays）
-            AutoResolvePendingEventsOnDayEnd(s, registry);
-
-            // 5) 经济 & 世界恐慌（全局）
+            // 4) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
             int wagePerAgentPerDay = registry.GetBalanceIntWithWarn("WagePerAgentPerDay", 0);
             int maintenanceDefault = registry.GetBalanceIntWithWarn("ContainedAnomalyMaintenanceDefault", 0);
