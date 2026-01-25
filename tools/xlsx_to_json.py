@@ -112,6 +112,7 @@ AFFECT_SCOPES = {
 }
 ANOMALY_CLASSES = {"Safe", "Euclid", "Keter"}
 EFFECT_OPS = {"Add", "Mul", "Set", "ClampAdd"}
+OPTIONAL_EMPTY_TOKENS = {"none", "null", "n/a", "na", "-"}
 
 
 @dataclass(slots=True)
@@ -167,6 +168,17 @@ def to_bool(value: Any) -> bool | None:
     if text in {"0", "false", "no"}:
         return False
     raise ValueError(f"Cannot parse bool from: {value!r}")
+
+
+def normalize_optional_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text:
+        return ""
+    if text.lower() in OPTIONAL_EMPTY_TOKENS:
+        return ""
+    return text
 
 
 def sheet_rows(ws) -> tuple[list[str], list[dict[str, Any]]]:
@@ -337,6 +349,7 @@ def load_effect_ops(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def load_triggers(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     triggers: list[dict[str, Any]] = []
     for row in rows:
+        task_type = normalize_optional_cell(row.get("taskType"))
         triggers.append(
             {
                 "eventDefId": str(row.get("eventDefId", "")).strip(),
@@ -347,7 +360,7 @@ def load_triggers(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "requiresAnomalyTagsAny": split_list(row.get("requiresAnomalyTagsAny")),
                 "requiresSecured": to_bool(row.get("requiresSecured")),
                 "minLocalPanic": to_int(row.get("minLocalPanic")),
-                "taskType": "" if row.get("taskType") is None else str(row.get("taskType")),
+                "taskType": task_type or None,
                 "onlyAffectOriginTask": to_bool(row.get("onlyAffectOriginTask")),
             }
         )
@@ -366,6 +379,28 @@ def _enum_issues(sheet: str, key: str, value: str, allowed: set[str], row_index:
         return []
     allowed_text = ", ".join(sorted(allowed))
     return [f"{sheet}[row {row_index}].{key} invalid enum {value!r} (allowed: {allowed_text})"]
+
+
+def _optional_enum_issues(
+    logger: logging.Logger,
+    sheet: str,
+    key: str,
+    raw_value: Any,
+    allowed: set[str],
+    row_index: int,
+) -> list[str]:
+    normalized_value = normalize_optional_cell(raw_value)
+    logger.debug(
+        "normalize optional enum %s[row %d].%s raw=%r normalized=%r",
+        sheet,
+        row_index,
+        key,
+        raw_value,
+        normalized_value,
+    )
+    if not normalized_value:
+        return []
+    return _enum_issues(sheet, key, normalized_value, allowed, row_index)
 
 
 def _scopes_issues(sheet: str, key: str, scopes: Iterable[str], row_index: int) -> list[str]:
@@ -390,7 +425,7 @@ def collect_sheet_info(wb, logger: logging.Logger) -> dict[str, SheetInfo]:
     return infos
 
 
-def validate_workbook(infos: dict[str, SheetInfo]) -> list[str]:
+def validate_workbook(infos: dict[str, SheetInfo], logger: logging.Logger) -> list[str]:
     issues: list[str] = []
 
     missing_sheets = [sheet for sheet in REQUIRED_SHEETS if sheet not in infos]
@@ -488,14 +523,12 @@ def validate_workbook(infos: dict[str, SheetInfo]) -> list[str]:
         min_day = _parse_cell(row, "minDay", to_int)
         max_day = _parse_cell(row, "maxDay", to_int)
         min_local_panic = _parse_cell(row, "minLocalPanic", to_int)
-        task_type = str(row.get("taskType", "")).strip()
 
         if min_day is not None and max_day is not None and min_day > max_day:
             issues.append(f"EventTriggers[row {idx}] invalid day range: {min_day}>{max_day}")
         if min_local_panic is not None and min_local_panic < 0:
             issues.append(f"EventTriggers[row {idx}] minLocalPanic < 0")
-        if task_type:
-            issues.extend(_enum_issues("EventTriggers", "taskType", task_type, TASK_TYPES, idx))
+        issues.extend(_optional_enum_issues(logger, "EventTriggers", "taskType", row.get("taskType"), TASK_TYPES, idx))
 
     for idx, row in enumerate(infos["Nodes"].rows, start=2):
         start_anomaly_ids = split_list(row.get("startAnomalyIds"))
@@ -627,7 +660,7 @@ def run(argv: list[str]) -> int:
     try:
         workbook = load_workbook(xlsx_path, data_only=True)
         infos = collect_sheet_info(workbook, logger)
-        issues = validate_workbook(infos)
+        issues = validate_workbook(infos, logger)
         if issues:
             logger.error("validate=FAIL issues=%d", len(issues))
             for issue in issues:
