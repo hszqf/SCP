@@ -757,9 +757,9 @@
           "taskDefId": "TASK_INVESTIGATE",
           "taskType": "Investigate",
           "name": "调查",
-          "baseDays": 5,
+          "baseDays": 1,
           "progressPerDay": 0.12,
-          "agentSlotsMin": 1,
+          "agentSlotsMin": 3,
           "agentSlotsMax": 3,
           "yieldKey": "Intel",
           "yieldPerDay": 1
@@ -770,7 +770,7 @@
           "name": "收容",
           "baseDays": 6,
           "progressPerDay": 0.1,
-          "agentSlotsMin": 1,
+          "agentSlotsMin": 3,
           "agentSlotsMax": 3,
           "yieldKey": "Money",
           "yieldPerDay": 0
@@ -781,7 +781,7 @@
           "name": "管理",
           "baseDays": 999,
           "progressPerDay": 0.02,
-          "agentSlotsMin": 1,
+          "agentSlotsMin": 3,
           "agentSlotsMax": 2,
           "yieldKey": "NegEntropy",
           "yieldPerDay": 2
@@ -849,7 +849,7 @@
             "OriginTask",
             "Node"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_INV"
         },
@@ -864,7 +864,7 @@
           "defaultAffects": [
             "Node"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
           "ignoreEffectId": "EFF_IGNORE_RANDOM"
         },
@@ -880,7 +880,7 @@
             "OriginTask",
             "Node"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE"
         },
@@ -897,7 +897,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC"
         },
@@ -914,7 +914,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
           "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY"
         },
@@ -930,7 +930,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_BLACKOUT"
         },
@@ -945,7 +945,7 @@
           "defaultAffects": [
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
           "ignoreEffectId": "EFF_IGNORE_AUDIT"
         },
@@ -961,7 +961,7 @@
             "Global",
             "Node"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_LEAK"
         },
@@ -977,7 +977,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_CULT"
         },
@@ -993,7 +993,7 @@
             "Global",
             "Node"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_STRIKE"
         },
@@ -1009,7 +1009,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
           "ignoreEffectId": "EFF_IGNORE_DRIFT"
         },
@@ -1025,7 +1025,7 @@
             "Node",
             "Global"
           ],
-          "autoResolveAfterDays": 0,
+          "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
           "ignoreEffectId": "EFF_IGNORE_SEIZURE"
         }
