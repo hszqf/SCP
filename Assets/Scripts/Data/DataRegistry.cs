@@ -176,80 +176,186 @@ namespace Data
         {
             Balance = Root.balance ?? new Dictionary<string, BalanceValue>();
 
-            NodesById = (Root.nodes ?? new List<NodeDef>())
-                .Where(n => n != null && !string.IsNullOrEmpty(n.nodeId))
-                .ToDictionary(n => n.nodeId, n => n);
+            Tables = new TableRegistry(Root.tables);
+            Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
+            LogTablesSanity();
 
-            AnomaliesById = (Root.anomalies ?? new List<AnomalyDef>())
-                .Where(a => a != null && !string.IsNullOrEmpty(a.anomalyId))
-                .ToDictionary(a => a.anomalyId, a => a);
+            NodesById = new Dictionary<string, NodeDef>();
+            foreach (var row in Tables.GetRows("Nodes"))
+            {
+                var nodeId = GetRowString(row, "nodeId");
+                if (string.IsNullOrEmpty(nodeId)) continue;
+                NodesById[nodeId] = new NodeDef
+                {
+                    nodeId = nodeId,
+                    name = GetRowString(row, "name"),
+                    tags = GetRowStringList(row, "tags"),
+                    startLocalPanic = GetRowInt(row, "startLocalPanic"),
+                    startPopulation = GetRowInt(row, "startPopulation"),
+                    startAnomalyIds = GetRowStringList(row, "startAnomalyIds"),
+                };
+            }
+
+            AnomaliesById = new Dictionary<string, AnomalyDef>();
+            foreach (var row in Tables.GetRows("Anomalies"))
+            {
+                var anomalyId = GetRowString(row, "anomalyId");
+                if (string.IsNullOrEmpty(anomalyId)) continue;
+                AnomaliesById[anomalyId] = new AnomalyDef
+                {
+                    anomalyId = anomalyId,
+                    name = GetRowString(row, "name"),
+                    @class = GetRowString(row, "class"),
+                    tags = GetRowStringList(row, "tags"),
+                    baseThreat = GetRowInt(row, "baseThreat"),
+                    investigateDifficulty = GetRowInt(row, "investigateDifficulty"),
+                    containDifficulty = GetRowInt(row, "containDifficulty"),
+                    manageRisk = GetRowInt(row, "manageRisk"),
+                };
+            }
 
             TaskDefsByType = new Dictionary<TaskType, TaskDef>();
-            foreach (var taskDef in Root.taskDefs ?? new List<TaskDef>())
+            foreach (var row in Tables.GetRows("TaskDefs"))
             {
-                if (taskDef == null) continue;
-                if (!TryParseTaskType(taskDef.taskType, out var type, out _)) continue;
+                var taskTypeRaw = GetRowString(row, "taskType");
+                if (string.IsNullOrEmpty(taskTypeRaw)) continue;
+                if (!TryParseTaskType(taskTypeRaw, out var type, out _)) continue;
+                var taskDef = new TaskDef
+                {
+                    taskDefId = GetRowString(row, "taskDefId"),
+                    taskType = taskTypeRaw,
+                    name = GetRowString(row, "name"),
+                    baseDays = GetRowInt(row, "baseDays"),
+                    progressPerDay = GetRowFloat(row, "progressPerDay"),
+                    agentSlotsMin = GetRowInt(row, "agentSlotsMin"),
+                    agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
+                    yieldKey = GetRowString(row, "yieldKey"),
+                    yieldPerDay = GetRowFloat(row, "yieldPerDay"),
+                };
                 TaskDefsByType[type] = taskDef;
             }
 
-            EventsById = (Root.events ?? new List<EventDef>())
-                .Where(e => e != null && !string.IsNullOrEmpty(e.eventDefId))
-                .ToDictionary(e => e.eventDefId, e => e);
+            EventsById = new Dictionary<string, EventDef>();
+            foreach (var row in Tables.GetRows("Events"))
+            {
+                var eventDefId = GetRowString(row, "eventDefId");
+                if (string.IsNullOrEmpty(eventDefId)) continue;
+                EventsById[eventDefId] = new EventDef
+                {
+                    eventDefId = eventDefId,
+                    source = GetRowString(row, "source"),
+                    causeType = GetRowString(row, "causeType"),
+                    weight = GetRowInt(row, "weight"),
+                    title = GetRowString(row, "title"),
+                    desc = GetRowString(row, "desc"),
+                    blockPolicy = GetRowString(row, "blockPolicy"),
+                    defaultAffects = GetRowStringList(row, "defaultAffects"),
+                    autoResolveAfterDays = GetRowInt(row, "autoResolveAfterDays"),
+                    ignoreApplyMode = GetRowString(row, "ignoreApplyMode"),
+                    ignoreEffectId = GetRowString(row, "ignoreEffectId"),
+                };
+            }
 
             OptionsByEventId = new Dictionary<string, List<EventOptionDef>>();
             OptionsByEventAndId = new Dictionary<string, Dictionary<string, EventOptionDef>>();
-            foreach (var option in Root.eventOptions ?? new List<EventOptionDef>())
+            foreach (var row in Tables.GetRows("EventOptions"))
             {
-                if (option == null || string.IsNullOrEmpty(option.eventDefId) || string.IsNullOrEmpty(option.optionId)) continue;
-                if (!OptionsByEventId.TryGetValue(option.eventDefId, out var list))
+                var eventDefId = GetRowString(row, "eventDefId");
+                var optionId = GetRowString(row, "optionId");
+                if (string.IsNullOrEmpty(eventDefId) || string.IsNullOrEmpty(optionId)) continue;
+                var option = new EventOptionDef
+                {
+                    eventDefId = eventDefId,
+                    optionId = optionId,
+                    text = GetRowString(row, "text"),
+                    resultText = GetRowString(row, "resultText"),
+                    affects = GetRowStringList(row, "affects"),
+                    effectId = GetRowString(row, "effectId"),
+                };
+
+                if (!OptionsByEventId.TryGetValue(eventDefId, out var list))
                 {
                     list = new List<EventOptionDef>();
-                    OptionsByEventId[option.eventDefId] = list;
+                    OptionsByEventId[eventDefId] = list;
                 }
                 list.Add(option);
 
-                if (!OptionsByEventAndId.TryGetValue(option.eventDefId, out var dict))
+                if (!OptionsByEventAndId.TryGetValue(eventDefId, out var dict))
                 {
                     dict = new Dictionary<string, EventOptionDef>();
-                    OptionsByEventAndId[option.eventDefId] = dict;
+                    OptionsByEventAndId[eventDefId] = dict;
                 }
-                dict[option.optionId] = option;
+                dict[optionId] = option;
             }
 
-            EffectsById = (Root.effects ?? new List<EffectDef>())
-                .Where(e => e != null && !string.IsNullOrEmpty(e.effectId))
-                .ToDictionary(e => e.effectId, e => e);
+            EffectsById = new Dictionary<string, EffectDef>();
+            foreach (var row in Tables.GetRows("Effects"))
+            {
+                var effectId = GetRowString(row, "effectId");
+                if (string.IsNullOrEmpty(effectId)) continue;
+                EffectsById[effectId] = new EffectDef
+                {
+                    effectId = effectId,
+                    comment = GetRowString(row, "comment"),
+                };
+            }
 
             EffectOpsByEffectId = new Dictionary<string, List<EffectOp>>();
-            foreach (var row in Root.effectOps ?? new List<EffectOpRow>())
+            foreach (var row in Tables.GetRows("EffectOps"))
             {
-                if (row == null || string.IsNullOrEmpty(row.effectId)) continue;
-                if (!TryParseEffectOp(row, out var ops)) continue;
+                var effectId = GetRowString(row, "effectId");
+                if (string.IsNullOrEmpty(effectId)) continue;
+                var rowModel = new EffectOpRow
+                {
+                    effectId = effectId,
+                    scope = GetRowString(row, "scope"),
+                    statKey = GetRowString(row, "statKey"),
+                    op = GetRowString(row, "op"),
+                    value = GetRowFloat(row, "value"),
+                    min = GetRowFloatNullable(row, "min"),
+                    max = GetRowFloatNullable(row, "max"),
+                    comment = GetRowString(row, "comment"),
+                };
+                if (!TryParseEffectOp(rowModel, out var ops)) continue;
 
-                if (!EffectOpsByEffectId.TryGetValue(row.effectId, out var list))
+                if (!EffectOpsByEffectId.TryGetValue(effectId, out var list))
                 {
                     list = new List<EffectOp>();
-                    EffectOpsByEffectId[row.effectId] = list;
+                    EffectOpsByEffectId[effectId] = list;
                 }
                 list.AddRange(ops);
             }
 
             TriggersByEventDefId = new Dictionary<string, List<EventTrigger>>();
-            foreach (var row in Root.eventTriggers ?? new List<EventTriggerRow>())
+            foreach (var row in Tables.GetRows("EventTriggers"))
             {
-                if (row == null || string.IsNullOrEmpty(row.eventDefId)) continue;
-                if (!TryParseTrigger(row, out var trigger)) continue;
-                if (!TriggersByEventDefId.TryGetValue(row.eventDefId, out var list))
+                var eventDefId = GetRowString(row, "eventDefId");
+                if (string.IsNullOrEmpty(eventDefId)) continue;
+                var rowModel = new EventTriggerRow
+                {
+                    eventDefId = eventDefId,
+                    minDay = GetRowIntNullable(row, "minDay"),
+                    maxDay = GetRowIntNullable(row, "maxDay"),
+                    requiresNodeTagsAny = GetRowStringList(row, "requiresNodeTagsAny"),
+                    requiresNodeTagsAll = GetRowStringList(row, "requiresNodeTagsAll"),
+                    requiresAnomalyTagsAny = GetRowStringList(row, "requiresAnomalyTagsAny"),
+                    requiresSecured = GetRowBoolNullable(row, "requiresSecured"),
+                    minLocalPanic = GetRowIntNullable(row, "minLocalPanic"),
+                    taskType = GetRowString(row, "taskType"),
+                    onlyAffectOriginTask = GetRowBoolNullable(row, "onlyAffectOriginTask"),
+                };
+                if (!TryParseTrigger(rowModel, out var trigger)) continue;
+                if (!TriggersByEventDefId.TryGetValue(eventDefId, out var list))
                 {
                     list = new List<EventTrigger>();
-                    TriggersByEventDefId[row.eventDefId] = list;
+                    TriggersByEventDefId[eventDefId] = list;
                 }
                 list.Add(trigger);
             }
 
-            Tables = new TableRegistry(Root.tables);
-            Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
-            LogTablesSanity();
+            LogGroupIndexSummary("EventOptions", "eventDefId", OptionsByEventId);
+            LogGroupIndexSummary("EffectOps", "effectId", EffectOpsByEffectId);
+            LogGroupIndexSummary("EventTriggers", "eventDefId", TriggersByEventDefId);
 
             LocalPanicHighThreshold = GetBalanceInt("LocalPanicHighThreshold", LocalPanicHighThreshold);
             RandomEventBaseProb = GetBalanceFloat("RandomEventBaseProb", (float)RandomEventBaseProb);
@@ -264,39 +370,147 @@ namespace Data
         {
             var schema = Root?.meta?.schemaVersion ?? "unknown";
             var dataVersion = Root?.meta?.dataVersion ?? "unknown";
-            int optionsCount = Root?.eventOptions?.Count ?? 0;
-            int opsCount = EffectOpsByEffectId?.Values.Sum(list => list?.Count ?? 0) ?? 0;
-            int triggersCount = Root?.eventTriggers?.Count ?? 0;
+            if (Tables != null && Tables.TryGetTable("Meta", out var metaTable) && metaTable?.rows?.Count > 0)
+            {
+                var row = metaTable.rows[0];
+                schema = GetRowString(row, "schemaVersion", schema);
+                dataVersion = GetRowString(row, "dataVersion", dataVersion);
+            }
 
-            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={EventsById.Count} options={optionsCount} effects={EffectsById.Count} ops={opsCount} triggers={triggersCount}");
+            int eventsCount = GetTableRowCountWithWarn("Events");
+            int optionsCount = GetTableRowCountWithWarn("EventOptions");
+            int effectsCount = GetTableRowCountWithWarn("Effects");
+            int opsCount = GetTableRowCountWithWarn("EffectOps");
+            int triggersCount = GetTableRowCountWithWarn("EventTriggers");
+
+            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount} triggers={triggersCount}");
         }
 
         private void LogTablesSanity()
         {
             if (Tables == null) return;
-            if (Root?.tables != null && Root.tables.TryGetValue("Balance", out var balanceTable))
+            if (Root?.tables != null)
             {
-                var columnNames = balanceTable?.columns?
-                    .Select(col => col?.name)
-                    .Where(name => !string.IsNullOrEmpty(name))
-                    .ToList() ?? new List<string>();
-                var expected = new HashSet<string>(new[] { "key", "p1", "p2", "p3" }, StringComparer.Ordinal);
-                var missing = expected.Where(name => !columnNames.Contains(name, StringComparer.Ordinal)).ToList();
-                if (missing.Count > 0)
+                foreach (var tableEntry in Root.tables)
                 {
-                    var columns = columnNames.Count > 0 ? string.Join(", ", columnNames) : "none";
-                    Debug.LogWarning($"[Tables] Balance missing columns: {string.Join(", ", missing)}. columns=[{columns}]");
+                    var rowCount = tableEntry.Value?.rows?.Count ?? 0;
+                    Debug.Log($"[Tables] {tableEntry.Key} rows={rowCount}");
                 }
             }
-            if (Tables.TryFindFirstValue("test", out var tableName, out var rowId, out var raw))
+
+            CheckTableColumns("Meta", new[] { "schemaVersion", "dataVersion" });
+            CheckTableColumns("Balance", new[] { "key", "p1", "p2", "p3" });
+            CheckTableColumns("Nodes", new[]
             {
-                var value = Tables.GetString(tableName, rowId, "test", raw?.ToString() ?? string.Empty);
-                Debug.Log($"[Tables] sanity {tableName}[{rowId}].test={value}");
-            }
-            else
+                "nodeId", "name", "tags", "startLocalPanic", "startPopulation", "startAnomalyIds",
+            });
+            CheckTableColumns("Anomalies", new[]
             {
-                Debug.LogWarning("[Tables] sanity test column not found");
+                "anomalyId", "name", "class", "tags", "baseThreat", "investigateDifficulty",
+                "containDifficulty", "manageRisk", "worldPanicPerDayUncontained", "maintenanceCostPerDay",
+            });
+            CheckTableColumns("Events", new[]
+            {
+                "eventDefId", "source", "causeType", "weight", "title", "desc", "blockPolicy",
+                "defaultAffects", "autoResolveAfterDays", "ignoreApplyMode", "ignoreEffectId",
+            });
+            CheckTableColumns("EventOptions", new[]
+            {
+                "rowId", "eventDefId", "optionId", "text", "resultText", "affects", "effectId",
+            });
+            CheckTableColumns("Effects", new[] { "effectId" });
+            CheckTableColumns("EffectOps", new[]
+            {
+                "rowId", "effectId", "scope", "statKey", "op", "value", "min", "max",
+            });
+            CheckTableColumns("EventTriggers", new[]
+            {
+                "rowId", "eventDefId", "taskType", "onlyAffectOriginTask", "minDay", "maxDay",
+                "requiresNodeTagsAny", "requiresNodeTagsAll", "requiresAnomalyTagsAny", "requiresSecured",
+                "minLocalPanic",
+            });
+        }
+
+        private void CheckTableColumns(string tableName, IEnumerable<string> requiredColumns)
+        {
+            if (Root?.tables == null || !Root.tables.TryGetValue(tableName, out var table) || table == null)
+            {
+                Debug.LogWarning($"[Tables] Missing table: {tableName}.");
+                return;
             }
+
+            var columnNames = table.columns?
+                .Select(col => col?.name)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .ToList() ?? new List<string>();
+            var missing = requiredColumns
+                .Where(name => !columnNames.Contains(name, StringComparer.Ordinal))
+                .ToList();
+            if (missing.Count > 0)
+            {
+                var columns = columnNames.Count > 0 ? string.Join(", ", columnNames) : "none";
+                Debug.LogWarning($"[Tables] {tableName} missing columns: {string.Join(", ", missing)}. columns=[{columns}]");
+            }
+        }
+
+        private int GetTableRowCountWithWarn(string tableName)
+        {
+            if (Tables == null || !Tables.TryGetTable(tableName, out var table) || table?.rows == null)
+            {
+                Debug.LogWarning($"[WARN] Missing table: {tableName}.");
+                return 0;
+            }
+
+            return table.rows.Count;
+        }
+
+        private void LogGroupIndexSummary<T>(string tableName, string columnName, Dictionary<string, List<T>> groups)
+        {
+            var rows = Tables?.GetRows(tableName)?.Count ?? 0;
+            var groupCount = groups?.Count ?? 0;
+            Debug.Log($"[DataIndex] {tableName} rows={rows} groups({columnName})={groupCount}");
+        }
+
+        private static string GetRowString(Dictionary<string, object> row, string column, string fallback = "")
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
+            return TableRegistry.TryCoerceString(raw, out var value) ? value ?? fallback : fallback;
+        }
+
+        private static int GetRowInt(Dictionary<string, object> row, string column, int fallback = 0)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
+            return TableRegistry.TryCoerceInt(raw, out var value) ? value : fallback;
+        }
+
+        private static int? GetRowIntNullable(Dictionary<string, object> row, string column)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return null;
+            return TableRegistry.TryCoerceInt(raw, out var value) ? value : null;
+        }
+
+        private static float GetRowFloat(Dictionary<string, object> row, string column, float fallback = 0f)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
+            return TableRegistry.TryCoerceFloat(raw, out var value) ? value : fallback;
+        }
+
+        private static float? GetRowFloatNullable(Dictionary<string, object> row, string column)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return null;
+            return TableRegistry.TryCoerceFloat(raw, out var value) ? value : null;
+        }
+
+        private static bool? GetRowBoolNullable(Dictionary<string, object> row, string column)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return null;
+            return TableRegistry.TryCoerceBool(raw, out var value) ? value : null;
+        }
+
+        private static List<string> GetRowStringList(Dictionary<string, object> row, string column)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return new List<string>();
+            return TableRegistry.CoerceStringList(raw);
         }
 
         private bool TryParseEffectOp(EffectOpRow row, out List<EffectOp> ops)
