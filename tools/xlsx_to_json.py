@@ -379,12 +379,18 @@ def _sheet_has_proto_v1(rows: list[tuple[Any, ...]]) -> bool:
     type_row = rows[2]
     if not any(cell is not None and str(cell).strip() for cell in field_row):
         return False
+    saw_marker = False
     for cell in type_row:
         if cell is None:
             continue
-        if str(cell).strip() in TABLE_TYPE_MARKERS:
-            return True
-    return False
+        text = str(cell).strip()
+        if not text:
+            continue
+        if text in TABLE_TYPE_MARKERS:
+            saw_marker = True
+            continue
+        return False
+    return saw_marker
 
 
 def _parse_table_value(type_name: str, value: Any) -> Any:
