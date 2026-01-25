@@ -22,7 +22,6 @@ namespace Core
         public string EventDefId;
         public string NodeId;
         public int CreatedDay;
-        public CauseType CauseType;
         public string SourceTaskId;
         public string SourceAnomalyId;
 
@@ -32,7 +31,7 @@ namespace Core
 
     public static class EventInstanceFactory
     {
-        public static EventInstance Create(string eventDefId, string nodeId, int day, CauseType causeType, string sourceTaskId = null, string sourceAnomalyId = null)
+        public static EventInstance Create(string eventDefId, string nodeId, int day, string sourceTaskId = null, string sourceAnomalyId = null)
         {
             return new EventInstance
             {
@@ -40,7 +39,6 @@ namespace Core
                 EventDefId = eventDefId,
                 NodeId = nodeId,
                 CreatedDay = day,
-                CauseType = causeType,
                 SourceTaskId = sourceTaskId,
                 SourceAnomalyId = sourceAnomalyId,
                 IgnoreAppliedOnce = false,

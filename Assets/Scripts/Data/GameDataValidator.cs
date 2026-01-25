@@ -33,120 +33,170 @@ namespace Data
 
         private static void ValidateEnums(DataRegistry registry, List<string> errors)
         {
-            foreach (var ev in registry.Root.events ?? new List<EventDef>())
+            var events = registry.Root.events ?? new List<EventDef>();
+            for (int i = 0; i < events.Count; i++)
             {
+                var ev = events[i];
                 if (ev == null) continue;
+                int row = i + 1;
+
                 if (!DataRegistry.TryParseEventSource(ev.source, out _, out var sourceError))
-                    errors.Add($"Events[{ev.eventDefId}].source: {sourceError}");
+                    errors.Add(FormatCellError("Events", row, "source", ev.source, sourceError));
                 if (!DataRegistry.TryParseCauseType(ev.causeType, out _, out var causeError))
-                    errors.Add($"Events[{ev.eventDefId}].causeType: {causeError}");
+                    errors.Add(FormatCellError("Events", row, "causeType", ev.causeType, causeError));
                 if (!DataRegistry.TryParseBlockPolicy(ev.blockPolicy, out _, out var blockError))
-                    errors.Add($"Events[{ev.eventDefId}].blockPolicy: {blockError}");
+                    errors.Add(FormatCellError("Events", row, "blockPolicy", ev.blockPolicy, blockError));
 
                 var affectsRaw = ev.defaultAffects ?? new List<string>();
                 if (!DataRegistry.TryParseAffectScopes(affectsRaw, out _, out var affectsError))
-                    errors.Add($"Events[{ev.eventDefId}].defaultAffects: {affectsError}");
+                    errors.Add(FormatCellError("Events", row, "defaultAffects", string.Join(";", affectsRaw), affectsError));
 
-                if (!string.IsNullOrEmpty(ev.ignoreApplyMode) && !DataRegistry.TryParseIgnoreApplyMode(ev.ignoreApplyMode, out _, out var modeError))
-                    errors.Add($"Events[{ev.eventDefId}].ignoreApplyMode: {modeError}");
+                if (!string.IsNullOrEmpty(ev.ignoreApplyMode) &&
+                    !DataRegistry.TryParseIgnoreApplyMode(ev.ignoreApplyMode, out _, out var modeError))
+                    errors.Add(FormatCellError("Events", row, "ignoreApplyMode", ev.ignoreApplyMode, modeError));
             }
 
-            foreach (var opt in registry.Root.eventOptions ?? new List<EventOptionDef>())
+            var options = registry.Root.eventOptions ?? new List<EventOptionDef>();
+            for (int i = 0; i < options.Count; i++)
             {
+                var opt = options[i];
                 if (opt == null) continue;
+                int row = i + 1;
                 if (opt.affects != null && opt.affects.Count > 0)
                 {
                     if (!DataRegistry.TryParseAffectScopes(opt.affects, out _, out var affectsError))
-                        errors.Add($"EventOptions[{opt.eventDefId}/{opt.optionId}].affects: {affectsError}");
+                        errors.Add(FormatCellError("EventOptions", row, "affects", string.Join(";", opt.affects), affectsError));
                 }
             }
 
-            foreach (var row in registry.Root.effectOps ?? new List<EffectOpRow>())
+            var opRows = registry.Root.effectOps ?? new List<EffectOpRow>();
+            for (int i = 0; i < opRows.Count; i++)
             {
+                var row = opRows[i];
                 if (row == null) continue;
+                int rowIndex = i + 1;
                 if (!DataRegistry.TryParseAffectScopes(row.scope, out _, out var scopeError))
-                    errors.Add($"EffectOps[{row.effectId}].scope: {scopeError}");
+                    errors.Add(FormatCellError("EffectOps", rowIndex, "scope", row.scope, scopeError));
                 if (!DataRegistry.TryParseEffectOpType(row.op, out _, out var opError))
-                    errors.Add($"EffectOps[{row.effectId}].op: {opError}");
+                    errors.Add(FormatCellError("EffectOps", rowIndex, "op", row.op, opError));
             }
 
-            foreach (var trigger in registry.Root.eventTriggers ?? new List<EventTriggerRow>())
+            var triggers = registry.Root.eventTriggers ?? new List<EventTriggerRow>();
+            for (int i = 0; i < triggers.Count; i++)
             {
+                var trigger = triggers[i];
                 if (trigger == null || string.IsNullOrEmpty(trigger.taskType)) continue;
+                int row = i + 1;
                 if (!DataRegistry.TryParseTaskType(trigger.taskType, out _, out var taskTypeError))
-                    errors.Add($"EventTriggers[{trigger.eventDefId}].taskType: {taskTypeError}");
+                    errors.Add(FormatCellError("EventTriggers", row, "taskType", trigger.taskType, taskTypeError));
             }
         }
 
         private static void ValidateForeignKeys(DataRegistry registry, List<string> errors)
         {
-            foreach (var opt in registry.Root.eventOptions ?? new List<EventOptionDef>())
+            var options = registry.Root.eventOptions ?? new List<EventOptionDef>();
+            for (int i = 0; i < options.Count; i++)
             {
+                var opt = options[i];
                 if (opt == null) continue;
+                int row = i + 1;
                 if (string.IsNullOrEmpty(opt.eventDefId) || !registry.EventsById.ContainsKey(opt.eventDefId))
-                    errors.Add($"EventOptions[{opt.optionId}] references missing eventDefId={opt.eventDefId}");
+                {
+                    errors.Add(FormatCellError("EventOptions", row, "eventDefId", opt.eventDefId, "existing Events.eventDefId"));
+                }
+
                 if (!string.IsNullOrEmpty(opt.effectId) && !registry.EffectsById.ContainsKey(opt.effectId))
-                    errors.Add($"EventOptions[{opt.eventDefId}/{opt.optionId}] references missing effectId={opt.effectId}");
+                {
+                    errors.Add(FormatCellError("EventOptions", row, "effectId", opt.effectId, "existing Effects.effectId"));
+                }
             }
 
-            foreach (var ev in registry.Root.events ?? new List<EventDef>())
+            var events = registry.Root.events ?? new List<EventDef>();
+            for (int i = 0; i < events.Count; i++)
             {
+                var ev = events[i];
                 if (ev == null) continue;
+                int row = i + 1;
                 if (!string.IsNullOrEmpty(ev.ignoreEffectId) && !registry.EffectsById.ContainsKey(ev.ignoreEffectId))
-                    errors.Add($"Events[{ev.eventDefId}] references missing ignoreEffectId={ev.ignoreEffectId}");
+                {
+                    errors.Add(FormatCellError("Events", row, "ignoreEffectId", ev.ignoreEffectId, "existing Effects.effectId"));
+                }
             }
 
-            foreach (var row in registry.Root.effectOps ?? new List<EffectOpRow>())
+            var effectOps = registry.Root.effectOps ?? new List<EffectOpRow>();
+            for (int i = 0; i < effectOps.Count; i++)
             {
+                var row = effectOps[i];
                 if (row == null) continue;
+                int rowIndex = i + 1;
                 if (string.IsNullOrEmpty(row.effectId) || !registry.EffectsById.ContainsKey(row.effectId))
-                    errors.Add($"EffectOps references missing effectId={row.effectId}");
+                {
+                    errors.Add(FormatCellError("EffectOps", rowIndex, "effectId", row.effectId, "existing Effects.effectId"));
+                }
             }
 
-            foreach (var trigger in registry.Root.eventTriggers ?? new List<EventTriggerRow>())
+            var triggers = registry.Root.eventTriggers ?? new List<EventTriggerRow>();
+            for (int i = 0; i < triggers.Count; i++)
             {
+                var trigger = triggers[i];
                 if (trigger == null) continue;
+                int row = i + 1;
                 if (string.IsNullOrEmpty(trigger.eventDefId) || !registry.EventsById.ContainsKey(trigger.eventDefId))
-                    errors.Add($"EventTriggers references missing eventDefId={trigger.eventDefId}");
+                {
+                    errors.Add(FormatCellError("EventTriggers", row, "eventDefId", trigger.eventDefId, "existing Events.eventDefId"));
+                }
             }
 
-            var duplicates = registry.Root.eventOptions
-                ?.Where(o => o != null)
-                .GroupBy(o => (o.eventDefId, o.optionId))
-                .Where(g => g.Count() > 1)
-                .Select(g => $"EventOptions duplicate key ({g.Key.eventDefId},{g.Key.optionId})")
+            var optionRows = registry.Root.eventOptions ?? new List<EventOptionDef>();
+            var duplicates = optionRows
+                .Select((option, index) => new { option, row = index + 1 })
+                .Where(entry => entry.option != null)
+                .GroupBy(entry => (entry.option.eventDefId, entry.option.optionId))
+                .Where(group => group.Count() > 1)
+                .Select(group =>
+                {
+                    var rows = string.Join(",", group.Select(entry => entry.row));
+                    var value = $"{group.Key.eventDefId}/{group.Key.optionId}";
+                    return FormatCellError("EventOptions", rows, "eventDefId+optionId", value, "unique combination");
+                })
                 .ToList();
-            if (duplicates != null && duplicates.Count > 0) errors.AddRange(duplicates);
+            if (duplicates.Count > 0) errors.AddRange(duplicates);
         }
 
         private static void ValidateTriggers(DataRegistry registry, List<string> errors)
         {
-            foreach (var trigger in registry.Root.eventTriggers ?? new List<EventTriggerRow>())
+            var triggers = registry.Root.eventTriggers ?? new List<EventTriggerRow>();
+            for (int i = 0; i < triggers.Count; i++)
             {
+                var trigger = triggers[i];
                 if (trigger == null) continue;
+                int row = i + 1;
                 if (trigger.minDay.HasValue && trigger.maxDay.HasValue && trigger.minDay.Value > trigger.maxDay.Value)
                 {
-                    errors.Add($"EventTriggers[{trigger.eventDefId}] invalid day range: {trigger.minDay}>{trigger.maxDay}");
+                    errors.Add(FormatCellError("EventTriggers", row, "minDay/maxDay", $"{trigger.minDay}>{trigger.maxDay}", "minDay <= maxDay"));
                 }
 
                 if (trigger.minLocalPanic.HasValue && trigger.minLocalPanic.Value < 0)
                 {
-                    errors.Add($"EventTriggers[{trigger.eventDefId}] minLocalPanic < 0");
+                    errors.Add(FormatCellError("EventTriggers", row, "minLocalPanic", trigger.minLocalPanic.Value.ToString(), ">= 0"));
                 }
             }
         }
 
         private static void ValidateBlockOriginTaskLogic(DataRegistry registry, List<string> errors)
         {
-            foreach (var ev in registry.Root.events ?? new List<EventDef>())
+            var events = registry.Root.events ?? new List<EventDef>();
+            for (int i = 0; i < events.Count; i++)
             {
+                var ev = events[i];
                 if (ev == null || string.IsNullOrEmpty(ev.eventDefId)) continue;
+                int row = i + 1;
                 if (!DataRegistry.TryParseBlockPolicy(ev.blockPolicy, out var policy, out _)) continue;
                 if (policy != BlockPolicy.BlockOriginTask) continue;
 
                 var relatedEffectIds = new List<string>();
                 if (!string.IsNullOrEmpty(ev.ignoreEffectId)) relatedEffectIds.Add(ev.ignoreEffectId);
-                if (registry.OptionsByEvent.TryGetValue(ev.eventDefId, out var options))
+                if (registry.OptionsByEventId.TryGetValue(ev.eventDefId, out var options))
                 {
                     relatedEffectIds.AddRange(options.Where(o => !string.IsNullOrEmpty(o.effectId)).Select(o => o.effectId));
                 }
@@ -160,9 +210,19 @@ namespace Data
 
                 if (!hasOriginTaskProgressAdd)
                 {
-                    errors.Add($"Events[{ev.eventDefId}] BlockOriginTask requires OriginTask TaskProgressDelta Add op.");
+                    errors.Add(FormatCellError("Events", row, "blockPolicy", ev.blockPolicy, "BlockOriginTask with OriginTask TaskProgressDelta Add op"));
                 }
             }
+        }
+
+        private static string FormatCellError(string sheet, int row, string col, string value, string expected)
+        {
+            return $"sheet={sheet} row={row} col={col} value={value ?? "<null>"} expected={expected}";
+        }
+
+        private static string FormatCellError(string sheet, string row, string col, string value, string expected)
+        {
+            return $"sheet={sheet} row={row} col={col} value={value ?? "<null>"} expected={expected}";
         }
     }
 }

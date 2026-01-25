@@ -5,6 +5,7 @@ using System.Linq;
 using Core;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Data
 {
@@ -102,11 +103,11 @@ namespace Data
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
         public Dictionary<TaskType, TaskDef> TaskDefsByType { get; private set; } = new();
         public Dictionary<string, EventDef> EventsById { get; private set; } = new();
-        public Dictionary<string, List<EventOptionDef>> OptionsByEvent { get; private set; } = new();
+        public Dictionary<string, List<EventOptionDef>> OptionsByEventId { get; private set; } = new();
         public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
         public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
-        public Dictionary<string, List<EventTrigger>> TriggersByEventId { get; private set; } = new();
+        public Dictionary<string, List<EventTrigger>> TriggersByEventDefId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
 
         public int LocalPanicHighThreshold { get; private set; } = 6;
@@ -125,17 +126,10 @@ namespace Data
 
         public void Reload()
         {
-            string path = Path.Combine(Application.streamingAssetsPath, GameDataFileName);
-            if (!File.Exists(path))
-            {
-                Debug.LogError($"[DataRegistry] Missing game data at: {path}");
-                Root = new GameDataRoot();
-                return;
-            }
-
             try
             {
-                var json = File.ReadAllText(path);
+                string path = Path.Combine(Application.streamingAssetsPath, GameDataFileName);
+                var json = LoadJsonText(path);
                 var settings = new JsonSerializerSettings
                 {
                     MissingMemberHandling = MissingMemberHandling.Ignore,
@@ -146,11 +140,34 @@ namespace Data
             catch (Exception ex)
             {
                 Debug.LogError($"[DataRegistry] Failed to load JSON: {ex}");
-                Root = new GameDataRoot();
+                throw;
             }
 
             BuildIndexes();
             GameDataValidator.ValidateOrThrow(this);
+            LogSummary();
+        }
+
+        private static string LoadJsonText(string path)
+        {
+            if (Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                using var request = UnityWebRequest.Get(path);
+                var op = request.SendWebRequest();
+                while (!op.isDone) { }
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    throw new InvalidOperationException($"[DataRegistry] Failed to load JSON from {path}: {request.error}");
+                }
+                return request.downloadHandler.text;
+            }
+
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"[DataRegistry] Missing game data at: {path}", path);
+            }
+
+            return File.ReadAllText(path);
         }
 
         private void BuildIndexes()
@@ -177,15 +194,15 @@ namespace Data
                 .Where(e => e != null && !string.IsNullOrEmpty(e.eventDefId))
                 .ToDictionary(e => e.eventDefId, e => e);
 
-            OptionsByEvent = new Dictionary<string, List<EventOptionDef>>();
+            OptionsByEventId = new Dictionary<string, List<EventOptionDef>>();
             OptionsByEventAndId = new Dictionary<string, Dictionary<string, EventOptionDef>>();
             foreach (var option in Root.eventOptions ?? new List<EventOptionDef>())
             {
                 if (option == null || string.IsNullOrEmpty(option.eventDefId) || string.IsNullOrEmpty(option.optionId)) continue;
-                if (!OptionsByEvent.TryGetValue(option.eventDefId, out var list))
+                if (!OptionsByEventId.TryGetValue(option.eventDefId, out var list))
                 {
                     list = new List<EventOptionDef>();
-                    OptionsByEvent[option.eventDefId] = list;
+                    OptionsByEventId[option.eventDefId] = list;
                 }
                 list.Add(option);
 
@@ -215,15 +232,15 @@ namespace Data
                 list.AddRange(ops);
             }
 
-            TriggersByEventId = new Dictionary<string, List<EventTrigger>>();
+            TriggersByEventDefId = new Dictionary<string, List<EventTrigger>>();
             foreach (var row in Root.eventTriggers ?? new List<EventTriggerRow>())
             {
                 if (row == null || string.IsNullOrEmpty(row.eventDefId)) continue;
                 if (!TryParseTrigger(row, out var trigger)) continue;
-                if (!TriggersByEventId.TryGetValue(row.eventDefId, out var list))
+                if (!TriggersByEventDefId.TryGetValue(row.eventDefId, out var list))
                 {
                     list = new List<EventTrigger>();
-                    TriggersByEventId[row.eventDefId] = list;
+                    TriggersByEventDefId[row.eventDefId] = list;
                 }
                 list.Add(trigger);
             }
@@ -235,6 +252,17 @@ namespace Data
             var defaultIgnoreApplyModeRaw = GetBalanceString("DefaultIgnoreApplyMode", DefaultIgnoreApplyMode.ToString());
             if (TryParseIgnoreApplyMode(defaultIgnoreApplyModeRaw, out var parsedMode, out _))
                 DefaultIgnoreApplyMode = parsedMode;
+        }
+
+        private void LogSummary()
+        {
+            var schema = Root?.meta?.schemaVersion ?? "unknown";
+            var dataVersion = Root?.meta?.dataVersion ?? "unknown";
+            int optionsCount = Root?.eventOptions?.Count ?? 0;
+            int opsCount = EffectOpsByEffectId?.Values.Sum(list => list?.Count ?? 0) ?? 0;
+            int triggersCount = Root?.eventTriggers?.Count ?? 0;
+
+            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={EventsById.Count} options={optionsCount} effects={EffectsById.Count} ops={opsCount} triggers={triggersCount}");
         }
 
         private bool TryParseEffectOp(EffectOpRow row, out List<EffectOp> ops)

@@ -17,27 +17,31 @@ namespace Data
 
     public static class EffectOpExecutor
     {
-        public static void ApplyEffect(string effectId, EffectContext ctx, IReadOnlyCollection<AffectScope> allowedScopes = null)
+        public static int ApplyEffect(string effectId, EffectContext ctx, IReadOnlyCollection<AffectScope> allowedScopes = null)
         {
-            if (ctx?.State == null || string.IsNullOrEmpty(effectId)) return;
+            if (ctx?.State == null || string.IsNullOrEmpty(effectId)) return 0;
 
             var registry = DataRegistry.Instance;
             if (!registry.EffectOpsByEffectId.TryGetValue(effectId, out var ops) || ops == null || ops.Count == 0)
             {
                 Debug.LogWarning($"[EffectOpExecutor] effectId={effectId} has no ops.");
-                return;
+                return 0;
             }
 
             var allowedSet = allowedScopes != null && allowedScopes.Count > 0
                 ? new HashSet<string>(allowedScopes.Select(s => s.Raw))
                 : null;
 
+            int applied = 0;
             foreach (var op in ops)
             {
                 if (op == null) continue;
                 if (allowedSet != null && !allowedSet.Contains(op.Scope.Raw)) continue;
                 ApplyOp(op, ctx);
+                applied++;
             }
+
+            return applied;
         }
 
         private static void ApplyOp(EffectOp op, EffectContext ctx)
