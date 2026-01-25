@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import subprocess
 import sys
 import time
@@ -14,7 +15,7 @@ from typing import Any, Iterable
 
 from openpyxl import load_workbook
 
-LIST_SPLIT = ";"
+LIST_SPLIT_PATTERN = re.compile(r"[;,，]")
 LOGGER_NAME = "xlsx_to_json"
 LOG_LEVELS = {
     "DEBUG": logging.DEBUG,
@@ -113,6 +114,7 @@ AFFECT_SCOPES = {
 ANOMALY_CLASSES = {"Safe", "Euclid", "Keter"}
 EFFECT_OPS = {"Add", "Mul", "Set", "ClampAdd"}
 OPTIONAL_EMPTY_TOKENS = {"none", "null", "n/a", "na", "-"}
+TABLE_TYPE_MARKERS = {"int", "float", "string", "bool", "int[]", "float[]", "string[]"}
 
 
 @dataclass(slots=True)
@@ -142,7 +144,8 @@ def split_list(value: Any) -> list[str]:
     text = str(value).strip()
     if not text:
         return []
-    return [part.strip() for part in text.split(LIST_SPLIT) if part.strip()]
+    parts = [part.strip() for part in LIST_SPLIT_PATTERN.split(text)]
+    return [part for part in parts if part]
 
 
 def to_int(value: Any) -> int | None:
@@ -157,16 +160,18 @@ def to_float(value: Any) -> float | None:
     return float(value)
 
 
-def to_bool(value: Any) -> bool | None:
+def to_bool(value: Any) -> int | None:
     if value is None or value == "":
         return None
     if isinstance(value, bool):
-        return value
+        return 1 if value else 0
+    if isinstance(value, (int, float)):
+        return 1 if int(value) != 0 else 0
     text = str(value).strip().lower()
     if text in {"1", "true", "yes"}:
-        return True
+        return 1
     if text in {"0", "false", "no"}:
-        return False
+        return 0
     raise ValueError(f"Cannot parse bool from: {value!r}")
 
 
@@ -367,6 +372,138 @@ def load_triggers(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return triggers
 
 
+def _sheet_has_proto_v1(rows: list[tuple[Any, ...]]) -> bool:
+    if len(rows) < 3:
+        return False
+    field_row = rows[1]
+    type_row = rows[2]
+    if not any(cell is not None and str(cell).strip() for cell in field_row):
+        return False
+    for cell in type_row:
+        if cell is None:
+            continue
+        if str(cell).strip() in TABLE_TYPE_MARKERS:
+            return True
+    return False
+
+
+def _parse_table_value(type_name: str, value: Any) -> Any:
+    if type_name == "string":
+        return "" if value is None else str(value).strip()
+    if type_name == "int":
+        return to_int(value)
+    if type_name == "float":
+        return to_float(value)
+    if type_name == "bool":
+        return to_bool(value)
+    if type_name == "string[]":
+        return split_list(value)
+    if type_name == "int[]":
+        return [int(part) for part in split_list(value)]
+    if type_name == "float[]":
+        return [float(part) for part in split_list(value)]
+    return "" if value is None else str(value).strip()
+
+
+def _normalize_header(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _collect_table(
+    sheet_name: str,
+    rows: list[tuple[Any, ...]],
+    logger: logging.Logger,
+) -> dict[str, Any] | None:
+    if not rows:
+        logger.info("sheet %s empty", sheet_name)
+        return None
+    mode = "proto_v1" if _sheet_has_proto_v1(rows) else "legacy"
+    if mode == "proto_v1":
+        header_row = rows[1]
+        type_row = rows[2]
+        data_rows = rows[3:]
+    else:
+        header_row = rows[0]
+        type_row = []
+        data_rows = rows[1:]
+
+    columns: list[dict[str, str]] = []
+    column_map: list[tuple[int, str, str]] = []
+    for idx, raw_name in enumerate(header_row):
+        name = _normalize_header(raw_name)
+        if not name or name.startswith("#"):
+            continue
+        if mode == "proto_v1":
+            raw_type = type_row[idx] if idx < len(type_row) else None
+            type_name = _normalize_header(raw_type) or "string"
+            if type_name not in TABLE_TYPE_MARKERS:
+                type_name = "string"
+        else:
+            type_name = "string"
+        columns.append({"name": name, "type": type_name})
+        column_map.append((idx, name, type_name))
+
+    if not columns:
+        logger.info("sheet %s mode=%s cols=%d rows=%d exportedCols=0", sheet_name, mode, len(header_row), len(data_rows))
+        return {
+            "mode": mode,
+            "idField": "",
+            "columns": [],
+            "rows": [],
+        }
+
+    id_field = columns[0]["name"]
+    row_entries: list[dict[str, Any]] = []
+    id_index: dict[Any, int] = {}
+    skipped_empty_id_logged = False
+    for row in data_rows:
+        raw_id = row[column_map[0][0]] if row and column_map[0][0] < len(row) else None
+        if raw_id is None or (isinstance(raw_id, str) and not raw_id.strip()):
+            if not skipped_empty_id_logged:
+                logger.info("sheet %s empty id rows skipped", sheet_name)
+                skipped_empty_id_logged = True
+            continue
+        entry: dict[str, Any] = {}
+        for col_idx, name, type_name in column_map:
+            cell_value = row[col_idx] if row and col_idx < len(row) else None
+            entry[name] = _parse_table_value(type_name, cell_value)
+        parsed_id = entry[id_field]
+        if parsed_id in id_index:
+            logger.warning("sheet %s duplicate id=%s (last wins)", sheet_name, parsed_id)
+            row_entries[id_index[parsed_id]] = entry
+        else:
+            id_index[parsed_id] = len(row_entries)
+            row_entries.append(entry)
+
+    logger.info(
+        "sheet %s mode=%s cols=%d rows=%d exportedCols=%d",
+        sheet_name,
+        mode,
+        len(header_row),
+        len(data_rows),
+        len(columns),
+    )
+    return {
+        "mode": mode,
+        "idField": id_field,
+        "columns": columns,
+        "rows": row_entries,
+    }
+
+
+def build_tables(workbook, logger: logging.Logger) -> dict[str, Any]:
+    tables: dict[str, Any] = {}
+    for sheet_name in workbook.sheetnames:
+        ws = workbook[sheet_name]
+        rows = list(ws.iter_rows(values_only=True))
+        table = _collect_table(sheet_name, rows, logger)
+        if table is not None:
+            tables[sheet_name] = table
+    return tables
+
+
 def _parse_cell(row: dict[str, Any], key: str, parser) -> Any:
     try:
         return parser(row.get(key))
@@ -539,7 +676,7 @@ def validate_workbook(infos: dict[str, SheetInfo], logger: logging.Logger) -> li
     return issues
 
 
-def build_data(infos: dict[str, SheetInfo]) -> dict[str, Any]:
+def build_data(infos: dict[str, SheetInfo], tables: dict[str, Any]) -> dict[str, Any]:
     return {
         "meta": load_meta(infos["Meta"].rows),
         "balance": load_balance(infos["Balance"].rows),
@@ -551,6 +688,7 @@ def build_data(infos: dict[str, SheetInfo]) -> dict[str, Any]:
         "effects": load_effects(infos["Effects"].rows),
         "effectOps": load_effect_ops(infos["EffectOps"].rows),
         "eventTriggers": load_triggers(infos["EventTriggers"].rows),
+        "tables": tables,
     }
 
 
@@ -645,13 +783,10 @@ def run(argv: list[str]) -> int:
     start_time = time.perf_counter()
 
     project_root = resolve_project_root(args.project_root)
-    logger.info("project_root=%s", project_root)
-
     xlsx_path = resolve_path(project_root, args.xlsx, "GameData/Local/game_data.xlsx")
     out_path = resolve_path(project_root, args.out, "Assets/StreamingAssets/game_data.json")
 
-    logger.info("xlsx=%s", xlsx_path)
-    logger.info("out=%s", out_path)
+    logger.info("xlsx=%s out=%s", xlsx_path, out_path)
 
     if not xlsx_path.exists():
         logger.error("XLSX does not exist: %s", xlsx_path)
@@ -668,7 +803,8 @@ def run(argv: list[str]) -> int:
             return 2
         logger.info("validate=OK")
 
-        data = build_data(infos)
+        tables = build_tables(workbook, logger)
+        data = build_data(infos, tables)
         indent = None if args.no_pretty else 2
         json_text = json.dumps(data, ensure_ascii=False, indent=indent)
         json_bytes = json_text.encode("utf-8")
