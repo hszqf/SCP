@@ -28,7 +28,6 @@ public class GameController : MonoBehaviour
     [Header("Debug Seed (same seed => same run)")]
     [SerializeField] private int seed = 12345;
 
-    private bool _legacyManageMigrated;
 
     private void Awake()
     {
@@ -91,7 +90,6 @@ public class GameController : MonoBehaviour
             State.Nodes.Add(nodeState);
         }
 
-        MigrateLegacyManageOccupancyIfNeeded();
         Notify();
     }
 
@@ -338,14 +336,6 @@ public class GameController : MonoBehaviour
         Notify();
     }
 
-    private void MigrateLegacyManageOccupancyIfNeeded()
-    {
-        if (_legacyManageMigrated) return;
-        _legacyManageMigrated = true;
-        GameControllerTaskExt.MigrateLegacyManageOccupancy(this);
-        GameControllerTaskExt.LogBusySnapshot(this, "LegacyManageMigration");
-    }
-
     private void RefreshMapNodes()
     {
         MapNodeSpawner.I?.RefreshMapNodes();
@@ -568,130 +558,12 @@ public static class GameControllerTaskExt
         return result;
     }
 
-    private static Dictionary<string, HashSet<string>> CollectLegacyManageAgentIds(GameController gc)
-    {
-        var legacyByAnomaly = new Dictionary<string, HashSet<string>>();
-        if (gc?.State?.Nodes == null) return legacyByAnomaly;
-
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.ManagedAnomalies == null) continue;
-            foreach (var m in node.ManagedAnomalies)
-            {
-                if (m == null || string.IsNullOrEmpty(m.Id)) continue;
-                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
-
-                if (!legacyByAnomaly.TryGetValue(m.Id, out var set))
-                {
-                    set = new HashSet<string>();
-                    legacyByAnomaly[m.Id] = set;
-                }
-
-                foreach (var id in m.ManagerAgentIds)
-                    if (!string.IsNullOrEmpty(id)) set.Add(id);
-            }
-        }
-
-        return legacyByAnomaly;
-    }
-
     public static void LogBusySnapshot(GameController gc, string context)
     {
         if (gc == null) return;
         var busy = DeriveBusyAgentIdsFromTasks(gc);
         var list = string.Join(",", busy.OrderBy(x => x));
         Debug.Log($"[BusySnapshot] {context} => count={busy.Count} ids=[{list}]");
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        var legacy = CollectLegacyManageAgentIds(gc);
-        if (legacy.Count == 0) return;
-
-        var legacyFlat = new HashSet<string>(legacy.SelectMany(kv => kv.Value));
-        if (!busy.SetEquals(legacyFlat))
-        {
-            var legacyList = string.Join(",", legacyFlat.OrderBy(x => x));
-            Debug.LogWarning($"[BusySnapshot] Legacy mismatch at {context} => task=[{list}] legacy=[{legacyList}]");
-        }
-#endif
-    }
-
-    public static void MigrateLegacyManageOccupancy(GameController gc)
-    {
-        if (gc?.State?.Nodes == null) return;
-
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.ManagedAnomalies == null) continue;
-            if (node.Tasks == null) node.Tasks = new List<NodeTask>();
-
-            foreach (var anomaly in node.ManagedAnomalies)
-            {
-                if (anomaly == null || string.IsNullOrEmpty(anomaly.Id)) continue;
-                if (anomaly.ManagerAgentIds == null || anomaly.ManagerAgentIds.Count == 0) continue;
-
-                var legacyAgents = anomaly.ManagerAgentIds
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .Distinct()
-                    .ToList();
-                if (legacyAgents.Count == 0)
-                {
-                    anomaly.ManagerAgentIds.Clear();
-                    continue;
-                }
-
-                var task = node.Tasks.LastOrDefault(t =>
-                    t != null &&
-                    t.State == TaskState.Active &&
-                    t.Type == TaskType.Manage &&
-                    t.TargetManagedAnomalyId == anomaly.Id);
-
-                bool taskHasAgents = task?.AssignedAgentIds != null && task.AssignedAgentIds.Count > 0;
-                if (taskHasAgents)
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    var taskSet = new HashSet<string>(task.AssignedAgentIds.Where(id => !string.IsNullOrEmpty(id)));
-                    var legacySet = new HashSet<string>(legacyAgents);
-                    if (!taskSet.SetEquals(legacySet))
-                    {
-
-                        Debug.LogWarning($"[LegacyManageMigration] Existing task differs anomaly:{anomaly.Id} task:[{string.Join(",", taskSet)}] legacy:[{string.Join(",", legacySet)}]");
-
-                    }
-#endif
-                    anomaly.ManagerAgentIds.Clear();
-                    continue;
-                }
-
-                if (task == null)
-                {
-                    task = new NodeTask
-                    {
-                        Id = "T_" + Guid.NewGuid().ToString("N")[..10],
-                        Type = TaskType.Manage,
-                        State = TaskState.Active,
-                        CreatedDay = gc.State.Day,
-                        Progress = 0f,
-                        TargetManagedAnomalyId = anomaly.Id,
-                        AssignedAgentIds = new List<string>(legacyAgents)
-                    };
-                    node.Tasks.Add(task);
-
-                    Debug.Log($"[LegacyManageMigration] Created manage task for anomaly:{anomaly.Id} agents:{string.Join(",", legacyAgents)}");
-
-                }
-                else
-                {
-                    if (task.AssignedAgentIds == null) task.AssignedAgentIds = new List<string>();
-                    foreach (var id in legacyAgents)
-                        if (!task.AssignedAgentIds.Contains(id)) task.AssignedAgentIds.Add(id);
-
-                    Debug.Log($"[LegacyManageMigration] Patched manage task:{task.Id} anomaly:{anomaly.Id} agents:{string.Join(",", task.AssignedAgentIds)}");
-
-                }
-
-                anomaly.ManagerAgentIds.Clear();
-            }
-        }
     }
 }
 // </EXPORT_BLOCK>

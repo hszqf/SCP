@@ -54,11 +54,6 @@ namespace Core
         // 左侧“已收藏异常”列表使用（后续可做收藏/取消收藏筛选）
         public bool Favorited = true;
 
-        // 被分配的管理干员（占用）
-        // Legacy field: when “Manage” is formalized as NodeTask (TaskType.Manage), agent assignment should live in NodeTask.AssignedAgentIds.
-        // Kept temporarily for migration/compatibility; do not write new logic against this field.
-        public List<string> ManagerAgentIds = new List<string>();
-
         // 第一次开始管理的日期（用于统计/成长）
         public int StartDay;
 
