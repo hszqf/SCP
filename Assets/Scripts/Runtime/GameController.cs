@@ -219,6 +219,7 @@ public class GameController : MonoBehaviour
             Progress = 0f,
         };
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Investigate);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateInvestigateTask(node:{nodeId})");
         return t;
     }
@@ -246,6 +247,7 @@ public class GameController : MonoBehaviour
             TargetContainableId = target,
         };
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Contain);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateContainTask(node:{nodeId}, target:{target})");
         return t;
     }
@@ -277,6 +279,7 @@ public class GameController : MonoBehaviour
             TargetManagedAnomalyId = target,
         };
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Manage);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateManageTask(node:{nodeId}, anomaly:{target})");
         return t;
     }
@@ -334,6 +337,14 @@ public class GameController : MonoBehaviour
 
         GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(",", agentIds)})");
         Notify();
+    }
+
+    private void LogTaskDefSummary(TaskType type)
+    {
+        var registry = DataRegistry.Instance;
+        int baseDays = registry.GetTaskBaseDaysWithWarn(type, 1);
+        var (minSlots, maxSlots) = registry.GetTaskAgentSlotRangeWithWarn(type, 1, int.MaxValue);
+        Debug.Log($"[TaskDef] taskType={type} baseDays={baseDays} slotsMin={minSlots} slotsMax={maxSlots}");
     }
 
     private void RefreshMapNodes()

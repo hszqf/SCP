@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -40,6 +41,8 @@ public class AnomalyManagePanel : MonoBehaviour
     private string _selectedAnomalyId;
     private string _nodeId; // management context node id (set by UIPanelRoot.ManageNodeId)
     private readonly HashSet<string> _selectedAgentIds = new();
+    private int _slotsMin = 1;
+    private int _slotsMax = int.MaxValue;
 
     void Awake()
     {
@@ -98,6 +101,8 @@ public class AnomalyManagePanel : MonoBehaviour
     {
         var gc = GameController.I;
         if (gc == null) return;
+        var registry = DataRegistry.Instance;
+        (_slotsMin, _slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Manage, 1, int.MaxValue);
 
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
         var list = GetFavoritedAnomalies(node);
@@ -264,7 +269,7 @@ public class AnomalyManagePanel : MonoBehaviour
         }
 
         // Update confirm button
-        if (confirmButton) confirmButton.interactable = true;
+        RefreshConfirmState();
     }
 
     private static string BuildAgentAttrLine(AgentState a)
@@ -278,9 +283,18 @@ public class AnomalyManagePanel : MonoBehaviour
         if (string.IsNullOrEmpty(agentId)) return;
 
         if (_selectedAgentIds.Contains(agentId))
+        {
             _selectedAgentIds.Remove(agentId);
+        }
         else
+        {
+            if (_selectedAgentIds.Count >= _slotsMax)
+            {
+                Debug.LogWarning($"[TaskDef] manage slot selection exceeds max. slotsMax={_slotsMax}");
+                return;
+            }
             _selectedAgentIds.Add(agentId);
+        }
 
         // Refresh only selection visuals
         foreach (var it in _agentItems)
@@ -290,12 +304,19 @@ public class AnomalyManagePanel : MonoBehaviour
         }
 
         UpdateHeader();
+        RefreshConfirmState();
     }
 
     private void Confirm()
     {
         var gc = GameController.I;
         if (gc == null) return;
+
+        if (_selectedAgentIds.Count < _slotsMin || _selectedAgentIds.Count > _slotsMax)
+        {
+            Debug.LogWarning($"[TaskDef] manage slot selection invalid. count={_selectedAgentIds.Count} slotsMin={_slotsMin} slotsMax={_slotsMax}");
+            return;
+        }
 
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
         var m = FindManagedAnomaly(node, _selectedAnomalyId);
@@ -323,6 +344,14 @@ public class AnomalyManagePanel : MonoBehaviour
         // Update UI
         RefreshUI();
         gc.Notify();
+    }
+
+    private void RefreshConfirmState()
+    {
+        if (!confirmButton) return;
+        bool withinMin = _selectedAgentIds.Count >= _slotsMin;
+        bool withinMax = _selectedAgentIds.Count <= _slotsMax;
+        confirmButton.interactable = withinMin && withinMax;
     }
 
     private void UpdateHeader()

@@ -5,6 +5,7 @@
 using System.Linq;
 using System.Text;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -79,7 +80,7 @@ public class NodeButton : MonoBehaviour
                     if (hasSquad && t.Progress <= EPS)
                         sb.Append("\n<color=#FFD700>调查：待开始</color>");
                     else
-                        sb.Append($"\n<color=#FFD700>调查中 {(int)(t.Progress * 100)}%</color>");
+                        sb.Append($"\n<color=#FFD700>调查中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (inv.Count > 1)
                         sb.Append($" <color=#FFD700>(+{inv.Count - 1})</color>");
@@ -95,7 +96,7 @@ public class NodeButton : MonoBehaviour
                     if (hasSquad && t.Progress <= EPS)
                         sb.Append("\n<color=#00FFFF>收容：待开始</color>");
                     else
-                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(t.Progress * 100)}%</color>");
+                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (con.Count > 1)
                         sb.Append($" <color=#00FFFF>(+{con.Count - 1})</color>");
@@ -124,5 +125,12 @@ public class NodeButton : MonoBehaviour
         }
 
         if (label) label.text = sb.ToString();
+    }
+
+    private static float GetTaskProgress01(NodeTask task)
+    {
+        if (task == null) return 0f;
+        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        return Mathf.Clamp01(task.Progress / baseDays);
     }
 }

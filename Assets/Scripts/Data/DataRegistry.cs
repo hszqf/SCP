@@ -99,6 +99,8 @@ namespace Data
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
+        private readonly HashSet<TaskType> _taskDefMissingWarned = new();
+
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
@@ -174,6 +176,7 @@ namespace Data
 
         private void BuildIndexes()
         {
+            _taskDefMissingWarned.Clear();
             Balance = Root.balance ?? new Dictionary<string, BalanceValue>();
 
             Tables = new TableRegistry(Root.tables);
@@ -573,6 +576,32 @@ namespace Data
         public bool TryGetTaskDef(TaskType type, out TaskDef def)
             => TaskDefsByType.TryGetValue(type, out def);
 
+        public bool TryGetTaskDefForType(TaskType type, out TaskDef def)
+        {
+            if (TaskDefsByType.TryGetValue(type, out def)) return true;
+            WarnMissingTaskDef(type);
+            def = null;
+            return false;
+        }
+
+        public int GetTaskBaseDaysWithWarn(TaskType type, int fallback)
+        {
+            return TryGetTaskDefForType(type, out var def) && def.baseDays > 0 ? def.baseDays : fallback;
+        }
+
+        public (int min, int max) GetTaskAgentSlotRangeWithWarn(TaskType type, int fallbackMin, int fallbackMax)
+        {
+            if (TryGetTaskDefForType(type, out var def))
+            {
+                int min = def.agentSlotsMin > 0 ? def.agentSlotsMin : fallbackMin;
+                int max = def.agentSlotsMax > 0 ? def.agentSlotsMax : fallbackMax;
+                if (max < min) max = min;
+                return (min, max);
+            }
+
+            return (fallbackMin, fallbackMax);
+        }
+
         public int GetTaskBaseDays(TaskType type, int fallback)
         {
             return TryGetTaskDef(type, out var def) && def.baseDays > 0 ? def.baseDays : fallback;
@@ -594,6 +623,12 @@ namespace Data
         {
             if (def != null && def.autoResolveAfterDays > 0) return def.autoResolveAfterDays;
             return DefaultAutoResolveAfterDays;
+        }
+
+        private void WarnMissingTaskDef(TaskType type)
+        {
+            if (_taskDefMissingWarned.Add(type))
+                Debug.LogWarning($"[TaskDef] Missing TaskDefs entry for taskType={type}. Using fallback values.");
         }
 
         private int GetBalanceInt(string key, int fallback)
