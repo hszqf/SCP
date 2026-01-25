@@ -112,11 +112,22 @@ namespace Data
                     continue;
                 }
 
-                foreach (var row in table.rows)
+                var seenRowIds = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (var i = 0; i < table.rows.Count; i++)
                 {
+                    var row = table.rows[i];
                     if (row == null) continue;
                     if (!TryGetRowId(row, table.idField, out var rowId)) continue;
                     if (string.IsNullOrEmpty(rowId)) continue;
+                    if (seenRowIds.TryGetValue(rowId, out var existingRow))
+                    {
+                        var rowNumber = i + 1;
+                        throw new InvalidOperationException(
+                            $"[DataRegistry] Table '{tableName}' idField '{table.idField}' duplicate key '{rowId}' at row {rowNumber} (previous row {existingRow}).");
+                    }
+
+                    var currentRowNumber = i + 1;
+                    seenRowIds[rowId] = currentRowNumber;
                     index[rowId] = row;
                 }
 
