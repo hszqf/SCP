@@ -37,7 +37,7 @@ namespace Core
 
                 if (allow)
                 {
-                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, CauseType.Fixed, reason: "FixedDayTrigger");
+                    TryGenerateEvent(s, rng, EventSource.Fixed, FIXED_EVENT_NODE_ID, reason: "FixedDayTrigger");
                 }
             }
 
@@ -117,7 +117,7 @@ namespace Core
 
                     if (allowLocalPanicHigh)
                     {
-                        TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, CauseType.LocalPanic, reason: $"LocalPanicHigh>={registry.LocalPanicHighThreshold}");
+                        TryGenerateEvent(s, rng, EventSource.LocalPanicHigh, node.Id, reason: $"LocalPanicHigh>={registry.LocalPanicHighThreshold}");
                         pendingBefore = node.PendingEvents?.Count ?? pendingBefore;
                     }
                 }
@@ -129,7 +129,7 @@ namespace Core
 
                 if (allowRandom)
                 {
-                    TryGenerateEvent(s, rng, EventSource.Random, node.Id, CauseType.Random, reason: $"RandomRoll<{registry.RandomEventBaseProb:0.00}");
+                    TryGenerateEvent(s, rng, EventSource.Random, node.Id, reason: $"RandomRoll<{registry.RandomEventBaseProb:0.00}");
                 }
             }
 
@@ -167,12 +167,11 @@ namespace Core
                 EventDefId = ev.EventDefId,
                 OptionId = optionId,
             };
-            EffectOpExecutor.ApplyEffect(optionDef.effectId, ctx, affects);
+            int effectsApplied = EffectOpExecutor.ApplyEffect(optionDef.effectId, ctx, affects);
 
             node.PendingEvents.Remove(ev);
 
-            int pendingAfter = node.PendingEvents.Count;
-            Debug.Log($"[EventResolve] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} eventDefId={ev.EventDefId} option={optionDef.optionId} pendingCountAfter={pendingAfter}");
+            Debug.Log($"[EventResolve] node={node.Id} inst={ev.EventInstanceId} def={ev.EventDefId} option={optionDef.optionId} effectsApplied={effectsApplied}");
 
             s.News.Add($"- {node.Name} 事件处理：{eventDef.title} -> {optionDef.text}");
 
@@ -182,7 +181,7 @@ namespace Core
             return (true, resultText);
         }
 
-        public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, CauseType causeType, string reason, NodeTask sourceTask = null, string sourceAnomalyId = null)
+        public static bool TryGenerateEvent(GameState s, Random rng, EventSource source, string nodeId, string reason, NodeTask sourceTask = null, string sourceAnomalyId = null)
         {
             var registry = DataRegistry.Instance;
             var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
@@ -191,11 +190,10 @@ namespace Core
             var eventDef = PickEventDef(registry, s, node, source, sourceTask, rng);
             if (eventDef == null) return false;
 
-            var instance = EventInstanceFactory.Create(eventDef.eventDefId, nodeId, s.Day, causeType, sourceTask?.Id, sourceAnomalyId);
+            var instance = EventInstanceFactory.Create(eventDef.eventDefId, nodeId, s.Day, sourceTask?.Id, sourceAnomalyId);
             AddEventToNode(node, instance);
 
-            int pendingCount = node.PendingEvents.Count;
-            Debug.Log($"[EventGen] day={s.Day} source={source} node={nodeId} eventDefId={eventDef.eventDefId} eventInstanceId={instance.EventInstanceId} pendingCount={pendingCount} reason={reason}");
+            Debug.Log($"[EventGen] day={s.Day} node={nodeId} def={eventDef.eventDefId} inst={instance.EventInstanceId} sourceTask={sourceTask?.Id ?? "none"} sourceAnomaly={sourceAnomalyId ?? "none"} reason={reason}");
             s.News.Add($"- {node.Name} 发生事件：{eventDef.title}");
             return true;
         }
@@ -354,17 +352,20 @@ namespace Core
         private static EventDef PickEventDef(DataRegistry registry, GameState state, NodeState node, EventSource source, NodeTask sourceTask, Random rng)
         {
             var candidates = new List<(EventDef def, int weight)>();
+            int sourceCount = 0;
 
             foreach (var ev in registry.Root.events ?? new List<EventDef>())
             {
                 if (ev == null || string.IsNullOrEmpty(ev.eventDefId)) continue;
                 if (!DataRegistry.TryParseEventSource(ev.source, out var evSource, out _)) continue;
                 if (evSource != source) continue;
+                sourceCount++;
 
                 if (!IsEventEligible(registry, state, node, ev, sourceTask)) continue;
                 candidates.Add((ev, Math.Max(1, ev.weight)));
             }
 
+            Debug.Log($"[EventPool] day={state.Day} node={node.Id} source={source} candidates={sourceCount} matched={candidates.Count}");
             if (candidates.Count == 0) return null;
 
             int totalWeight = candidates.Sum(c => c.weight);
@@ -380,7 +381,7 @@ namespace Core
 
         private static bool IsEventEligible(DataRegistry registry, GameState state, NodeState node, EventDef ev, NodeTask sourceTask)
         {
-            if (!registry.TriggersByEventId.TryGetValue(ev.eventDefId, out var triggers) || triggers == null || triggers.Count == 0)
+            if (!registry.TriggersByEventDefId.TryGetValue(ev.eventDefId, out var triggers) || triggers == null || triggers.Count == 0)
                 return true;
 
             foreach (var trigger in triggers)
@@ -486,7 +487,7 @@ namespace Core
                 node.HasAnomaly = true;
 
                 s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1 ({anomalyId})");
-                TryGenerateEvent(s, rng, EventSource.Investigate, node.Id, CauseType.TaskInvestigate, reason: "InvestigateComplete", sourceTask: task, sourceAnomalyId: anomalyId);
+                TryGenerateEvent(s, rng, EventSource.Investigate, node.Id, reason: "InvestigateComplete", sourceTask: task, sourceAnomalyId: anomalyId);
             }
             else if (task.Type == TaskType.Contain)
             {
@@ -513,7 +514,7 @@ namespace Core
                 s.Panic = Math.Max(0, s.Panic - 5);
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
-                TryGenerateEvent(s, rng, EventSource.Contain, node.Id, CauseType.TaskContain, reason: "ContainComplete", sourceTask: task, sourceAnomalyId: anomalyId);
+                TryGenerateEvent(s, rng, EventSource.Contain, node.Id, reason: "ContainComplete", sourceTask: task, sourceAnomalyId: anomalyId);
 
                 // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
                 {
@@ -562,7 +563,7 @@ namespace Core
             }
             else if (task.Type == TaskType.Manage)
             {
-                TryGenerateEvent(s, rng, EventSource.Manage, node.Id, CauseType.TaskManage, reason: "ManageTick", sourceTask: task, sourceAnomalyId: task.TargetManagedAnomalyId);
+                TryGenerateEvent(s, rng, EventSource.Manage, node.Id, reason: "ManageTick", sourceTask: task, sourceAnomalyId: task.TargetManagedAnomalyId);
             }
         }
 
@@ -649,7 +650,7 @@ namespace Core
 
                 if (node.Status == NodeStatus.Secured && nodeTotal > 0)
                 {
-                    TryGenerateEvent(s, rng, EventSource.SecuredManage, node.Id, CauseType.TaskManage, reason: "SecuredManageYield");
+                    TryGenerateEvent(s, rng, EventSource.SecuredManage, node.Id, reason: "SecuredManageYield");
                 }
             }
 

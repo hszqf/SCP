@@ -54,7 +54,7 @@ public class EventPanel : MonoBehaviour
         _onChoose = onChoose;
         _onClose = onClose;
 
-        registry.OptionsByEvent.TryGetValue(ev.EventDefId, out _options);
+        registry.OptionsByEventId.TryGetValue(ev.EventDefId, out _options);
         _options ??= new List<EventOptionDef>();
 
         resultText.text = string.Empty;
