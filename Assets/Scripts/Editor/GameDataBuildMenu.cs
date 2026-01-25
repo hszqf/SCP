@@ -61,7 +61,7 @@ public static class GameDataBuildMenu
             Directory.CreateDirectory(outDir);
         }
 
-        var args = $"\"{script}\" --xlsx \"{xlsx}\" --out \"{outJson}\" --log-level {logLevel}";
+        var args = $"-u \"{script}\" --xlsx \"{xlsx}\" --out \"{outJson}\" --log-level {logLevel}";
         RunProcess(repoRoot, python, args, out var stdout, out var stderr, out var exitCode);
 
         // IMPORTANT: stderr is not always "error" (Python logging may write INFO to stderr)
@@ -136,6 +136,10 @@ public static class GameDataBuildMenu
 
     private static void RunProcess(string wd, string exe, string args, out string stdout, out string stderr, out int exitCode)
     {
+        var outputBuilder = new System.Text.StringBuilder();
+        var errorBuilder = new System.Text.StringBuilder();
+        using var outputDone = new System.Threading.ManualResetEventSlim(false);
+        using var errorDone = new System.Threading.ManualResetEventSlim(false);
         var psi = new ProcessStartInfo
         {
             FileName = exe,
@@ -146,17 +150,50 @@ public static class GameDataBuildMenu
             RedirectStandardError = true,
             CreateNoWindow = true
         };
+        psi.Environment["PYTHONUNBUFFERED"] = "1";
         using var p = Process.Start(psi);
         if (p == null) throw new Exception("Failed to start process.");
-        stdout = p.StandardOutput.ReadToEnd();
-        stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
+        p.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data == null)
+            {
+                outputDone.Set();
+                return;
+            }
+            outputBuilder.AppendLine(e.Data);
+            LogLineSmart(e.Data, false);
+        };
+        p.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data == null)
+            {
+                errorDone.Set();
+                return;
+            }
+            errorBuilder.AppendLine(e.Data);
+            LogLineSmart(e.Data, true);
+        };
+        p.BeginOutputReadLine();
+        p.BeginErrorReadLine();
+        var lastHeartbeat = DateTime.UtcNow;
+        while (!p.WaitForExit(200))
+        {
+            if ((DateTime.UtcNow - lastHeartbeat).TotalSeconds >= 5)
+            {
+                Debug.Log("[GameData] running...");
+                lastHeartbeat = DateTime.UtcNow;
+            }
+        }
+        outputDone.Wait();
+        errorDone.Wait();
+        stdout = outputBuilder.ToString();
+        stderr = errorBuilder.ToString();
         exitCode = p.ExitCode;
     }
 
     private static bool EnsurePythonDependency(string repoRoot, string pythonExe, string packageName)
     {
-        RunProcess(repoRoot, pythonExe, $"-m pip show {packageName}", out var showStdout, out var showStderr, out var showExitCode);
+        RunProcess(repoRoot, pythonExe, $"-u -m pip show {packageName}", out var showStdout, out var showStderr, out var showExitCode);
         LogOutput(showStdout, false);
         LogOutput(showStderr, false);
         if (showExitCode == 0) return true;
@@ -165,7 +202,7 @@ public static class GameDataBuildMenu
         RunProcess(
             repoRoot,
             pythonExe,
-            $"-m pip install {packageName}",
+            $"-u -m pip install {packageName}",
             out var installStdout,
             out var installStderr,
             out var installExitCode
