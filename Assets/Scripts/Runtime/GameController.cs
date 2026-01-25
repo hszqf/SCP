@@ -45,6 +45,7 @@ public class GameController : MonoBehaviour
         float startWorldPanic = registry.GetBalanceFloatWithWarn("StartWorldPanic", 0f);
         int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
         float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+        Debug.Log($"[Balance] StartMoney={startMoney} StartWorldPanic={startWorldPanic} ClampMoneyMin={clampMoneyMin} ClampWorldPanicMin={clampWorldPanicMin}");
         State.Money = Math.Max(clampMoneyMin, startMoney);
         State.WorldPanic = Math.Max(clampWorldPanicMin, startWorldPanic);
 
