@@ -30,6 +30,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private AgentPickerView agentPickerPrefab;
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
     [SerializeField] private GameObject managePanelPrefab; // 管理面板 Prefab（你新建的管理界面）
+    [SerializeField] private RecruitPanel recruitPanelPrefab;
 
     // --- 运行时实例 (自动生成) ---
     private HUD _hud;
@@ -40,6 +41,7 @@ public class UIPanelRoot : MonoBehaviour
     private ConfirmDialog _confirmDialog;
     private GameObject _managePanel;
     private AnomalyManagePanel _managePanelView;
+    private RecruitPanel _recruitPanel;
 
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
@@ -303,6 +305,40 @@ public class UIPanelRoot : MonoBehaviour
         }
     }
 
+    // ================== RECRUIT ==================
+
+    void EnsureRecruitPanel()
+    {
+        if (_recruitPanel) return;
+        if (recruitPanelPrefab)
+        {
+            _recruitPanel = Instantiate(recruitPanelPrefab, transform);
+        }
+        else
+        {
+            var go = new GameObject("RecruitPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image), typeof(RecruitPanel));
+            go.transform.SetParent(transform, false);
+            _recruitPanel = go.GetComponent<RecruitPanel>();
+        }
+
+        if (_recruitPanel) _recruitPanel.gameObject.SetActive(false);
+    }
+
+    public void OpenRecruit()
+    {
+        EnsureRecruitPanel();
+        if (_recruitPanel)
+        {
+            _recruitPanel.Show();
+            _recruitPanel.transform.SetAsLastSibling();
+        }
+    }
+
+    public void CloseRecruit()
+    {
+        if (_recruitPanel) _recruitPanel.Hide();
+    }
+
     public void OpenNodeEvent(string nodeId)
     {
         if (GameController.I == null || string.IsNullOrEmpty(nodeId)) return;
@@ -365,6 +401,7 @@ public class UIPanelRoot : MonoBehaviour
         CloseNode();
         CloseEvent();
         CloseManage();
+        CloseRecruit();
         if (_newsPanel) _newsPanel.Hide();
 
         if (_confirmDialog) _confirmDialog.Hide();

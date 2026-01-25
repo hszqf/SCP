@@ -15,6 +15,7 @@ public class HUD : MonoBehaviour
     [Header("Buttons (bind in code, clear Inspector OnClick)")]
     [SerializeField] private Button endDayButton;
     [SerializeField] private Button newsButton;
+    [SerializeField] private Button recruitButton;
 
     private void Awake()
     {
@@ -54,6 +55,17 @@ public class HUD : MonoBehaviour
             if (t) newsButton = t.GetComponent<Button>();
         }
 
+        if (!recruitButton && panel)
+        {
+            var t = panel.Find("RecruitBT");
+            if (t) recruitButton = t.GetComponent<Button>();
+        }
+
+        if (!recruitButton && panel)
+        {
+            recruitButton = CreateRecruitButton(panel);
+        }
+
         // 文本：如果你不想手动拖，按顺序自动找 HUD/Panel 下的 3 个 TMP_Text
         if ((!dayText || !moneyText || !panicText) && panel)
         {
@@ -83,6 +95,12 @@ public class HUD : MonoBehaviour
             newsButton.onClick.RemoveAllListeners();
             newsButton.onClick.AddListener(OnNewsClicked);
         }
+
+        if (recruitButton)
+        {
+            recruitButton.onClick.RemoveAllListeners();
+            recruitButton.onClick.AddListener(OnRecruitClicked);
+        }
     }
 
     void OnEndDayClicked()
@@ -95,6 +113,12 @@ public class HUD : MonoBehaviour
     {
         if (UIPanelRoot.I == null) return;
         UIPanelRoot.I.OpenNews();
+    }
+
+    void OnRecruitClicked()
+    {
+        if (UIPanelRoot.I == null) return;
+        UIPanelRoot.I.OpenRecruit();
     }
 
     void Refresh()
@@ -119,5 +143,36 @@ public class HUD : MonoBehaviour
 
         // 里程碑0：HUD 只负责展示，不负责“弹窗逻辑”
         // 弹事件交给 UIPanelRoot 监听 OnStateChanged 的统一入口，避免重复弹/抢焦点。
+    }
+
+    private Button CreateRecruitButton(Transform panel)
+    {
+        var go = new GameObject("RecruitBT", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.transform.SetParent(panel, false);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(0f, 0f);
+        rt.pivot = new Vector2(0f, 0f);
+        rt.sizeDelta = new Vector2(160f, 50f);
+        rt.anchoredPosition = new Vector2(20f, 20f);
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
+
+        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        labelGo.transform.SetParent(go.transform, false);
+        var labelRt = labelGo.GetComponent<RectTransform>();
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = Vector2.zero;
+        labelRt.offsetMax = Vector2.zero;
+
+        var label = labelGo.GetComponent<TextMeshProUGUI>();
+        label.text = "Recruit";
+        label.fontSize = 24;
+        label.alignment = TextAlignmentOptions.Center;
+
+        return go.GetComponent<Button>();
     }
 }
