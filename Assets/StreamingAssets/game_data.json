@@ -101,7 +101,7 @@
       "agentSlotsMin": 1,
       "agentSlotsMax": 3,
       "yieldKey": "Intel",
-      "yieldPerDay": 1
+      "yieldPerDay": 1.0
     },
     {
       "taskDefId": "TASK_CONTAIN",
@@ -112,7 +112,7 @@
       "agentSlotsMin": 1,
       "agentSlotsMax": 3,
       "yieldKey": "Money",
-      "yieldPerDay": 0
+      "yieldPerDay": 0.0
     },
     {
       "taskDefId": "TASK_MANAGE",
@@ -123,7 +123,7 @@
       "agentSlotsMin": 1,
       "agentSlotsMax": 2,
       "yieldKey": "NegEntropy",
-      "yieldPerDay": 2
+      "yieldPerDay": 2.0
     }
   ],
   "events": [
@@ -246,7 +246,7 @@
       "scope": "Node",
       "statKey": "LocalPanic",
       "op": "Add",
-      "value": 1,
+      "value": 1.0,
       "min": null,
       "max": null,
       "comment": "忽略提升本地恐慌"
@@ -256,7 +256,7 @@
       "scope": "Node",
       "statKey": "LocalPanic",
       "op": "Add",
-      "value": -2,
+      "value": -2.0,
       "min": null,
       "max": null,
       "comment": "降低本地恐慌"
@@ -276,7 +276,7 @@
       "scope": "Global",
       "statKey": "WorldPanic",
       "op": "Add",
-      "value": 1,
+      "value": 1.0,
       "min": null,
       "max": null,
       "comment": "全局恐慌上升"
@@ -286,7 +286,7 @@
       "scope": "Node",
       "statKey": "LocalPanic",
       "op": "Add",
-      "value": 1,
+      "value": 1.0,
       "min": null,
       "max": null,
       "comment": "忽略会增加恐慌"
@@ -296,7 +296,7 @@
       "scope": "Node",
       "statKey": "LocalPanic",
       "op": "Add",
-      "value": -1,
+      "value": -1.0,
       "min": null,
       "max": null,
       "comment": "稳定情绪"
@@ -306,7 +306,7 @@
       "scope": "Global",
       "statKey": "Money",
       "op": "Add",
-      "value": -80,
+      "value": -80.0,
       "min": null,
       "max": null,
       "comment": "经费消耗"
@@ -316,7 +316,7 @@
       "scope": "Node",
       "statKey": "Population",
       "op": "Add",
-      "value": -1,
+      "value": -1.0,
       "min": null,
       "max": null,
       "comment": "人口损失"
@@ -358,7 +358,7 @@
       "requiresAnomalyTagsAny": [],
       "requiresSecured": null,
       "minLocalPanic": null,
-      "taskType": "",
+      "taskType": null,
       "onlyAffectOriginTask": false
     }
   ]
