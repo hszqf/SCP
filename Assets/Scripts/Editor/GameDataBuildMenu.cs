@@ -64,8 +64,9 @@ public static class GameDataBuildMenu
         var args = $"\"{script}\" --xlsx \"{xlsx}\" --out \"{outJson}\" --log-level {logLevel}";
         RunProcess(repoRoot, python, args, out var stdout, out var stderr, out var exitCode);
 
-        LogOutput(stdout, false);
-        LogOutput(stderr, true);
+        // IMPORTANT: stderr is not always "error" (Python logging may write INFO to stderr)
+        LogOutput(stdout, false); // stdout
+        LogOutput(stderr, true);  // stderr
 
         if (exitCode != 0)
         {
@@ -169,8 +170,11 @@ public static class GameDataBuildMenu
             out var installStderr,
             out var installExitCode
         );
-        LogOutput(installStdout, false);
-        LogOutput(installStderr, installExitCode != 0);
+        // IMPORTANT: 2nd arg must mean "isStderr", NOT "isError"
+        LogOutput(installStdout, false); // stdout
+        LogOutput(installStderr, true);  // stderr
+        if (installExitCode != 0)
+            Debug.LogError($"[GameData] pip install failed: {packageName} (exitCode={installExitCode})");
         return installExitCode == 0;
     }
 
@@ -189,12 +193,6 @@ public static class GameDataBuildMenu
     {
         if (string.IsNullOrWhiteSpace(line)) return;
 
-        if (isStderr)
-        {
-            Debug.LogError(line);
-            return;
-        }
-
         var trimmed = line.TrimStart();
         if (trimmed.StartsWith("[ERROR]", StringComparison.Ordinal))
         {
@@ -211,7 +209,9 @@ public static class GameDataBuildMenu
         }
         else
         {
-            Debug.Log(line);
+            // No prefix: treat stderr as warning, stdout as normal log
+            if (isStderr) Debug.LogWarning(line);
+            else Debug.Log(line);
         }
     }
 
