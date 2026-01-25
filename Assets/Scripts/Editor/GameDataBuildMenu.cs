@@ -157,7 +157,7 @@ public static class GameDataBuildMenu
     {
         RunProcess(repoRoot, pythonExe, $"-m pip show {packageName}", out var showStdout, out var showStderr, out var showExitCode);
         LogOutput(showStdout, false);
-        LogOutput(showStderr, showExitCode != 0);
+        LogOutput(showStderr, false);
         if (showExitCode == 0) return true;
 
         Debug.Log($"[GameData] Installing missing Python dependency: {packageName}");
@@ -174,15 +174,44 @@ public static class GameDataBuildMenu
         return installExitCode == 0;
     }
 
-    private static void LogOutput(string text, bool isError)
+    private static void LogOutput(string text, bool isStderr)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
         var lines = text.Replace("\r\n", "\n").Split('\n');
         foreach (var line in lines)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
-            if (isError) Debug.LogError(line);
-            else Debug.Log(line);
+            LogLineSmart(line, isStderr);
+        }
+    }
+
+    private static void LogLineSmart(string line, bool isStderr)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return;
+
+        if (isStderr)
+        {
+            Debug.LogError(line);
+            return;
+        }
+
+        var trimmed = line.TrimStart();
+        if (trimmed.StartsWith("[ERROR]", StringComparison.Ordinal))
+        {
+            Debug.LogError(line);
+        }
+        else if (trimmed.StartsWith("[WARN]", StringComparison.Ordinal))
+        {
+            Debug.LogWarning(line);
+        }
+        else if (trimmed.StartsWith("[SUCCESS]", StringComparison.Ordinal)
+            || trimmed.StartsWith("[INFO]", StringComparison.Ordinal))
+        {
+            Debug.Log(line);
+        }
+        else
+        {
+            Debug.Log(line);
         }
     }
 
