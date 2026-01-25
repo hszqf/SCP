@@ -136,6 +136,9 @@ namespace Core
             // 4) 不处理的后果（按 IgnoreApplyMode 执行）
             ApplyIgnorePenaltyOnDayEnd(s, registry);
 
+            // 4.5) 事件自动关闭（按 autoResolveAfterDays）
+            AutoResolvePendingEventsOnDayEnd(s, registry);
+
             // 5) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
             int wagePerAgentPerDay = registry.GetBalanceIntWithWarn("WagePerAgentPerDay", 0);
@@ -323,6 +326,41 @@ namespace Core
 
             if (anyApplied) OnIgnorePenaltyApplied?.Invoke();
             return anyApplied;
+        }
+
+        private static void AutoResolvePendingEventsOnDayEnd(GameState s, DataRegistry registry)
+        {
+            int scanned = 0;
+            int removed = 0;
+
+            foreach (var node in s.Nodes)
+            {
+                if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
+
+                var toRemove = new List<EventInstance>();
+                foreach (var ev in node.PendingEvents)
+                {
+                    if (ev == null) continue;
+                    scanned += 1;
+                    ev.AgeDays += 1;
+
+                    if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
+                    int limit = def.autoResolveAfterDays;
+                    if (limit <= 0) continue;
+                    if (ev.AgeDays < limit) continue;
+
+                    toRemove.Add(ev);
+                    removed += 1;
+                    Debug.Log($"[EventAutoResolve] day={s.Day} nodeId={node.Id} eventDefId={ev.EventDefId} age={ev.AgeDays} limit={limit} reason=AutoResolveAfterDays");
+                }
+
+                if (toRemove.Count > 0)
+                {
+                    foreach (var ev in toRemove) node.PendingEvents.Remove(ev);
+                }
+            }
+
+            Debug.Log($"[EventAutoResolve] day={s.Day} scanned={scanned} removed={removed}");
         }
 
         private static bool IsTaskBlockedByEvents(GameState state, NodeState node, NodeTask task, DataRegistry registry)

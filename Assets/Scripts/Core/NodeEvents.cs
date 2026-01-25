@@ -22,6 +22,7 @@ namespace Core
         public string EventDefId;
         public string NodeId;
         public int CreatedDay;
+        public int AgeDays;
         public string SourceTaskId;
         public string SourceAnomalyId;
 
@@ -39,6 +40,7 @@ namespace Core
                 EventDefId = eventDefId,
                 NodeId = nodeId,
                 CreatedDay = day,
+                AgeDays = 0,
                 SourceTaskId = sourceTaskId,
                 SourceAnomalyId = sourceAnomalyId,
                 IgnoreAppliedOnce = false,
