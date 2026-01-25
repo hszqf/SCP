@@ -247,6 +247,10 @@ namespace Data
                 list.Add(trigger);
             }
 
+            Tables = new TableRegistry(Root.tables);
+            Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
+            LogTablesSanity();
+
             LocalPanicHighThreshold = GetBalanceInt("LocalPanicHighThreshold", LocalPanicHighThreshold);
             RandomEventBaseProb = GetBalanceFloat("RandomEventBaseProb", (float)RandomEventBaseProb);
             DefaultAutoResolveAfterDays = GetBalanceInt("DefaultAutoResolveAfterDays", DefaultAutoResolveAfterDays);
@@ -254,10 +258,6 @@ namespace Data
             var defaultIgnoreApplyModeRaw = GetBalanceString("DefaultIgnoreApplyMode", DefaultIgnoreApplyMode.ToString());
             if (TryParseIgnoreApplyMode(defaultIgnoreApplyModeRaw, out var parsedMode, out _))
                 DefaultIgnoreApplyMode = parsedMode;
-
-            Tables = new TableRegistry(Root.tables);
-            Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
-            LogTablesSanity();
         }
 
         private void LogSummary()
@@ -274,6 +274,20 @@ namespace Data
         private void LogTablesSanity()
         {
             if (Tables == null) return;
+            if (Root?.tables != null && Root.tables.TryGetValue("Balance", out var balanceTable))
+            {
+                var columnNames = balanceTable?.columns?
+                    .Select(col => col?.name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .ToList() ?? new List<string>();
+                var expected = new HashSet<string>(new[] { "key", "p1", "p2", "p3" }, StringComparer.Ordinal);
+                var missing = expected.Where(name => !columnNames.Contains(name, StringComparer.Ordinal)).ToList();
+                if (missing.Count > 0)
+                {
+                    var columns = columnNames.Count > 0 ? string.Join(", ", columnNames) : "none";
+                    Debug.LogWarning($"[Tables] Balance missing columns: {string.Join(", ", missing)}. columns=[{columns}]");
+                }
+            }
             if (Tables.TryFindFirstValue("test", out var tableName, out var rowId, out var raw))
             {
                 var value = Tables.GetString(tableName, rowId, "test", raw?.ToString() ?? string.Empty);
@@ -370,32 +384,96 @@ namespace Data
 
         private int GetBalanceInt(string key, int fallback)
         {
-            if (!Balance.TryGetValue(key, out var val)) return fallback;
-            if (val == null || string.IsNullOrEmpty(val.value)) return fallback;
-            return int.TryParse(val.value, out var parsed) ? parsed : fallback;
+            if (!TryGetBalanceRow(key, out _))
+            {
+                Debug.LogWarning($"[WARN] Missing Balance row: {key}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            var ints = GetBalanceIntArray(key);
+            if (ints.Count > 0) return ints[0];
+
+            var floats = GetBalanceFloatArray(key);
+            if (floats.Count > 0) return Mathf.RoundToInt(floats[0]);
+
+            var strings = GetBalanceStringArray(key);
+            if (strings.Count > 0 && int.TryParse(strings[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+
+            Debug.LogWarning($"[WARN] Missing Balance value: Balance.{key}. Using fallback={fallback}.");
+            return fallback;
         }
 
         private float GetBalanceFloat(string key, float fallback)
         {
-            if (!Balance.TryGetValue(key, out var val)) return fallback;
-            if (val == null || string.IsNullOrEmpty(val.value)) return fallback;
-            return float.TryParse(val.value, out var parsed) ? parsed : fallback;
+            if (!TryGetBalanceRow(key, out _))
+            {
+                Debug.LogWarning($"[WARN] Missing Balance row: {key}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            var floats = GetBalanceFloatArray(key);
+            if (floats.Count > 0) return floats[0];
+
+            var ints = GetBalanceIntArray(key);
+            if (ints.Count > 0) return ints[0];
+
+            var strings = GetBalanceStringArray(key);
+            if (strings.Count > 0 && float.TryParse(strings[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                return parsed;
+
+            Debug.LogWarning($"[WARN] Missing Balance value: Balance.{key}. Using fallback={fallback}.");
+            return fallback;
         }
 
         private string GetBalanceString(string key, string fallback)
         {
-            if (!Balance.TryGetValue(key, out var val)) return fallback;
-            return string.IsNullOrEmpty(val?.value) ? fallback : val.value;
+            if (!TryGetBalanceRow(key, out _))
+            {
+                Debug.LogWarning($"[WARN] Missing Balance row: {key}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            var strings = GetBalanceStringArray(key);
+            if (strings.Count > 0) return strings[0];
+
+            Debug.LogWarning($"[WARN] Missing Balance value: Balance.{key}. Using fallback={fallback}.");
+            return fallback;
+        }
+
+        public List<int> GetBalanceIntArray(string key)
+        {
+            if (!TryGetBalanceRow(key, out _)) return new List<int>();
+            return Tables.GetIntList("Balance", key, "p1") ?? new List<int>();
+        }
+
+        public List<float> GetBalanceFloatArray(string key)
+        {
+            if (!TryGetBalanceRow(key, out _)) return new List<float>();
+            return Tables.GetFloatList("Balance", key, "p2") ?? new List<float>();
+        }
+
+        public List<string> GetBalanceStringArray(string key)
+        {
+            if (!TryGetBalanceRow(key, out _)) return new List<string>();
+            return Tables.GetStringList("Balance", key, "p3") ?? new List<string>();
+        }
+
+        private bool TryGetBalanceRow(string key, out Dictionary<string, object> row)
+        {
+            row = null;
+            if (Tables == null || string.IsNullOrEmpty(key)) return false;
+            return Tables.TryGetRow("Balance", key, out row);
         }
 
         public int GetBalanceIntWithWarn(string key, int fallback = 0)
-            => GetTableIntWithWarn("Balance", key, "value", fallback);
+            => GetBalanceInt(key, fallback);
 
         public float GetBalanceFloatWithWarn(string key, float fallback = 0f)
-            => GetTableFloatWithWarn("Balance", key, "value", fallback);
+            => GetBalanceFloat(key, fallback);
 
         public string GetBalanceStringWithWarn(string key, string fallback = "")
-            => GetTableStringWithWarn("Balance", key, "value", fallback);
+            => GetBalanceString(key, fallback);
 
         public int GetAnomalyIntWithWarn(string anomalyId, string column, int fallback = 0)
             => GetTableIntWithWarn("Anomalies", anomalyId, column, fallback);
