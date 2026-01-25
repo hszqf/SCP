@@ -168,8 +168,11 @@ namespace Core
     public class GameState
     {
         public int Day = 1;
-        public int Money = 1000;
-        public int Panic = 0;
+        public int Money = 0;
+        public float WorldPanic = 0f;
+
+        // 预留字段：Intel（暂不结算）
+        public int Intel = 0;
 
         // 新货币：负熵（由“管理异常”系统每日产出）
         public int NegEntropy = 0;

@@ -21,6 +21,7 @@ public class GameController : MonoBehaviour
 
     public GameState State { get; private set; } = new GameState();
     public event Action OnStateChanged;
+    public bool IsGameOver { get; private set; }
 
     private System.Random _rng;
 
@@ -36,8 +37,16 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
-        _ = DataRegistry.Instance;
+        var registry = DataRegistry.Instance;
         Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
+
+        // ---- 初始全局状态（从 Balance 表读取）----
+        int startMoney = registry.GetBalanceIntWithWarn("StartMoney", 0);
+        float startWorldPanic = registry.GetBalanceFloatWithWarn("StartWorldPanic", 0f);
+        int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+        float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+        State.Money = Math.Max(clampMoneyMin, startMoney);
+        State.WorldPanic = Math.Max(clampWorldPanicMin, startWorldPanic);
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
         State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4 });
@@ -103,9 +112,22 @@ public class GameController : MonoBehaviour
 
     public void EndDay()
     {
+        if (IsGameOver)
+        {
+            Debug.LogWarning("[GameOver] EndDay ignored because the game is already over.");
+            return;
+        }
+
         Sim.StepDay(State, _rng);
         Notify();
         RefreshMapNodes();
+    }
+
+    public void MarkGameOver(string reason)
+    {
+        if (IsGameOver) return;
+        IsGameOver = true;
+        Debug.Log($"[GameOver] {reason}");
     }
 
     public (bool success, string text) ResolveEvent(string nodeId, string eventId, string optionId)

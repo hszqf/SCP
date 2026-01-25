@@ -100,14 +100,19 @@ namespace Data
         private static void ApplyToGlobal(EffectOp op, GameState state)
         {
             if (state == null) return;
+            var registry = DataRegistry.Instance;
 
             if (StatEquals(op.StatKey, "WorldPanic") || StatEquals(op.StatKey, "Panic"))
             {
-                state.Panic = ApplyInt(state.Panic, op, clampMin: 0, clampMax: 100);
+                var next = ApplyFloat(state.WorldPanic, op);
+                float clampMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+                state.WorldPanic = Mathf.Max(clampMin, next);
             }
             else if (StatEquals(op.StatKey, "Money"))
             {
-                state.Money = ApplyInt(state.Money, op);
+                int next = ApplyInt(state.Money, op);
+                int clampMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+                state.Money = Math.Max(clampMin, next);
             }
             else if (StatEquals(op.StatKey, "NegEntropy"))
             {

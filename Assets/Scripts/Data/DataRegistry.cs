@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Core;
@@ -385,6 +386,127 @@ namespace Data
         {
             if (!Balance.TryGetValue(key, out var val)) return fallback;
             return string.IsNullOrEmpty(val?.value) ? fallback : val.value;
+        }
+
+        public int GetBalanceIntWithWarn(string key, int fallback = 0)
+            => GetTableIntWithWarn("Balance", key, "value", fallback);
+
+        public float GetBalanceFloatWithWarn(string key, float fallback = 0f)
+            => GetTableFloatWithWarn("Balance", key, "value", fallback);
+
+        public string GetBalanceStringWithWarn(string key, string fallback = "")
+            => GetTableStringWithWarn("Balance", key, "value", fallback);
+
+        public int GetAnomalyIntWithWarn(string anomalyId, string column, int fallback = 0)
+            => GetTableIntWithWarn("Anomalies", anomalyId, column, fallback);
+
+        public float GetAnomalyFloatWithWarn(string anomalyId, string column, float fallback = 0f)
+            => GetTableFloatWithWarn("Anomalies", anomalyId, column, fallback);
+
+        private int GetTableIntWithWarn(string tableName, string rowId, string column, int fallback)
+        {
+            if (!TryGetTableValue(tableName, rowId, column, out var raw))
+            {
+                Debug.LogWarning($"[WARN] Missing table value: {tableName}.{rowId}.{column}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            if (TryParseInt(raw, out var value)) return value;
+            Debug.LogWarning($"[WARN] Invalid int table value: {tableName}.{rowId}.{column}={raw}. Using fallback={fallback}.");
+            return fallback;
+        }
+
+        private float GetTableFloatWithWarn(string tableName, string rowId, string column, float fallback)
+        {
+            if (!TryGetTableValue(tableName, rowId, column, out var raw))
+            {
+                Debug.LogWarning($"[WARN] Missing table value: {tableName}.{rowId}.{column}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            if (TryParseFloat(raw, out var value)) return value;
+            Debug.LogWarning($"[WARN] Invalid float table value: {tableName}.{rowId}.{column}={raw}. Using fallback={fallback}.");
+            return fallback;
+        }
+
+        private string GetTableStringWithWarn(string tableName, string rowId, string column, string fallback)
+        {
+            if (!TryGetTableValue(tableName, rowId, column, out var raw))
+            {
+                Debug.LogWarning($"[WARN] Missing table value: {tableName}.{rowId}.{column}. Using fallback={fallback}.");
+                return fallback;
+            }
+
+            var parsed = Convert.ToString(raw, CultureInfo.InvariantCulture);
+            if (!string.IsNullOrEmpty(parsed)) return parsed;
+            Debug.LogWarning($"[WARN] Invalid string table value: {tableName}.{rowId}.{column}={raw}. Using fallback={fallback}.");
+            return fallback;
+        }
+
+        private bool TryGetTableValue(string tableName, string rowId, string column, out object raw)
+        {
+            raw = null;
+            if (Tables == null || string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(rowId) || string.IsNullOrEmpty(column))
+                return false;
+
+            if (!Tables.TryGetRow(tableName, rowId, out var row) || row == null)
+                return false;
+
+            return row.TryGetValue(column, out raw);
+        }
+
+        private static bool TryParseInt(object raw, out int value)
+        {
+            value = 0;
+            if (raw == null) return false;
+            switch (raw)
+            {
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue:
+                    value = (int)longValue;
+                    return true;
+                case float floatValue:
+                    value = (int)floatValue;
+                    return true;
+                case double doubleValue:
+                    value = (int)doubleValue;
+                    return true;
+                case decimal decimalValue:
+                    value = (int)decimalValue;
+                    return true;
+                default:
+                    var text = Convert.ToString(raw, CultureInfo.InvariantCulture);
+                    return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+            }
+        }
+
+        private static bool TryParseFloat(object raw, out float value)
+        {
+            value = 0f;
+            if (raw == null) return false;
+            switch (raw)
+            {
+                case float floatValue:
+                    value = floatValue;
+                    return true;
+                case double doubleValue:
+                    value = (float)doubleValue;
+                    return true;
+                case decimal decimalValue:
+                    value = (float)decimalValue;
+                    return true;
+                case int intValue:
+                    value = intValue;
+                    return true;
+                case long longValue:
+                    value = longValue;
+                    return true;
+                default:
+                    var text = Convert.ToString(raw, CultureInfo.InvariantCulture);
+                    return float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+            }
         }
 
         public static bool TryParseTaskType(string raw, out TaskType type, out string error)

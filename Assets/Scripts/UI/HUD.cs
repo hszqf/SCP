@@ -38,7 +38,7 @@ public class HUD : MonoBehaviour
 
     void AutoWireBindingsIfMissing()
     {
-        // HUD 结构：HUD/Panel/End Day, HUD/Panel/NewsBT, 以及 3 个 TMP 文本（day/money/panic）
+        // HUD 结构：HUD/Panel/End Day, HUD/Panel/NewsBT, 以及 3 个 TMP 文本（day/money/world panic）
         // 如果你已经手动拖好了，这里不会覆盖。
         var panel = transform.Find("Panel");
 
@@ -59,7 +59,7 @@ public class HUD : MonoBehaviour
         {
             var tmps = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
             // 层级里显示为 Text (TMP), Text (TMP) (1), Text (TMP) (2) :contentReference[oaicite:1]{index=1}
-            // 我们按出现顺序填充：Day/Money/Panic
+            // 我们按出现顺序填充：Day/Money/WorldPanic
             if (!dayText && tmps.Length > 0) dayText = tmps[0];
             if (!moneyText && tmps.Length > 1) moneyText = tmps[1];
             if (!panicText && tmps.Length > 2) panicText = tmps[2];
@@ -104,7 +104,7 @@ public class HUD : MonoBehaviour
         var s = GameController.I.State;
         if (dayText) dayText.text = $"Day {s.Day}";
         if (moneyText) moneyText.text = $"$ {s.Money}";
-        if (panicText) panicText.text = $"Panic {s.Panic}%";
+        if (panicText) panicText.text = $"WorldPanic {s.WorldPanic:0.##}";
 
         if (debugText)
         {

@@ -136,10 +136,73 @@ namespace Core
             // 4) 不处理的后果（按 IgnoreApplyMode 执行）
             ApplyIgnorePenaltyOnDayEnd(s, registry);
 
-            // 5) 恐慌 & 收入（全局）
-            int activeAnomaly = s.Nodes.Count(n => n.HasAnomaly && n.Status != NodeStatus.Secured);
-            s.Panic = ClampInt(s.Panic + activeAnomaly, 0, 100);
-            s.Money += 50;
+            // 5) 经济 & 世界恐慌（全局）
+            float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
+            int wagePerAgentPerDay = registry.GetBalanceIntWithWarn("WagePerAgentPerDay", 0);
+            int maintenanceDefault = registry.GetBalanceIntWithWarn("ContainedAnomalyMaintenanceDefault", 0);
+            int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+            float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+
+            int income = 0;
+            int maintenance = 0;
+            int safeNodeCount = 0;
+            float worldPanicAdd = 0f;
+
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+
+                income += Mathf.FloorToInt(node.Population * popToMoneyRate);
+
+                bool hasUncontained = node.Status != NodeStatus.Secured && node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
+                if (!hasUncontained) safeNodeCount++;
+
+                if (hasUncontained)
+                {
+                    foreach (var anomalyId in node.ActiveAnomalyIds)
+                    {
+                        if (string.IsNullOrEmpty(anomalyId))
+                        {
+                            Debug.LogWarning("[WARN] Missing anomalyId for world panic calculation. Using fallback=0.");
+                            continue;
+                        }
+                        worldPanicAdd += registry.GetAnomalyFloatWithWarn(anomalyId, "worldPanicPerDayUncontained", 0f);
+                    }
+                }
+
+                if (node.ManagedAnomalies == null) continue;
+                foreach (var managed in node.ManagedAnomalies)
+                {
+                    if (managed == null) continue;
+                    if (string.IsNullOrEmpty(managed.AnomalyId))
+                    {
+                        Debug.LogWarning($"[WARN] Managed anomaly {managed.Id} missing anomalyId. Using default maintenance={maintenanceDefault}.");
+                        maintenance += maintenanceDefault;
+                        continue;
+                    }
+                    maintenance += registry.GetAnomalyIntWithWarn(managed.AnomalyId, "maintenanceCostPerDay", maintenanceDefault);
+                }
+            }
+
+            int wage = (s.Agents?.Count ?? 0) * wagePerAgentPerDay;
+            s.Money += income - wage - maintenance;
+            if (s.Money < clampMoneyMin) s.Money = clampMoneyMin;
+
+            Debug.Log($"[Economy] day={s.Day} income={income} wage={wage} maintenance={maintenance} money={s.Money}");
+
+            float dailyDecay = registry.GetBalanceFloatWithWarn("DailyWorldPanicDecay", 0f);
+            float decayPerSafeNode = registry.GetBalanceFloatWithWarn("WorldPanicDecayPerSafeNodePerDay", 0f);
+            float worldPanicDecay = dailyDecay + safeNodeCount * decayPerSafeNode;
+            s.WorldPanic += worldPanicAdd - worldPanicDecay;
+            if (s.WorldPanic < clampWorldPanicMin) s.WorldPanic = clampWorldPanicMin;
+
+            Debug.Log($"[WorldPanic] day={s.Day} add={worldPanicAdd:0.##} decay={worldPanicDecay:0.##} worldPanic={s.WorldPanic:0.##}");
+
+            float failThreshold = registry.GetBalanceFloatWithWarn("WorldPanicFailThreshold", 0f);
+            if (s.WorldPanic >= failThreshold && GameController.I != null)
+            {
+                GameController.I.MarkGameOver($"WorldPanic {s.WorldPanic:0.##} >= threshold {failThreshold:0.##}");
+            }
 
             s.News.Add($"Day {s.Day} 结束");
         }
@@ -511,9 +574,14 @@ namespace Core
                 int reward = 200 + 50 * level;
 
                 s.Money += reward;
-                s.Panic = Math.Max(0, s.Panic - 5);
+                int relief = registry.GetBalanceIntWithWarn("ContainReliefFixed", 0);
+                float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+                float beforePanic = s.WorldPanic;
+                s.WorldPanic = Math.Max(clampWorldPanicMin, s.WorldPanic - relief);
 
-                s.News.Add($"- {node.Name} 收容成功（+$ {reward}, -Panic 5）");
+                Debug.Log($"[WorldPanic] day={s.Day} source=ContainComplete relief={relief} before={beforePanic:0.##} after={s.WorldPanic:0.##}");
+
+                s.News.Add($"- {node.Name} 收容成功（+$ {reward}, WorldPanic -{relief}）");
                 TryGenerateEvent(s, rng, EventSource.Contain, node.Id, reason: "ContainComplete", sourceTask: task, sourceAnomalyId: anomalyId);
 
                 // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
@@ -763,7 +831,6 @@ namespace Core
         // =====================
 
         static float Clamp01(float v) => Mathf.Clamp01(v);
-        static int ClampInt(int v, int min, int max) => Mathf.Clamp(v, min, max);
     }
 }
 // </EXPORT_BLOCK>
