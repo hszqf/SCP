@@ -26,6 +26,40 @@ namespace Data
 
         public int TableCount => _tables.Count;
 
+        public bool TryGetTable(string tableName, out GameDataTable table)
+        {
+            table = null;
+            if (string.IsNullOrEmpty(tableName)) return false;
+            return _tables.TryGetValue(tableName, out table);
+        }
+
+        public IReadOnlyList<Dictionary<string, object>> GetRows(string tableName)
+        {
+            if (!_tables.TryGetValue(tableName, out var table) || table?.rows == null)
+            {
+                return Array.Empty<Dictionary<string, object>>();
+            }
+
+            return table.rows;
+        }
+
+        public List<Dictionary<string, object>> GetRowsByColumn(string tableName, string columnName, string value)
+        {
+            var matches = new List<Dictionary<string, object>>();
+            if (string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(columnName)) return matches;
+            if (!_tables.TryGetValue(tableName, out var table) || table?.rows == null) return matches;
+
+            foreach (var row in table.rows)
+            {
+                if (row == null || !row.TryGetValue(columnName, out var raw)) continue;
+                if (!TryCoerceString(raw, out var rowValue)) continue;
+                if (!string.Equals(rowValue, value, StringComparison.Ordinal)) continue;
+                matches.Add(row);
+            }
+
+            return matches;
+        }
+
         public bool TryGetRow(string tableName, string rowId, out Dictionary<string, object> row)
         {
             row = null;
@@ -151,7 +185,7 @@ namespace Data
             return row.TryGetValue(column, out value);
         }
 
-        private static bool TryCoerceString(object raw, out string value)
+        internal static bool TryCoerceString(object raw, out string value)
         {
             value = null;
             if (raw == null) return false;
@@ -173,7 +207,7 @@ namespace Data
             }
         }
 
-        private static bool TryCoerceInt(object raw, out int value)
+        internal static bool TryCoerceInt(object raw, out int value)
         {
             value = 0;
             if (raw == null) return false;
@@ -210,7 +244,7 @@ namespace Data
             }
         }
 
-        private static bool TryCoerceFloat(object raw, out float value)
+        internal static bool TryCoerceFloat(object raw, out float value)
         {
             value = 0f;
             if (raw == null) return false;
@@ -244,7 +278,7 @@ namespace Data
             }
         }
 
-        private static bool TryCoerceBool(object raw, out bool value)
+        internal static bool TryCoerceBool(object raw, out bool value)
         {
             value = false;
             if (raw == null) return false;
@@ -298,7 +332,7 @@ namespace Data
             return false;
         }
 
-        private static List<string> CoerceStringList(object raw)
+        internal static List<string> CoerceStringList(object raw)
         {
             var list = CoerceList(raw);
             if (list == null) return new List<string>();
@@ -310,7 +344,7 @@ namespace Data
             }).ToList();
         }
 
-        private static List<int> CoerceIntList(object raw)
+        internal static List<int> CoerceIntList(object raw)
         {
             var list = CoerceList(raw);
             if (list == null) return new List<int>();
@@ -323,7 +357,7 @@ namespace Data
             return result;
         }
 
-        private static List<float> CoerceFloatList(object raw)
+        internal static List<float> CoerceFloatList(object raw)
         {
             var list = CoerceList(raw);
             if (list == null) return new List<float>();
@@ -336,7 +370,7 @@ namespace Data
             return result;
         }
 
-        private static List<object> CoerceList(object raw)
+        internal static List<object> CoerceList(object raw)
         {
             if (raw == null) return null;
             if (raw is JValue jValue)
@@ -373,7 +407,7 @@ namespace Data
             return new List<object> { raw };
         }
 
-        private static List<string> SplitStringList(string raw)
+        internal static List<string> SplitStringList(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return new List<string>();
             return raw

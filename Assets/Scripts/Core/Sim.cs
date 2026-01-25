@@ -417,7 +417,7 @@ namespace Core
             var candidates = new List<(EventDef def, int weight)>();
             int sourceCount = 0;
 
-            foreach (var ev in registry.Root.events ?? new List<EventDef>())
+            foreach (var ev in registry.EventsById.Values)
             {
                 if (ev == null || string.IsNullOrEmpty(ev.eventDefId)) continue;
                 if (!DataRegistry.TryParseEventSource(ev.source, out var evSource, out _)) continue;
