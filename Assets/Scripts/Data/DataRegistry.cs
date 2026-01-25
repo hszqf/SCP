@@ -109,6 +109,7 @@ namespace Data
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
         public Dictionary<string, List<EventTrigger>> TriggersByEventDefId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
+        public TableRegistry Tables { get; private set; } = new();
 
         public int LocalPanicHighThreshold { get; private set; } = 6;
         public double RandomEventBaseProb { get; private set; } = 0.15d;
@@ -252,6 +253,10 @@ namespace Data
             var defaultIgnoreApplyModeRaw = GetBalanceString("DefaultIgnoreApplyMode", DefaultIgnoreApplyMode.ToString());
             if (TryParseIgnoreApplyMode(defaultIgnoreApplyModeRaw, out var parsedMode, out _))
                 DefaultIgnoreApplyMode = parsedMode;
+
+            Tables = new TableRegistry(Root.tables);
+            Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
+            LogTablesSanity();
         }
 
         private void LogSummary()
@@ -263,6 +268,20 @@ namespace Data
             int triggersCount = Root?.eventTriggers?.Count ?? 0;
 
             Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={EventsById.Count} options={optionsCount} effects={EffectsById.Count} ops={opsCount} triggers={triggersCount}");
+        }
+
+        private void LogTablesSanity()
+        {
+            if (Tables == null) return;
+            if (Tables.TryFindFirstValue("test", out var tableName, out var rowId, out var raw))
+            {
+                var value = Tables.GetString(tableName, rowId, "test", raw?.ToString() ?? string.Empty);
+                Debug.Log($"[Tables] sanity {tableName}[{rowId}].test={value}");
+            }
+            else
+            {
+                Debug.LogWarning("[Tables] sanity test column not found");
+            }
         }
 
         private bool TryParseEffectOp(EffectOpRow row, out List<EffectOp> ops)

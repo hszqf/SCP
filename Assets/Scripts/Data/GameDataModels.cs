@@ -16,6 +16,7 @@ namespace Data
         public List<EffectDef> effects = new();
         public List<EffectOpRow> effectOps = new();
         public List<EventTriggerRow> eventTriggers = new();
+        public Dictionary<string, GameDataTable> tables = new();
     }
 
     [Serializable]
@@ -132,5 +133,21 @@ namespace Data
         public int? minLocalPanic;
         public string taskType;
         public bool? onlyAffectOriginTask;
+    }
+
+    [Serializable]
+    public class GameDataTable
+    {
+        public string mode;
+        public string idField;
+        public List<GameDataColumn> columns = new();
+        public List<Dictionary<string, object>> rows = new();
+    }
+
+    [Serializable]
+    public class GameDataColumn
+    {
+        public string name;
+        public string type;
     }
 }
