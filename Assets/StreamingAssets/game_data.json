@@ -413,7 +413,7 @@
           "investigateDifficulty": 3,
           "containDifficulty": 4,
           "manageRisk": 2,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -428,7 +428,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 6,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -444,7 +444,7 @@
           "investigateDifficulty": 2,
           "containDifficulty": 3,
           "manageRisk": 2,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -459,7 +459,7 @@
           "investigateDifficulty": 4,
           "containDifficulty": 2,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -474,7 +474,7 @@
           "investigateDifficulty": 4,
           "containDifficulty": 5,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -489,7 +489,7 @@
           "investigateDifficulty": 3,
           "containDifficulty": 4,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -504,7 +504,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 5,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -519,7 +519,7 @@
           "investigateDifficulty": 3,
           "containDifficulty": 4,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -534,7 +534,7 @@
           "investigateDifficulty": 2,
           "containDifficulty": 3,
           "manageRisk": 1,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -549,7 +549,7 @@
           "investigateDifficulty": 3,
           "containDifficulty": 3,
           "manageRisk": 2,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -564,7 +564,7 @@
           "investigateDifficulty": 2,
           "containDifficulty": 2,
           "manageRisk": 1,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -580,7 +580,7 @@
           "investigateDifficulty": 4,
           "containDifficulty": 6,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -596,7 +596,7 @@
           "investigateDifficulty": 3,
           "containDifficulty": 4,
           "manageRisk": 2,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -612,7 +612,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 5,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -628,7 +628,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 6,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -643,7 +643,7 @@
           "investigateDifficulty": 6,
           "containDifficulty": 7,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -659,7 +659,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 6,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -675,7 +675,7 @@
           "investigateDifficulty": 5,
           "containDifficulty": 7,
           "manageRisk": 5,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -691,7 +691,7 @@
           "investigateDifficulty": 4,
           "containDifficulty": 6,
           "manageRisk": 4,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         },
         {
@@ -707,7 +707,7 @@
           "investigateDifficulty": 4,
           "containDifficulty": 5,
           "manageRisk": 3,
-          "worldPanicPerDayUncontained": 2.0,
+          "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
         }
       ]
