@@ -1,8 +1,8 @@
 {
   "meta": {
     "schemaVersion": "0.1",
-    "dataVersion": "2026.01.24a",
-    "comment": "Minimal sample for data pipeline"
+    "dataVersion": "2026.01.25b",
+    "comment": "Expanded content pack: more nodes/anomalies/events/effects for prototyping"
   },
   "balance": {
     "LocalPanicHighThreshold": {
@@ -24,6 +24,46 @@
       "value": "ApplyDailyKeep",
       "type": "enum",
       "comment": "Default ignore mode"
+    },
+    "WorldPanicFailThreshold": {
+      "value": "10",
+      "type": "int",
+      "comment": "World panic hard fail threshold"
+    },
+    "WorldPanicSoftThreshold": {
+      "value": "7",
+      "type": "int",
+      "comment": "World panic warning threshold"
+    },
+    "StartingMoney": {
+      "value": "250",
+      "type": "int",
+      "comment": "Starting global money"
+    },
+    "StartingIntel": {
+      "value": "2",
+      "type": "int",
+      "comment": "Starting global intel"
+    },
+    "StartingNegEntropy": {
+      "value": "0",
+      "type": "int",
+      "comment": "Starting global neg-entropy"
+    },
+    "DailyWorldPanicDecay": {
+      "value": "0.05",
+      "type": "float",
+      "comment": "Daily world panic decay (if supported)"
+    },
+    "DailyIntelDecay": {
+      "value": "0",
+      "type": "float",
+      "comment": "Daily intel decay (if supported)"
+    },
+    "DailyUpkeepPerAgent": {
+      "value": "4",
+      "type": "int",
+      "comment": "Daily upkeep per busy agent (if supported)"
     }
   },
   "nodes": [
@@ -34,7 +74,7 @@
         "urban",
         "lab"
       ],
-      "startLocalPanic": 2,
+      "startLocalPanic": 0,
       "startPopulation": 12,
       "startAnomalyIds": [
         "AN_001"
@@ -46,7 +86,7 @@
       "tags": [
         "rural"
       ],
-      "startLocalPanic": 1,
+      "startLocalPanic": 0,
       "startPopulation": 9,
       "startAnomalyIds": []
     },
@@ -60,6 +100,76 @@
       "startPopulation": 10,
       "startAnomalyIds": [
         "AN_002"
+      ]
+    },
+    {
+      "nodeId": "N4",
+      "name": "节点4",
+      "tags": [
+        "coastal",
+        "port"
+      ],
+      "startLocalPanic": 1,
+      "startPopulation": 11,
+      "startAnomalyIds": [
+        "AN_007",
+        "AN_011"
+      ]
+    },
+    {
+      "nodeId": "N5",
+      "name": "节点5",
+      "tags": [
+        "mountain",
+        "temple"
+      ],
+      "startLocalPanic": 0,
+      "startPopulation": 8,
+      "startAnomalyIds": [
+        "AN_013",
+        "AN_019"
+      ]
+    },
+    {
+      "nodeId": "N6",
+      "name": "节点6",
+      "tags": [
+        "industrial",
+        "mine"
+      ],
+      "startLocalPanic": 2,
+      "startPopulation": 9,
+      "startAnomalyIds": [
+        "AN_018",
+        "AN_020"
+      ]
+    },
+    {
+      "nodeId": "N7",
+      "name": "节点7",
+      "tags": [
+        "academic",
+        "lab"
+      ],
+      "startLocalPanic": 0,
+      "startPopulation": 10,
+      "startAnomalyIds": [
+        "AN_004",
+        "AN_010"
+      ]
+    },
+    {
+      "nodeId": "N8",
+      "name": "节点8",
+      "tags": [
+        "rural",
+        "forest"
+      ],
+      "startLocalPanic": 1,
+      "startPopulation": 7,
+      "startAnomalyIds": [
+        "AN_008",
+        "AN_014"
       ]
     }
   ],
@@ -89,6 +199,249 @@
       "investigateDifficulty": 5,
       "containDifficulty": 6,
       "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_003",
+      "name": "嗜盐水雾",
+      "class": "Euclid",
+      "tags": [
+        "bio",
+        "toxic",
+        "water"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 2,
+      "containDifficulty": 3,
+      "manageRisk": 2
+    },
+    {
+      "anomalyId": "AN_004",
+      "name": "空白日记",
+      "class": "Euclid",
+      "tags": [
+        "memetic",
+        "infohazard"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 4,
+      "containDifficulty": 2,
+      "manageRisk": 3
+    },
+    {
+      "anomalyId": "AN_005",
+      "name": "逆向楼梯间",
+      "class": "Keter",
+      "tags": [
+        "spatial",
+        "urban"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 4,
+      "containDifficulty": 5,
+      "manageRisk": 3
+    },
+    {
+      "anomalyId": "AN_006",
+      "name": "自复原蜡像",
+      "class": "Euclid",
+      "tags": [
+        "bio",
+        "panic"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 3,
+      "containDifficulty": 4,
+      "manageRisk": 3
+    },
+    {
+      "anomalyId": "AN_007",
+      "name": "午夜电台",
+      "class": "Keter",
+      "tags": [
+        "memetic",
+        "signal"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 5,
+      "containDifficulty": 5,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_008",
+      "name": "低语菌落",
+      "class": "Euclid",
+      "tags": [
+        "bio",
+        "spore"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 3,
+      "containDifficulty": 4,
+      "manageRisk": 3
+    },
+    {
+      "anomalyId": "AN_009",
+      "name": "无影灯",
+      "class": "Euclid",
+      "tags": [
+        "stealth",
+        "optic"
+      ],
+      "baseThreat": 1,
+      "investigateDifficulty": 2,
+      "containDifficulty": 3,
+      "manageRisk": 1
+    },
+    {
+      "anomalyId": "AN_010",
+      "name": "恒温灰尘",
+      "class": "Euclid",
+      "tags": [
+        "material",
+        "lab"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 3,
+      "containDifficulty": 3,
+      "manageRisk": 2
+    },
+    {
+      "anomalyId": "AN_011",
+      "name": "回声邮筒",
+      "class": "Euclid",
+      "tags": [
+        "spatial",
+        "info"
+      ],
+      "baseThreat": 1,
+      "investigateDifficulty": 2,
+      "containDifficulty": 2,
+      "manageRisk": 1
+    },
+    {
+      "anomalyId": "AN_012",
+      "name": "镜中幼体",
+      "class": "Keter",
+      "tags": [
+        "bio",
+        "stealth",
+        "embryo"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 4,
+      "containDifficulty": 6,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_013",
+      "name": "祈香残火",
+      "class": "Euclid",
+      "tags": [
+        "religion",
+        "incense",
+        "merit"
+      ],
+      "baseThreat": 2,
+      "investigateDifficulty": 3,
+      "containDifficulty": 4,
+      "manageRisk": 2
+    },
+    {
+      "anomalyId": "AN_014",
+      "name": "符箓回路",
+      "class": "Euclid",
+      "tags": [
+        "tao",
+        "qi",
+        "sigil"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 5,
+      "containDifficulty": 5,
+      "manageRisk": 3
+    },
+    {
+      "anomalyId": "AN_015",
+      "name": "五行失衡井",
+      "class": "Keter",
+      "tags": [
+        "tao",
+        "wuxing",
+        "panic"
+      ],
+      "baseThreat": 4,
+      "investigateDifficulty": 5,
+      "containDifficulty": 6,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_016",
+      "name": "洞天影门",
+      "class": "Keter",
+      "tags": [
+        "tao",
+        "spatial"
+      ],
+      "baseThreat": 4,
+      "investigateDifficulty": 6,
+      "containDifficulty": 7,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_017",
+      "name": "天人回响",
+      "class": "Keter",
+      "tags": [
+        "tao",
+        "memetic",
+        "signal"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 5,
+      "containDifficulty": 6,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_018",
+      "name": "业火余烬",
+      "class": "Keter",
+      "tags": [
+        "religion",
+        "fire",
+        "karma"
+      ],
+      "baseThreat": 4,
+      "investigateDifficulty": 5,
+      "containDifficulty": 7,
+      "manageRisk": 5
+    },
+    {
+      "anomalyId": "AN_019",
+      "name": "戒律钟摆",
+      "class": "Euclid",
+      "tags": [
+        "religion",
+        "rule",
+        "panic"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 4,
+      "containDifficulty": 6,
+      "manageRisk": 4
+    },
+    {
+      "anomalyId": "AN_020",
+      "name": "丹砂雾化",
+      "class": "Euclid",
+      "tags": [
+        "tao",
+        "toxic",
+        "lab"
+      ],
+      "baseThreat": 3,
+      "investigateDifficulty": 4,
+      "containDifficulty": 5,
+      "manageRisk": 3
     }
   ],
   "taskDefs": [
@@ -157,6 +510,167 @@
       "autoResolveAfterDays": 0,
       "ignoreApplyMode": "ApplyOnceThenRemove",
       "ignoreEffectId": "EFF_IGNORE_RANDOM"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+      "source": "Investigate",
+      "causeType": "TaskInvestigate",
+      "weight": 8,
+      "title": "证据遗失",
+      "desc": "关键物证在转运中丢失，调查线索可能断裂。",
+      "blockPolicy": "BlockOriginTask",
+      "defaultAffects": [
+        "OriginTask",
+        "Node"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+      "source": "Investigate",
+      "causeType": "TaskInvestigate",
+      "weight": 7,
+      "title": "认知污染",
+      "desc": "调查员疑似遭受认知污染，需立即处置。",
+      "blockPolicy": "BlockOriginTask",
+      "defaultAffects": [
+        "OriginTask",
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+      "source": "Investigate",
+      "causeType": "TaskInvestigate",
+      "weight": 6,
+      "title": "封口要价",
+      "desc": "当地关键人物索要好处以保持沉默。",
+      "blockPolicy": "BlockOriginTask",
+      "defaultAffects": [
+        "OriginTask",
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyOnceThenRemove",
+      "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_BLACKOUT",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 7,
+      "title": "区域停电",
+      "desc": "区域性停电导致监控失效与安防薄弱。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_BLACKOUT"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_AUDIT",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 5,
+      "title": "总部审计",
+      "desc": "总部派出审计组，要求检查报表与日志。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyOnceThenRemove",
+      "ignoreEffectId": "EFF_IGNORE_AUDIT"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_LEAK",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 6,
+      "title": "信息外泄",
+      "desc": "内部消息疑似外泄，媒体开始追问。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Global",
+        "Node"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_LEAK"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 6,
+      "title": "教团活动",
+      "desc": "可疑教团在附近活动，疑似与异常相关。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_CULT"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 4,
+      "title": "员工罢工",
+      "desc": "后勤与安保提出待遇要求，工作效率下降。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Global",
+        "Node"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_STRIKE"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 5,
+      "title": "收容漂移",
+      "desc": "收容措施出现偏移迹象，需立即校准。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyDailyKeep",
+      "ignoreEffectId": "EFF_IGNORE_DRIFT"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+      "source": "Random",
+      "causeType": "Random",
+      "weight": 5,
+      "title": "物资扣押",
+      "desc": "地方机关临时扣押物资，项目补给受阻。",
+      "blockPolicy": "None",
+      "defaultAffects": [
+        "Node",
+        "Global"
+      ],
+      "autoResolveAfterDays": 0,
+      "ignoreApplyMode": "ApplyOnceThenRemove",
+      "ignoreEffectId": "EFF_IGNORE_SEIZURE"
     }
   ],
   "eventOptions": [
@@ -202,6 +716,225 @@
         "TaskType:Contain"
       ],
       "effectId": "EFF_OPTION_PROJECT"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+      "optionId": "O1",
+      "text": "封锁现场并回溯",
+      "resultText": "线索回收，进度回补，但引发关注。",
+      "affects": [
+        "OriginTask",
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+      "optionId": "O2",
+      "text": "放弃物证，改走旁证",
+      "resultText": "进度受损，但不惊动外界。",
+      "affects": [
+        "OriginTask",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+      "optionId": "O1",
+      "text": "隔离并执行反制协议",
+      "resultText": "行动延缓，污染被压制。",
+      "affects": [
+        "OriginTask",
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+      "optionId": "O2",
+      "text": "继续行动，押注稳定",
+      "resultText": "小队冒险推进，外部风险上升。",
+      "affects": [
+        "OriginTask",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_MEMETIC_PUSH"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+      "optionId": "O1",
+      "text": "支付封口费",
+      "resultText": "对方保持沉默，舆情回落。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_BRIBE_PAY"
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+      "optionId": "O2",
+      "text": "施压/威慑",
+      "resultText": "对方退让，但反弹风险增加。",
+      "affects": [
+        "OriginTask",
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_BLACKOUT",
+      "optionId": "O1",
+      "text": "启用备用电源",
+      "resultText": "维持安防与监控，消耗经费。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_BLACKOUT_BACKUP"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_BLACKOUT",
+      "optionId": "O2",
+      "text": "切换到低功耗模式",
+      "resultText": "节省资源，但收容压力上升。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_AUDIT",
+      "optionId": "O1",
+      "text": "全力配合",
+      "resultText": "合规风险下降，但需要投入成本。",
+      "affects": [
+        "Global"
+      ],
+      "effectId": "EFF_OPT_AUDIT_COOP"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_AUDIT",
+      "optionId": "O2",
+      "text": "拖延并整理",
+      "resultText": "短期省钱，但可能引发追责。",
+      "affects": [
+        "Global"
+      ],
+      "effectId": "EFF_OPT_AUDIT_DELAY"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_LEAK",
+      "optionId": "O1",
+      "text": "启动舆情引导",
+      "resultText": "舆论被压制，成本较高。",
+      "affects": [
+        "Global",
+        "Node"
+      ],
+      "effectId": "EFF_OPT_LEAK_PR"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_LEAK",
+      "optionId": "O2",
+      "text": "封禁渠道，追查内鬼",
+      "resultText": "找到线索，但外部压力上升。",
+      "affects": [
+        "Global"
+      ],
+      "effectId": "EFF_OPT_LEAK_HUNT"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+      "optionId": "O1",
+      "text": "秘密监控",
+      "resultText": "获得情报，但民间焦虑上升。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_CULT_SURVEIL"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+      "optionId": "O2",
+      "text": "直接清剿",
+      "resultText": "短期平息，但引发更大关注。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_CULT_RAID"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+      "optionId": "O1",
+      "text": "临时加薪",
+      "resultText": "秩序恢复，但资金承压。",
+      "affects": [
+        "Global"
+      ],
+      "effectId": "EFF_OPT_STRIKE_RAISE"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+      "optionId": "O2",
+      "text": "强制复岗",
+      "resultText": "成本降低，但士气与风险恶化。",
+      "affects": [
+        "Global",
+        "Node"
+      ],
+      "effectId": "EFF_OPT_STRIKE_FORCE"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+      "optionId": "O1",
+      "text": "追加安防与校准",
+      "resultText": "风险下降，但需要经费。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_DRIFT_REINFORCE"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+      "optionId": "O2",
+      "text": "转移收容物",
+      "resultText": "暂时止损，但任务与舆情受损。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_DRIFT_TRANSFER"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+      "optionId": "O1",
+      "text": "走官方渠道疏通",
+      "resultText": "成本可控，恢复供给。",
+      "affects": [
+        "Node",
+        "Global"
+      ],
+      "effectId": "EFF_OPT_SEIZURE_OFFICIAL"
+    },
+    {
+      "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+      "optionId": "O2",
+      "text": "走黑市替代",
+      "resultText": "供给恢复，但后患增加。",
+      "affects": [
+        "Global",
+        "Node"
+      ],
+      "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"
     }
   ],
   "effects": [
@@ -228,6 +961,126 @@
     {
       "effectId": "EFF_OPTION_PROJECT",
       "comment": "保障项目推进"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_EVIDENCE",
+      "comment": "忽略证据遗失的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_MEMETIC",
+      "comment": "忽略认知污染的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_BRIBERY",
+      "comment": "忽略封口要价的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_BLACKOUT",
+      "comment": "忽略停电的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_AUDIT",
+      "comment": "忽略审计的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_LEAK",
+      "comment": "忽略信息外泄的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_CULT",
+      "comment": "忽略教团活动的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_STRIKE",
+      "comment": "忽略员工罢工的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_DRIFT",
+      "comment": "忽略收容漂移的惩罚"
+    },
+    {
+      "effectId": "EFF_IGNORE_SEIZURE",
+      "comment": "忽略物资扣押的惩罚"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+      "comment": "封锁回溯取证"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
+      "comment": "旁证替代方案"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+      "comment": "隔离反制协议"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
+      "comment": "冒险继续推进"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PAY",
+      "comment": "支付封口费"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+      "comment": "施压威慑"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_BACKUP",
+      "comment": "启用备用电源"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
+      "comment": "低功耗模式"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_COOP",
+      "comment": "审计配合"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_DELAY",
+      "comment": "审计拖延"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_PR",
+      "comment": "舆情引导"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_HUNT",
+      "comment": "追查内鬼"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_SURVEIL",
+      "comment": "秘密监控教团"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_RAID",
+      "comment": "清剿教团"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_RAISE",
+      "comment": "加薪安抚"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_FORCE",
+      "comment": "强制复岗"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_REINFORCE",
+      "comment": "追加校准安防"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_TRANSFER",
+      "comment": "转移收容物"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
+      "comment": "官方疏通"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+      "comment": "黑市替代"
     }
   ],
   "effectOps": [
@@ -330,6 +1183,706 @@
       "min": null,
       "max": null,
       "comment": "收容任务推进"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_EVIDENCE",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.15,
+      "min": null,
+      "max": null,
+      "comment": "忽略导致调查进度退回"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_EVIDENCE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "本地恐慌上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_EVIDENCE",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "情报损失"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": 0.1,
+      "min": null,
+      "max": null,
+      "comment": "追回物证推进"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "封锁引发关注"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "补回情报"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.05,
+      "min": null,
+      "max": null,
+      "comment": "旁证效率较低"
+    },
+    {
+      "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "旁证带来额外线索"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_MEMETIC",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.1,
+      "min": null,
+      "max": null,
+      "comment": "小队受损导致进度退回"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_MEMETIC",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "污染传闻扩散"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_MEMETIC",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "认知危害抬升世界恐慌"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.05,
+      "min": null,
+      "max": null,
+      "comment": "隔离导致延误"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "传闻被压制"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "获得反制记录"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": 0.15,
+      "min": null,
+      "max": null,
+      "comment": "冒险推进获得进度"
+    },
+    {
+      "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "外部风险上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_BRIBERY",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "目击者扩散带来恐慌"
+    },
+    {
+      "effectId": "EFF_IGNORE_INV_BRIBERY",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "舆论发酵"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PAY",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -50.0,
+      "min": null,
+      "max": null,
+      "comment": "封口费成本"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PAY",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "暂时稳定"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+      "scope": "OriginTask",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": 0.05,
+      "min": null,
+      "max": null,
+      "comment": "强硬推进获得效率"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "反弹风险"
+    },
+    {
+      "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "可能引发外部关注"
+    },
+    {
+      "effectId": "EFF_IGNORE_BLACKOUT",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "安防薄弱引发恐慌"
+    },
+    {
+      "effectId": "EFF_IGNORE_BLACKOUT",
+      "scope": "TaskType:Contain",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.05,
+      "min": null,
+      "max": null,
+      "comment": "收容任务受阻"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_BACKUP",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -60.0,
+      "min": null,
+      "max": null,
+      "comment": "备用电源成本"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_BACKUP",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "风险下降"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -10.0,
+      "min": null,
+      "max": null,
+      "comment": "低功耗维护成本"
+    },
+    {
+      "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "压力上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_AUDIT",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "追责与处罚预期"
+    },
+    {
+      "effectId": "EFF_IGNORE_AUDIT",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -20.0,
+      "min": null,
+      "max": null,
+      "comment": "合规罚款/机会成本"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_COOP",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -30.0,
+      "min": null,
+      "max": null,
+      "comment": "配合成本"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_COOP",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "合规带来稳定"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_COOP",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "审计输出形成情报资产"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_DELAY",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "拖延引发怀疑"
+    },
+    {
+      "effectId": "EFF_OPT_AUDIT_DELAY",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "日志缺口导致情报损失"
+    },
+    {
+      "effectId": "EFF_IGNORE_LEAK",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "舆论失控"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_PR",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -50.0,
+      "min": null,
+      "max": null,
+      "comment": "舆情成本"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_PR",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "压力降低"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_PR",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "本地稳定"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_HUNT",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -20.0,
+      "min": null,
+      "max": null,
+      "comment": "调查成本"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_HUNT",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "获得线索"
+    },
+    {
+      "effectId": "EFF_OPT_LEAK_HUNT",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "短期关注上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_CULT",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "教团扩散引发恐慌"
+    },
+    {
+      "effectId": "EFF_IGNORE_CULT",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "外部关注上升"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_SURVEIL",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "获取情报"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_SURVEIL",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "民间焦虑上升"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_RAID",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "清剿带来线索"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_RAID",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "冲突扩大"
+    },
+    {
+      "effectId": "EFF_OPT_CULT_RAID",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "关注上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_STRIKE",
+      "scope": "TaskType:Manage",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.1,
+      "min": null,
+      "max": null,
+      "comment": "管理任务效率下降"
+    },
+    {
+      "effectId": "EFF_IGNORE_STRIKE",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "内部不稳"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_RAISE",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -80.0,
+      "min": null,
+      "max": null,
+      "comment": "加薪成本"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_RAISE",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "稳定内部"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_FORCE",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "士气恶化"
+    },
+    {
+      "effectId": "EFF_OPT_STRIKE_FORCE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "执行风险上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_DRIFT",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 2.0,
+      "min": null,
+      "max": null,
+      "comment": "收容风险抬升"
+    },
+    {
+      "effectId": "EFF_IGNORE_DRIFT",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "外部压力上升"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_REINFORCE",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -70.0,
+      "min": null,
+      "max": null,
+      "comment": "追加成本"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_REINFORCE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "风险下降"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_TRANSFER",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "转移引发波动"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_TRANSFER",
+      "scope": "TaskType:Contain",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.1,
+      "min": null,
+      "max": null,
+      "comment": "转移导致收容延期"
+    },
+    {
+      "effectId": "EFF_OPT_DRIFT_TRANSFER",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "外部关注上升"
+    },
+    {
+      "effectId": "EFF_IGNORE_SEIZURE",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "供给紧张带来恐慌"
+    },
+    {
+      "effectId": "EFF_IGNORE_SEIZURE",
+      "scope": "TaskType:Contain",
+      "statKey": "TaskProgressDelta",
+      "op": "Add",
+      "value": -0.05,
+      "min": null,
+      "max": null,
+      "comment": "收容进度受阻"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -40.0,
+      "min": null,
+      "max": null,
+      "comment": "疏通成本"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
+      "scope": "Node",
+      "statKey": "LocalPanic",
+      "op": "Add",
+      "value": -1.0,
+      "min": null,
+      "max": null,
+      "comment": "恢复供给"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+      "scope": "Global",
+      "statKey": "Money",
+      "op": "Add",
+      "value": -60.0,
+      "min": null,
+      "max": null,
+      "comment": "黑市溢价"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+      "scope": "Global",
+      "statKey": "Intel",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "黑市关系带来线索"
+    },
+    {
+      "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+      "scope": "Global",
+      "statKey": "WorldPanic",
+      "op": "Add",
+      "value": 1.0,
+      "min": null,
+      "max": null,
+      "comment": "后患增加"
     }
   ],
   "eventTriggers": [
@@ -358,6 +1911,158 @@
       "requiresAnomalyTagsAny": [],
       "requiresSecured": null,
       "minLocalPanic": null,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+      "minDay": 1,
+      "maxDay": null,
+      "requiresNodeTagsAny": [],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [
+        "infohazard",
+        "stealth"
+      ],
+      "requiresSecured": false,
+      "minLocalPanic": 0,
+      "taskType": "Investigate",
+      "onlyAffectOriginTask": true
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+      "minDay": 1,
+      "maxDay": null,
+      "requiresNodeTagsAny": [],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [
+        "memetic",
+        "infohazard"
+      ],
+      "requiresSecured": false,
+      "minLocalPanic": 0,
+      "taskType": "Investigate",
+      "onlyAffectOriginTask": true
+    },
+    {
+      "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+      "minDay": 1,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "urban"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": false,
+      "minLocalPanic": 2,
+      "taskType": "Investigate",
+      "onlyAffectOriginTask": true
+    },
+    {
+      "eventDefId": "EVT_RANDOM_BLACKOUT",
+      "minDay": 2,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "urban",
+        "industrial",
+        "port"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": null,
+      "minLocalPanic": 2,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_AUDIT",
+      "minDay": 5,
+      "maxDay": null,
+      "requiresNodeTagsAny": [],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": null,
+      "minLocalPanic": null,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_LEAK",
+      "minDay": 3,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "urban",
+        "academic"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [
+        "memetic",
+        "infohazard"
+      ],
+      "requiresSecured": null,
+      "minLocalPanic": 1,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+      "minDay": 2,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "mountain",
+        "rural",
+        "temple"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [
+        "religion",
+        "tao"
+      ],
+      "requiresSecured": null,
+      "minLocalPanic": 1,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+      "minDay": 3,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "urban",
+        "industrial",
+        "lab"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": null,
+      "minLocalPanic": 3,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+      "minDay": 1,
+      "maxDay": null,
+      "requiresNodeTagsAny": [],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": true,
+      "minLocalPanic": null,
+      "taskType": null,
+      "onlyAffectOriginTask": false
+    },
+    {
+      "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+      "minDay": 2,
+      "maxDay": null,
+      "requiresNodeTagsAny": [
+        "port",
+        "urban"
+      ],
+      "requiresNodeTagsAll": [],
+      "requiresAnomalyTagsAny": [],
+      "requiresSecured": null,
+      "minLocalPanic": 1,
       "taskType": null,
       "onlyAffectOriginTask": false
     }
