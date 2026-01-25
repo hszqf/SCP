@@ -970,7 +970,7 @@ MonoBehaviour:
   debugText: {fileID: 1329140030878947302}
   endDayButton: {fileID: 780750136854631078}
   newsButton: {fileID: 2386546073462401332}
-  recruitButton: {fileID: 0}
+  recruitButton: {fileID: 7995241649854128429}
 --- !u!1 &4316429007806604704
 GameObject:
   m_ObjectHideFlags: 0
