@@ -234,6 +234,8 @@ namespace Data
                     agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
                     yieldKey = GetRowString(row, "yieldKey"),
                     yieldPerDay = GetRowFloat(row, "yieldPerDay"),
+                    hasYieldKey = row != null && row.ContainsKey("yieldKey"),
+                    hasYieldPerDay = row != null && row.ContainsKey("yieldPerDay"),
                 };
                 TaskDefsByType[type] = taskDef;
             }
