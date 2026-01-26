@@ -105,6 +105,7 @@ namespace Data
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
         public Dictionary<TaskType, TaskDef> TaskDefsByType { get; private set; } = new();
+        public Dictionary<string, TaskDef> TaskDefsById { get; private set; } = new();
         public Dictionary<string, EventDef> EventsById { get; private set; } = new();
         public Dictionary<string, List<EventOptionDef>> OptionsByEventId { get; private set; } = new();
         public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
@@ -218,6 +219,7 @@ namespace Data
             }
 
             TaskDefsByType = new Dictionary<TaskType, TaskDef>();
+            TaskDefsById = new Dictionary<string, TaskDef>();
             foreach (var row in Tables.GetRows("TaskDefs"))
             {
                 var taskTypeRaw = GetRowString(row, "taskType");
@@ -238,6 +240,10 @@ namespace Data
                     hasYieldPerDay = row != null && row.ContainsKey("yieldPerDay"),
                 };
                 TaskDefsByType[type] = taskDef;
+                if (!string.IsNullOrEmpty(taskDef.taskDefId))
+                {
+                    TaskDefsById[taskDef.taskDefId] = taskDef;
+                }
             }
 
             EventsById = new Dictionary<string, EventDef>();
@@ -577,6 +583,9 @@ namespace Data
 
         public bool TryGetTaskDef(TaskType type, out TaskDef def)
             => TaskDefsByType.TryGetValue(type, out def);
+
+        public TaskDef GetTaskDefById(string taskDefId)
+            => !string.IsNullOrEmpty(taskDefId) && TaskDefsById.TryGetValue(taskDefId, out var def) ? def : null;
 
         public bool TryGetTaskDefForType(TaskType type, out TaskDef def)
         {

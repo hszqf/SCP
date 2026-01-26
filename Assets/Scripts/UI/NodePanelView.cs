@@ -590,13 +590,16 @@ public class NodePanelView : MonoBehaviour
             var status = GetTmp(row, "Status");
             var people = GetTmp(row, "People");
 
-            string titleTextLocal = t.Type switch
-            {
-                TaskType.Investigate => "调查",
-                TaskType.Contain => "收容",
-                TaskType.Manage => "管理",
-                _ => t.Type.ToString()
-            };
+            string taskDefLabel = ResolveTaskDefLabel(t);
+            string titleTextLocal = !string.IsNullOrEmpty(taskDefLabel)
+                ? taskDefLabel
+                : t.Type switch
+                {
+                    TaskType.Investigate => "调查",
+                    TaskType.Contain => "收容",
+                    TaskType.Manage => "管理",
+                    _ => t.Type.ToString()
+                };
             if (t.Type == TaskType.Contain)
             {
                 string tn = ResolveContainableName(node, t.TargetContainableId);
@@ -736,6 +739,14 @@ public class NodePanelView : MonoBehaviour
             if (m != null) return m.Name ?? "";
         }
         return "";
+    }
+
+    private static string ResolveTaskDefLabel(NodeTask task)
+    {
+        if (task == null) return "";
+        var def = DataRegistry.Instance != null ? DataRegistry.Instance.GetTaskDefById(task.TaskDefId) : null;
+        if (def != null && !string.IsNullOrEmpty(def.name)) return def.name;
+        return task.TaskDefId ?? "";
     }
 
     private static string BuildTaskStatusText(NodeTask t, bool hasSquad)
