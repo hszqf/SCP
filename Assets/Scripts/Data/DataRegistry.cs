@@ -80,6 +80,7 @@ namespace Data
 
     public sealed class EventTrigger
     {
+        public string RowId;
         public string EventDefId;
         public int? MinDay;
         public int? MaxDay;
@@ -342,8 +343,19 @@ namespace Data
             {
                 var eventDefId = GetRowString(row, "eventDefId");
                 if (string.IsNullOrEmpty(eventDefId)) continue;
+                var rowId = GetRowString(row, "rowId");
+                if (string.IsNullOrEmpty(rowId))
+                {
+                    rowId = GetRowString(row, "key");
+                    if (string.IsNullOrEmpty(rowId))
+                    {
+                        var rowKey = GetRowIntNullable(row, "key");
+                        rowId = rowKey?.ToString();
+                    }
+                }
                 var rowModel = new EventTriggerRow
                 {
+                    rowId = rowId,
                     eventDefId = eventDefId,
                     minDay = GetRowIntNullable(row, "minDay"),
                     maxDay = GetRowIntNullable(row, "maxDay"),
@@ -551,6 +563,7 @@ namespace Data
         {
             trigger = new EventTrigger
             {
+                RowId = string.IsNullOrEmpty(row.rowId) ? row.eventDefId : row.rowId,
                 EventDefId = row.eventDefId,
                 MinDay = row.minDay,
                 MaxDay = row.maxDay,
