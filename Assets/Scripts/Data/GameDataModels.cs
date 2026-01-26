@@ -129,7 +129,6 @@ namespace Data
     }
 
     [Serializable]
-    [Serializable]
     public class GameDataTable
     {
         public string mode;
