@@ -218,6 +218,7 @@ public class GameController : MonoBehaviour
             CreatedDay = State.Day,
             Progress = 0f,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
         LogTaskDefSummary(TaskType.Investigate);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateInvestigateTask(node:{nodeId})");
@@ -246,6 +247,7 @@ public class GameController : MonoBehaviour
             Progress = 0f,
             TargetContainableId = target,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
         LogTaskDefSummary(TaskType.Contain);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateContainTask(node:{nodeId}, target:{target})");
@@ -278,6 +280,7 @@ public class GameController : MonoBehaviour
             Progress = 0f,
             TargetManagedAnomalyId = target,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
         LogTaskDefSummary(TaskType.Manage);
         GameControllerTaskExt.LogBusySnapshot(this, $"CreateManageTask(node:{nodeId}, anomaly:{target})");
@@ -345,6 +348,26 @@ public class GameController : MonoBehaviour
         int baseDays = registry.GetTaskBaseDaysWithWarn(type, 1);
         var (minSlots, maxSlots) = registry.GetTaskAgentSlotRangeWithWarn(type, 1, int.MaxValue);
         Debug.Log($"[TaskDef] taskType={type} baseDays={baseDays} slotsMin={minSlots} slotsMax={maxSlots}");
+    }
+
+    private void WireTaskDefOnCreate(NodeTask task)
+    {
+        if (task == null) return;
+        TaskDef def = null;
+        var registry = DataRegistry.Instance;
+        if (registry != null && registry.TryGetTaskDefForType(task.Type, out def))
+        {
+            task.TaskDefId = def.taskDefId;
+        }
+        LogTaskCreate(task, def);
+    }
+
+    private static void LogTaskCreate(NodeTask task, TaskDef def)
+    {
+        if (task == null) return;
+        string taskDefId = def?.taskDefId ?? task.TaskDefId ?? "";
+        string taskDefName = def?.name ?? "";
+        Debug.Log($"[TaskCreate] taskId={task.Id} type={task.Type} taskDefId={taskDefId} name={taskDefName}");
     }
 
     private void RefreshMapNodes()

@@ -67,6 +67,7 @@ namespace Core
         public string Id;
         public TaskType Type;
         public TaskState State = TaskState.Active;
+        public string TaskDefId;
 
         // 0..1
         public float Progress = 0f;
