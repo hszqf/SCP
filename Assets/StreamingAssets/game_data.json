@@ -697,11 +697,19 @@
           "type": "string"
         },
         {
-          "name": "source",
+          "name": "requiresAnomalyId",
           "type": "string"
         },
         {
-          "name": "causeType",
+          "name": "requiresNodeId",
+          "type": "string"
+        },
+        {
+          "name": "requiresTaskType",
+          "type": "string"
+        },
+        {
+          "name": "source",
           "type": "string"
         },
         {
@@ -735,13 +743,35 @@
         {
           "name": "ignoreEffectId",
           "type": "string"
+        },
+        {
+          "name": "p",
+          "type": "float"
+        },
+        {
+          "name": "minDay",
+          "type": "int"
+        },
+        {
+          "name": "maxDay",
+          "type": "int"
+        },
+        {
+          "name": "CD",
+          "type": "int"
+        },
+        {
+          "name": "limitNum",
+          "type": "int"
         }
       ],
       "rows": [
         {
           "eventDefId": "EVT_INVESTIGATE_SPOTTED",
-          "source": "Investigate",
-          "causeType": "TaskInvestigate",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
           "weight": 10,
           "title": "调查暴露",
           "desc": "调查行动被目击，必须立即回应。",
@@ -752,12 +782,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_INV"
+          "ignoreEffectId": "EFF_IGNORE_INV",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_SHORTAGE",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 6,
           "title": "补给短缺",
           "desc": "供应链出现波动，需要做出取舍。",
@@ -767,12 +804,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
-          "ignoreEffectId": "EFF_IGNORE_RANDOM"
+          "ignoreEffectId": "EFF_IGNORE_RANDOM",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
-          "source": "Investigate",
-          "causeType": "TaskInvestigate",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
           "weight": 8,
           "title": "证据遗失",
           "desc": "关键物证在转运中丢失，调查线索可能断裂。",
@@ -783,12 +827,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE"
+          "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
-          "source": "Investigate",
-          "causeType": "TaskInvestigate",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
           "weight": 7,
           "title": "认知污染",
           "desc": "调查员疑似遭受认知污染，需立即处置。",
@@ -800,12 +851,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC"
+          "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_INVESTIGATE_BRIBERY",
-          "source": "Investigate",
-          "causeType": "TaskInvestigate",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
           "weight": 6,
           "title": "封口要价",
           "desc": "当地关键人物索要好处以保持沉默。",
@@ -817,12 +875,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
-          "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY"
+          "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_BLACKOUT",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 7,
           "title": "区域停电",
           "desc": "区域性停电导致监控失效与安防薄弱。",
@@ -833,12 +898,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_BLACKOUT"
+          "ignoreEffectId": "EFF_IGNORE_BLACKOUT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_AUDIT",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 5,
           "title": "总部审计",
           "desc": "总部派出审计组，要求检查报表与日志。",
@@ -848,12 +920,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
-          "ignoreEffectId": "EFF_IGNORE_AUDIT"
+          "ignoreEffectId": "EFF_IGNORE_AUDIT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_LEAK",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 6,
           "title": "信息外泄",
           "desc": "内部消息疑似外泄，媒体开始追问。",
@@ -864,12 +943,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_LEAK"
+          "ignoreEffectId": "EFF_IGNORE_LEAK",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 6,
           "title": "教团活动",
           "desc": "可疑教团在附近活动，疑似与异常相关。",
@@ -880,12 +966,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_CULT"
+          "ignoreEffectId": "EFF_IGNORE_CULT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 4,
           "title": "员工罢工",
           "desc": "后勤与安保提出待遇要求，工作效率下降。",
@@ -896,12 +989,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_STRIKE"
+          "ignoreEffectId": "EFF_IGNORE_STRIKE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 5,
           "title": "收容漂移",
           "desc": "收容措施出现偏移迹象，需立即校准。",
@@ -912,12 +1012,19 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyDailyKeep",
-          "ignoreEffectId": "EFF_IGNORE_DRIFT"
+          "ignoreEffectId": "EFF_IGNORE_DRIFT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         },
         {
           "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
-          "source": "Random",
-          "causeType": "Random",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
           "weight": 5,
           "title": "物资扣押",
           "desc": "地方机关临时扣押物资，项目补给受阻。",
@@ -928,7 +1035,12 @@
           ],
           "autoResolveAfterDays": 1,
           "ignoreApplyMode": "ApplyOnceThenRemove",
-          "ignoreEffectId": "EFF_IGNORE_SEIZURE"
+          "ignoreEffectId": "EFF_IGNORE_SEIZURE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
         }
       ]
     },
@@ -2332,213 +2444,6 @@
           "min": null,
           "max": null,
           "comment": "后患增加"
-        }
-      ]
-    },
-    "EventTriggers": {
-      "idField": "key",
-      "columns": [
-        {
-          "name": "key",
-          "type": "int"
-        },
-        {
-          "name": "eventDefId",
-          "type": "string"
-        },
-        {
-          "name": "minDay",
-          "type": "int"
-        },
-        {
-          "name": "maxDay",
-          "type": "int"
-        },
-        {
-          "name": "requiresnodeId",
-          "type": "string"
-        },
-        {
-          "name": "requiresAnomalyId",
-          "type": "string"
-        },
-        {
-          "name": "requirestaskType",
-          "type": "string"
-        },
-        {
-          "name": "requiresSecured",
-          "type": "int"
-        },
-        {
-          "name": "minLocalPanic",
-          "type": "float"
-        },
-        {
-          "name": "taskType",
-          "type": "string"
-        },
-        {
-          "name": "onlyAffectOriginTask",
-          "type": "int"
-        }
-      ],
-      "rows": [
-        {
-          "key": 1,
-          "eventDefId": "EVT_INVESTIGATE_SPOTTED",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_001",
-          "requirestaskType": "Any",
-          "requiresSecured": 0,
-          "minLocalPanic": 0.0,
-          "taskType": "Investigate",
-          "onlyAffectOriginTask": 1
-        },
-        {
-          "key": 2,
-          "eventDefId": "EVT_RANDOM_SHORTAGE",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_002",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": null,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 3,
-          "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_003",
-          "requirestaskType": "Any",
-          "requiresSecured": 0,
-          "minLocalPanic": 0.0,
-          "taskType": "Investigate",
-          "onlyAffectOriginTask": 1
-        },
-        {
-          "key": 4,
-          "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_004",
-          "requirestaskType": "Any",
-          "requiresSecured": 0,
-          "minLocalPanic": 0.0,
-          "taskType": "Investigate",
-          "onlyAffectOriginTask": 1
-        },
-        {
-          "key": 5,
-          "eventDefId": "EVT_INVESTIGATE_BRIBERY",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_005",
-          "requirestaskType": "Any",
-          "requiresSecured": 0,
-          "minLocalPanic": 2.0,
-          "taskType": "Investigate",
-          "onlyAffectOriginTask": 1
-        },
-        {
-          "key": 6,
-          "eventDefId": "EVT_RANDOM_BLACKOUT",
-          "minDay": 2,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_006",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": 2.0,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 7,
-          "eventDefId": "EVT_RANDOM_AUDIT",
-          "minDay": 5,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_007",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": null,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 8,
-          "eventDefId": "EVT_RANDOM_LEAK",
-          "minDay": 3,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_008",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": 1.0,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 9,
-          "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
-          "minDay": 2,
-          "maxDay": null,
-          "requiresnodeId": "Any",
-          "requiresAnomalyId": "AN_009",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": 1.0,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 10,
-          "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
-          "minDay": 3,
-          "maxDay": null,
-          "requiresnodeId": "N3",
-          "requiresAnomalyId": "AN_010",
-          "requirestaskType": "Any",
-          "requiresSecured": null,
-          "minLocalPanic": 3.0,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 11,
-          "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
-          "minDay": 1,
-          "maxDay": null,
-          "requiresnodeId": "N2",
-          "requiresAnomalyId": "AN_011",
-          "requirestaskType": "Investigate",
-          "requiresSecured": 1,
-          "minLocalPanic": null,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
-        },
-        {
-          "key": 12,
-          "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
-          "minDay": 2,
-          "maxDay": null,
-          "requiresnodeId": "N1",
-          "requiresAnomalyId": "AN_012",
-          "requirestaskType": "Investigate",
-          "requiresSecured": null,
-          "minLocalPanic": 1.0,
-          "taskType": "",
-          "onlyAffectOriginTask": 0
         }
       ]
     }
