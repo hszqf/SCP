@@ -16,6 +16,11 @@ namespace Core
     {
         private const int FIXED_EVENT_DAY = 3;
         private const string FIXED_EVENT_NODE_ID = "N1";
+        private const bool EnableTriggerSkipLogs = false;
+
+        private static int _triggerRowsScanned;
+        private static int _triggerCandidates;
+        private static int _triggerFired;
 
         public static event Action OnIgnorePenaltyApplied;
 
@@ -29,6 +34,9 @@ namespace Core
 
             s.Day += 1;
             s.News.Add($"Day {s.Day}: 日结算开始");
+            _triggerRowsScanned = 0;
+            _triggerCandidates = 0;
+            _triggerFired = 0;
 
             // 0) 异常生成（节点维度）
             foreach (var n in s.Nodes)
@@ -240,6 +248,7 @@ namespace Core
                 GameController.I.MarkGameOver($"reason=WorldPanic day={s.Day} value={s.WorldPanic:0.##} threshold={failThreshold:0.##}");
             }
 
+            Debug.Log($"[TriggerSummary] day={s.Day} rows={_triggerRowsScanned} candidates={_triggerCandidates} fired={_triggerFired}");
             s.News.Add($"Day {s.Day} 结束");
         }
 
@@ -286,13 +295,16 @@ namespace Core
             var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
             if (node == null) return false;
 
-            var eventDef = PickEventDef(registry, s, node, source, sourceTask, rng);
-            if (eventDef == null) return false;
+            if (!TryPickEventDef(registry, s, node, source, sourceTask, sourceAnomalyId, rng, out var eventDef, out var matchedTrigger, out var matchedAnomalyId))
+                return false;
 
-            var instance = EventInstanceFactory.Create(eventDef.eventDefId, nodeId, s.Day, sourceTask?.Id, sourceAnomalyId);
+            var finalAnomalyId = matchedAnomalyId ?? sourceAnomalyId;
+            var instance = EventInstanceFactory.Create(eventDef.eventDefId, nodeId, s.Day, sourceTask?.Id, finalAnomalyId);
             AddEventToNode(node, instance);
 
-            Debug.Log($"[EventGen] day={s.Day} node={nodeId} def={eventDef.eventDefId} inst={instance.EventInstanceId} sourceTask={sourceTask?.Id ?? "none"} sourceAnomaly={sourceAnomalyId ?? "none"} reason={reason}");
+            _triggerFired++;
+            Debug.Log($"[TriggerFire] day={s.Day} rowId={matchedTrigger?.RowId ?? "none"} eventDefId={eventDef.eventDefId} nodeId={nodeId} taskId={sourceTask?.Id ?? "none"} anomalyId={finalAnomalyId ?? "none"} reason=Matched");
+            Debug.Log($"[EventGen] day={s.Day} node={nodeId} def={eventDef.eventDefId} inst={instance.EventInstanceId} sourceTask={sourceTask?.Id ?? "none"} sourceAnomaly={finalAnomalyId ?? "none"} reason={reason}");
             s.News.Add($"- {node.Name} 发生事件：{eventDef.title}");
             return true;
         }
@@ -483,9 +495,13 @@ namespace Core
             return parts.Count == 0 ? string.Empty : string.Join("，", parts);
         }
 
-        private static EventDef PickEventDef(DataRegistry registry, GameState state, NodeState node, EventSource source, NodeTask sourceTask, Random rng)
+        private static bool TryPickEventDef(DataRegistry registry, GameState state, NodeState node, EventSource source, NodeTask sourceTask, string sourceAnomalyId, Random rng, out EventDef pickedDef, out EventTrigger matchedTrigger, out string matchedAnomalyId)
         {
-            var candidates = new List<(EventDef def, int weight)>();
+            pickedDef = null;
+            matchedTrigger = null;
+            matchedAnomalyId = null;
+
+            var candidates = new List<(EventDef def, int weight, EventTrigger trigger, string anomalyId)>();
             int sourceCount = 0;
 
             foreach (var ev in registry.EventsById.Values)
@@ -495,61 +511,151 @@ namespace Core
                 if (evSource != source) continue;
                 sourceCount++;
 
-                if (!IsEventEligible(registry, state, node, ev, sourceTask)) continue;
-                candidates.Add((ev, Math.Max(1, ev.weight)));
+                if (!TryGetMatchingTrigger(registry, state, node, ev, sourceTask, sourceAnomalyId, out var trigger, out var anomalyId)) continue;
+                _triggerCandidates++;
+                candidates.Add((ev, Math.Max(1, ev.weight), trigger, anomalyId));
             }
 
             Debug.Log($"[EventPool] day={state.Day} node={node.Id} source={source} candidates={sourceCount} matched={candidates.Count}");
-            if (candidates.Count == 0) return null;
+            if (candidates.Count == 0) return false;
 
             int totalWeight = candidates.Sum(c => c.weight);
             int roll = rng.Next(totalWeight);
             foreach (var candidate in candidates)
             {
                 roll -= candidate.weight;
-                if (roll < 0) return candidate.def;
+                if (roll < 0)
+                {
+                    pickedDef = candidate.def;
+                    matchedTrigger = candidate.trigger;
+                    matchedAnomalyId = candidate.anomalyId;
+                    return true;
+                }
             }
 
-            return candidates[0].def;
+            pickedDef = candidates[0].def;
+            matchedTrigger = candidates[0].trigger;
+            matchedAnomalyId = candidates[0].anomalyId;
+            return true;
         }
 
-        private static bool IsEventEligible(DataRegistry registry, GameState state, NodeState node, EventDef ev, NodeTask sourceTask)
+        private static bool TryGetMatchingTrigger(DataRegistry registry, GameState state, NodeState node, EventDef ev, NodeTask sourceTask, string sourceAnomalyId, out EventTrigger matchedTrigger, out string matchedAnomalyId)
         {
+            matchedTrigger = null;
+            matchedAnomalyId = sourceAnomalyId;
+
             if (!registry.TriggersByEventDefId.TryGetValue(ev.eventDefId, out var triggers) || triggers == null || triggers.Count == 0)
                 return true;
 
+            var nodeDef = registry.NodesById.TryGetValue(node.Id, out var def) ? def : null;
             foreach (var trigger in triggers)
             {
                 if (trigger == null) continue;
-                if (DoesTriggerMatch(registry, state, node, trigger, sourceTask)) return true;
+                _triggerRowsScanned++;
+                if (TriggerMatches(trigger, state.Day, node, nodeDef, sourceTask, sourceAnomalyId, registry, out var anomalyId, out var skipReason))
+                {
+                    matchedTrigger = trigger;
+                    matchedAnomalyId = anomalyId ?? sourceAnomalyId;
+                    return true;
+                }
+
+                if (EnableTriggerSkipLogs && !string.IsNullOrEmpty(skipReason))
+                {
+                    Debug.Log($"[TriggerSkip] day={state.Day} rowId={trigger.RowId ?? "none"} eventDefId={ev.eventDefId} nodeId={node.Id} reason={skipReason}");
+                }
             }
 
             return false;
         }
 
-        private static bool DoesTriggerMatch(DataRegistry registry, GameState state, NodeState node, EventTrigger trigger, NodeTask sourceTask)
+        private static bool TriggerMatches(EventTrigger trigger, int day, NodeState nodeState, NodeDef nodeDef, NodeTask originTask, string originAnomalyId, DataRegistry registry, out string matchedAnomalyId, out string skipReason)
         {
-            if (node == null) return false;
+            matchedAnomalyId = string.IsNullOrEmpty(originAnomalyId) ? null : originAnomalyId;
+            skipReason = null;
 
-            if (trigger.MinDay.HasValue && state.Day < trigger.MinDay.Value) return false;
-            if (trigger.MaxDay.HasValue && state.Day > trigger.MaxDay.Value) return false;
-            if (trigger.MinLocalPanic.HasValue && node.LocalPanic < trigger.MinLocalPanic.Value) return false;
-            if (trigger.RequiresSecured.HasValue && (node.Status == NodeStatus.Secured) != trigger.RequiresSecured.Value) return false;
+            if (nodeState == null) return false;
+
+            if (trigger.MinDay.HasValue && trigger.MinDay.Value > 0 && day < trigger.MinDay.Value)
+            {
+                skipReason = "MinDay";
+                return false;
+            }
+
+            if (trigger.MaxDay.HasValue && trigger.MaxDay.Value > 0 && day > trigger.MaxDay.Value)
+            {
+                skipReason = "MaxDay";
+                return false;
+            }
+
+            if (trigger.RequiresSecured == true && nodeState.Status != NodeStatus.Secured)
+            {
+                skipReason = "Secured";
+                return false;
+            }
+
+            if (trigger.MinLocalPanic.HasValue && trigger.MinLocalPanic.Value > 0 && nodeState.LocalPanic < trigger.MinLocalPanic.Value)
+            {
+                skipReason = "LocalPanic";
+                return false;
+            }
 
             if (trigger.TaskType.HasValue)
             {
-                if (sourceTask == null || sourceTask.Type != trigger.TaskType.Value) return false;
+                if (originTask == null)
+                {
+                    skipReason = "NoOriginTask";
+                    return false;
+                }
+
+                if (originTask.Type != trigger.TaskType.Value)
+                {
+                    skipReason = "TaskType";
+                    return false;
+                }
             }
 
-            if (trigger.OnlyAffectOriginTask == true && sourceTask == null) return false;
+            if (trigger.OnlyAffectOriginTask == true && originTask == null)
+            {
+                skipReason = "NoOriginTask";
+                return false;
+            }
 
-            if (!MatchesTagRequirement(node.Tags, trigger.RequiresNodeTagsAll, requireAll: true)) return false;
-            if (!MatchesTagRequirement(node.Tags, trigger.RequiresNodeTagsAny, requireAll: false)) return false;
+            if (!MatchesTagRequirement(nodeState.Tags, trigger.RequiresNodeTagsAll, requireAll: true))
+            {
+                skipReason = "Tags";
+                return false;
+            }
+
+            if (!MatchesTagRequirement(nodeState.Tags, trigger.RequiresNodeTagsAny, requireAll: false))
+            {
+                skipReason = "Tags";
+                return false;
+            }
 
             if (trigger.RequiresAnomalyTagsAny != null && trigger.RequiresAnomalyTagsAny.Count > 0)
             {
-                var anomalyTags = GetActiveAnomalyTags(node, registry);
-                if (!MatchesTagRequirement(anomalyTags, trigger.RequiresAnomalyTagsAny, requireAll: false)) return false;
+                var originCandidateId = !string.IsNullOrEmpty(originAnomalyId) ? originAnomalyId : GetTaskAnomalyId(nodeState, originTask);
+                if (!string.IsNullOrEmpty(originCandidateId))
+                {
+                    if (AnomalyHasRequiredTags(originCandidateId, trigger.RequiresAnomalyTagsAny, registry))
+                    {
+                        matchedAnomalyId = originCandidateId;
+                        return true;
+                    }
+
+                    skipReason = "AnomalyTags";
+                    return false;
+                }
+
+                foreach (var anomalyId in GetCandidateAnomalyIds(nodeState, nodeDef))
+                {
+                    if (!AnomalyHasRequiredTags(anomalyId, trigger.RequiresAnomalyTagsAny, registry)) continue;
+                    matchedAnomalyId = anomalyId;
+                    return true;
+                }
+
+                skipReason = "AnomalyTags";
+                return false;
             }
 
             return true;
@@ -569,20 +675,53 @@ namespace Core
             return requiredTags.Any(set.Contains);
         }
 
-        private static List<string> GetActiveAnomalyTags(NodeState node, DataRegistry registry)
+        private static bool AnomalyHasRequiredTags(string anomalyId, List<string> requiredTags, DataRegistry registry)
         {
-            var tags = new HashSet<string>();
-            foreach (var anomalyId in node.ActiveAnomalyIds ?? new List<string>())
+            if (string.IsNullOrEmpty(anomalyId)) return false;
+            if (!registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly)) return false;
+            return MatchesTagRequirement(anomaly.tags, requiredTags, requireAll: false);
+        }
+
+        private static IEnumerable<string> GetCandidateAnomalyIds(NodeState nodeState, NodeDef nodeDef)
+        {
+            var seen = new HashSet<string>();
+            if (nodeState?.ActiveAnomalyIds != null)
             {
-                if (string.IsNullOrEmpty(anomalyId)) continue;
-                if (!registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly)) continue;
-                foreach (var tag in anomaly.tags ?? new List<string>())
+                foreach (var anomalyId in nodeState.ActiveAnomalyIds)
                 {
-                    if (!string.IsNullOrWhiteSpace(tag)) tags.Add(tag);
+                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
+                    yield return anomalyId;
                 }
             }
 
-            return tags.ToList();
+            if (nodeState?.ManagedAnomalies != null)
+            {
+                foreach (var managed in nodeState.ManagedAnomalies)
+                {
+                    var anomalyId = managed?.AnomalyId;
+                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
+                    yield return anomalyId;
+                }
+            }
+
+            if (nodeState?.Containables != null)
+            {
+                foreach (var containable in nodeState.Containables)
+                {
+                    var anomalyId = containable?.AnomalyId;
+                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
+                    yield return anomalyId;
+                }
+            }
+
+            if (nodeDef?.startAnomalyIds != null)
+            {
+                foreach (var anomalyId in nodeDef.startAnomalyIds)
+                {
+                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
+                    yield return anomalyId;
+                }
+            }
         }
 
         // =====================

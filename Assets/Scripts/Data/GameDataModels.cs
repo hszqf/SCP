@@ -125,6 +125,7 @@ namespace Data
     [Serializable]
     public class EventTriggerRow
     {
+        public string rowId;
         public string eventDefId;
         public int? minDay;
         public int? maxDay;
