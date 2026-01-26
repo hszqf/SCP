@@ -10,17 +10,6 @@ using UnityEngine.Networking;
 
 namespace Data
 {
-    public enum CauseType
-    {
-        TaskInvestigate,
-        TaskContain,
-        TaskManage,
-        Anomaly,
-        LocalPanic,
-        Fixed,
-        Random,
-    }
-
     public enum BlockPolicy
     {
         None,
@@ -78,32 +67,24 @@ namespace Data
         public string Comment;
     }
 
-    public sealed class EventTrigger
-    {
-        public string RowId;
-        public string EventDefId;
-        public int? MinDay;
-        public int? MaxDay;
-        public string RequiresNodeId;
-        public bool? RequiresSecured;
-        public int? MinLocalPanic;
-        public TaskType? TaskType;
-        public bool? OnlyAffectOriginTask;
-    }
-
     public sealed class DataRegistry
     {
         private const string GameDataFileName = "game_data.json";
+        private const string RequirementAny = "ANY";
 
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
         private readonly HashSet<TaskType> _taskDefMissingWarned = new();
-        private bool _warnedMissingTriggerRequiresNodeId;
+        private bool _warnedMissingEventRequiresNodeId;
         private bool _warnedMissingEventRequiresAnomalyId;
         private bool _warnedMissingEventRequiresTaskType;
-        private bool _warnedDeprecatedTriggerNodeTags;
-        private bool _warnedDeprecatedTriggerAnomalyTags;
+        private bool _warnedMissingEventSource;
+        private bool _warnedMissingEventP;
+        private bool _warnedMissingEventMinDay;
+        private bool _warnedMissingEventMaxDay;
+        private bool _warnedMissingEventCd;
+        private bool _warnedMissingEventLimitNum;
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
@@ -115,7 +96,6 @@ namespace Data
         public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
         public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
-        public Dictionary<string, List<EventTrigger>> TriggersByEventDefId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
         public TableRegistry Tables { get; private set; } = new();
 
@@ -255,12 +235,10 @@ namespace Data
             {
                 var eventDefId = GetRowString(row, "eventDefId");
                 if (string.IsNullOrEmpty(eventDefId)) continue;
-                WarnOnMissingEventRequirements();
                 EventsById[eventDefId] = new EventDef
                 {
                     eventDefId = eventDefId,
-                    source = GetRowString(row, "source"),
-                    causeType = GetRowString(row, "causeType"),
+                    source = GetEventStringWithDefault(row, "source", "RandomDaily", ref _warnedMissingEventSource, "RandomDaily"),
                     weight = GetRowInt(row, "weight"),
                     title = GetRowString(row, "title"),
                     desc = GetRowString(row, "desc"),
@@ -269,8 +247,14 @@ namespace Data
                     autoResolveAfterDays = GetRowInt(row, "autoResolveAfterDays"),
                     ignoreApplyMode = GetRowString(row, "ignoreApplyMode"),
                     ignoreEffectId = GetRowString(row, "ignoreEffectId"),
-                    requiresAnomalyId = NormalizeRequirement(GetRowString(row, "requiresAnomalyId")),
-                    requiresTaskType = NormalizeRequirement(GetEventTaskTypeAlias(row)),
+                    requiresNodeId = NormalizeRequirement(GetEventStringWithDefault(row, "requiresNodeId", RequirementAny, ref _warnedMissingEventRequiresNodeId, "ANY")),
+                    requiresAnomalyId = NormalizeRequirement(GetEventStringWithDefault(row, "requiresAnomalyId", RequirementAny, ref _warnedMissingEventRequiresAnomalyId, "ANY")),
+                    requiresTaskType = NormalizeRequirement(GetEventStringWithDefault(row, "requiresTaskType", RequirementAny, ref _warnedMissingEventRequiresTaskType, "ANY")),
+                    p = GetEventFloatWithDefault(row, "p", 0f, ref _warnedMissingEventP),
+                    minDay = GetEventIntWithDefault(row, "minDay", 0, ref _warnedMissingEventMinDay),
+                    maxDay = GetEventIntWithDefault(row, "maxDay", 0, ref _warnedMissingEventMaxDay),
+                    cd = GetEventIntWithDefault(row, "CD", 0, ref _warnedMissingEventCd),
+                    limitNum = GetEventIntWithDefault(row, "limitNum", 0, ref _warnedMissingEventLimitNum),
                 };
             }
 
@@ -344,47 +328,8 @@ namespace Data
                 list.AddRange(ops);
             }
 
-            TriggersByEventDefId = new Dictionary<string, List<EventTrigger>>();
-            foreach (var row in Tables.GetRows("EventTriggers"))
-            {
-                var eventDefId = GetRowString(row, "eventDefId");
-                if (string.IsNullOrEmpty(eventDefId)) continue;
-                WarnOnDeprecatedTriggerFields();
-                WarnOnMissingTriggerRequiresNodeId();
-                var rowId = GetRowString(row, "rowId");
-                if (string.IsNullOrEmpty(rowId))
-                {
-                    rowId = GetRowString(row, "key");
-                    if (string.IsNullOrEmpty(rowId))
-                    {
-                        var rowKey = GetRowIntNullable(row, "key");
-                        rowId = rowKey?.ToString();
-                    }
-                }
-                var rowModel = new EventTriggerRow
-                {
-                    rowId = rowId,
-                    eventDefId = eventDefId,
-                    minDay = GetRowIntNullable(row, "minDay"),
-                    maxDay = GetRowIntNullable(row, "maxDay"),
-                    requiresNodeId = NormalizeRequirement(GetRowString(row, "requiresNodeId")),
-                    requiresSecured = GetRowBoolNullable(row, "requiresSecured"),
-                    minLocalPanic = GetRowIntNullable(row, "minLocalPanic"),
-                    taskType = GetRowString(row, "taskType"),
-                    onlyAffectOriginTask = GetRowBoolNullable(row, "onlyAffectOriginTask"),
-                };
-                if (!TryParseTrigger(rowModel, out var trigger)) continue;
-                if (!TriggersByEventDefId.TryGetValue(eventDefId, out var list))
-                {
-                    list = new List<EventTrigger>();
-                    TriggersByEventDefId[eventDefId] = list;
-                }
-                list.Add(trigger);
-            }
-
             LogGroupIndexSummary("EventOptions", "eventDefId", OptionsByEventId);
             LogGroupIndexSummary("EffectOps", "effectId", EffectOpsByEffectId);
-            LogGroupIndexSummary("EventTriggers", "eventDefId", TriggersByEventDefId);
 
             LocalPanicHighThreshold = GetBalanceInt("LocalPanicHighThreshold", LocalPanicHighThreshold);
             RandomEventBaseProb = GetBalanceFloat("RandomEventBaseProb", (float)RandomEventBaseProb);
@@ -410,9 +355,8 @@ namespace Data
             int optionsCount = GetTableRowCountWithWarn("EventOptions");
             int effectsCount = GetTableRowCountWithWarn("Effects");
             int opsCount = GetTableRowCountWithWarn("EffectOps");
-            int triggersCount = GetTableRowCountWithWarn("EventTriggers");
 
-            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount} triggers={triggersCount}");
+            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount}");
         }
 
         private void LogTablesSanity()
@@ -440,9 +384,10 @@ namespace Data
             });
             CheckTableColumns("Events", new[]
             {
-                "eventDefId", "source", "causeType", "weight", "title", "desc", "blockPolicy",
+                "eventDefId", "source", "weight", "title", "desc", "blockPolicy",
                 "defaultAffects", "autoResolveAfterDays", "ignoreApplyMode", "ignoreEffectId",
-                "requiresAnomalyId", "requiresTaskType",
+                "requiresNodeId", "requiresAnomalyId", "requiresTaskType",
+                "p", "minDay", "maxDay", "CD", "limitNum",
             });
             CheckTableColumns("EventOptions", new[]
             {
@@ -452,11 +397,6 @@ namespace Data
             CheckTableColumns("EffectOps", new[]
             {
                 "rowId", "effectId", "scope", "statKey", "op", "value", "min", "max",
-            });
-            CheckTableColumns("EventTriggers", new[]
-            {
-                "rowId", "eventDefId", "taskType", "onlyAffectOriginTask", "minDay", "maxDay",
-                "requiresNodeId", "requiresSecured", "minLocalPanic",
             });
         }
 
@@ -496,8 +436,7 @@ namespace Data
         {
             if (table?.columns == null || table.columns.Count == 0) return false;
             if (!string.Equals(tableName, "EventOptions", StringComparison.Ordinal) &&
-                !string.Equals(tableName, "EffectOps", StringComparison.Ordinal) &&
-                !string.Equals(tableName, "EventTriggers", StringComparison.Ordinal))
+                !string.Equals(tableName, "EffectOps", StringComparison.Ordinal))
             {
                 return false;
             }
@@ -530,10 +469,60 @@ namespace Data
             return TableRegistry.TryCoerceString(raw, out var value) ? value ?? fallback : fallback;
         }
 
+        private string GetEventStringWithDefault(Dictionary<string, object> row, string column, string fallback, ref bool warned, string fallbackLabel)
+        {
+            if (!TableHasColumn("Events", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallbackLabel}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceString(raw, out var value) || string.IsNullOrWhiteSpace(value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallbackLabel}");
+                }
+                return fallback;
+            }
+
+            return value;
+        }
+
         private static int GetRowInt(Dictionary<string, object> row, string column, int fallback = 0)
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
             return TableRegistry.TryCoerceInt(raw, out var value) ? value : fallback;
+        }
+
+        private int GetEventIntWithDefault(Dictionary<string, object> row, string column, int fallback, ref bool warned)
+        {
+            if (!TableHasColumn("Events", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceInt(raw, out var value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            return value;
         }
 
         private static int? GetRowIntNullable(Dictionary<string, object> row, string column)
@@ -546,6 +535,31 @@ namespace Data
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
             return TableRegistry.TryCoerceFloat(raw, out var value) ? value : fallback;
+        }
+
+        private float GetEventFloatWithDefault(Dictionary<string, object> row, string column, float fallback, ref bool warned)
+        {
+            if (!TableHasColumn("Events", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceFloat(raw, out var value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            return value;
         }
 
         private static float? GetRowFloatNullable(Dictionary<string, object> row, string column)
@@ -589,85 +603,14 @@ namespace Data
             return true;
         }
 
-        private bool TryParseTrigger(EventTriggerRow row, out EventTrigger trigger)
-        {
-            trigger = new EventTrigger
-            {
-                RowId = string.IsNullOrEmpty(row.rowId) ? row.eventDefId : row.rowId,
-                EventDefId = row.eventDefId,
-                MinDay = row.minDay,
-                MaxDay = row.maxDay,
-                RequiresNodeId = NormalizeRequirement(row.requiresNodeId),
-                RequiresSecured = row.requiresSecured,
-                MinLocalPanic = row.minLocalPanic,
-                OnlyAffectOriginTask = row.onlyAffectOriginTask,
-            };
-
-            if (!string.IsNullOrEmpty(row.taskType))
-            {
-                if (!TryParseTaskType(row.taskType, out var type, out _)) return false;
-                trigger.TaskType = type;
-            }
-
-            return true;
-        }
-
         private string NormalizeRequirement(string raw)
-            => string.IsNullOrWhiteSpace(raw) ? "Any" : raw;
-
-        private string GetEventTaskTypeAlias(Dictionary<string, object> row)
-        {
-            var value = GetRowString(row, "requiresTaskType");
-            if (!string.IsNullOrEmpty(value)) return value;
-            return GetRowString(row, "requirestaskType");
-        }
-
-        private void WarnOnMissingTriggerRequiresNodeId()
-        {
-            if (_warnedMissingTriggerRequiresNodeId) return;
-            if (TableHasColumn("EventTriggers", "requiresNodeId")) return;
-            _warnedMissingTriggerRequiresNodeId = true;
-            Debug.LogWarning("[DataWarn] missing trigger field requiresNodeId; defaulting to Any");
-        }
-
-        private void WarnOnMissingEventRequirements()
-        {
-            if (!_warnedMissingEventRequiresAnomalyId && !TableHasColumn("Events", "requiresAnomalyId"))
-            {
-                _warnedMissingEventRequiresAnomalyId = true;
-                Debug.LogWarning("[DataWarn] missing event field requiresAnomalyId; defaulting to Any");
-            }
-
-            if (!_warnedMissingEventRequiresTaskType &&
-                !TableHasColumn("Events", "requiresTaskType") &&
-                !TableHasColumn("Events", "requirestaskType"))
-            {
-                _warnedMissingEventRequiresTaskType = true;
-                Debug.LogWarning("[DataWarn] missing event field requiresTaskType; defaulting to Any");
-            }
-        }
-
-        private void WarnOnDeprecatedTriggerFields()
-        {
-            if (!_warnedDeprecatedTriggerNodeTags &&
-                (TableHasColumn("EventTriggers", "requiresNodeTagsAny") || TableHasColumn("EventTriggers", "requiresNodeTagsAll")))
-            {
-                _warnedDeprecatedTriggerNodeTags = true;
-                Debug.LogWarning("[DataWarn] deprecated trigger field requiresNodeTagsAny/All ignored");
-            }
-
-            if (!_warnedDeprecatedTriggerAnomalyTags && TableHasColumn("EventTriggers", "requiresAnomalyTagsAny"))
-            {
-                _warnedDeprecatedTriggerAnomalyTags = true;
-                Debug.LogWarning("[DataWarn] deprecated trigger field requiresAnomalyTagsAny ignored");
-            }
-        }
+            => string.IsNullOrWhiteSpace(raw) ? RequirementAny : raw.Trim();
 
         private bool TableHasColumn(string tableName, string columnName)
         {
             if (Tables == null || string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(columnName)) return false;
             if (!Tables.TryGetTable(tableName, out var table) || table?.columns == null) return false;
-            return table.columns.Any(col => string.Equals(col?.name, columnName, StringComparison.Ordinal));
+            return table.columns.Any(col => string.Equals(col?.name, columnName, StringComparison.OrdinalIgnoreCase));
         }
 
         public bool TryGetEvent(string eventDefId, out EventDef def)
@@ -958,36 +901,6 @@ namespace Data
 
             if (Enum.TryParse(raw, true, out type)) return true;
             error = $"Invalid TaskType: {raw}";
-            return false;
-        }
-
-        public static bool TryParseEventSource(string raw, out EventSource source, out string error)
-        {
-            error = null;
-            source = EventSource.Random;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "EventSource empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out source)) return true;
-            error = $"Invalid EventSource: {raw}";
-            return false;
-        }
-
-        public static bool TryParseCauseType(string raw, out CauseType causeType, out string error)
-        {
-            error = null;
-            causeType = CauseType.Random;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "CauseType empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out causeType)) return true;
-            error = $"Invalid CauseType: {raw}";
             return false;
         }
 

@@ -15,7 +15,6 @@ namespace Data
         public List<EventOptionDef> eventOptions = new();
         public List<EffectDef> effects = new();
         public List<EffectOpRow> effectOps = new();
-        public List<EventTriggerRow> eventTriggers = new();
         public Dictionary<string, GameDataTable> tables = new();
     }
 
@@ -80,7 +79,6 @@ namespace Data
     {
         public string eventDefId;
         public string source;
-        public string causeType;
         public int weight;
         public string title;
         public string desc;
@@ -89,8 +87,14 @@ namespace Data
         public int autoResolveAfterDays;
         public string ignoreApplyMode;
         public string ignoreEffectId;
+        public string requiresNodeId;
         public string requiresAnomalyId;
         public string requiresTaskType;
+        public float p;
+        public int minDay;
+        public int maxDay;
+        public int cd;
+        public int limitNum;
     }
 
     [Serializable]
@@ -125,19 +129,6 @@ namespace Data
     }
 
     [Serializable]
-    public class EventTriggerRow
-    {
-        public string rowId;
-        public string eventDefId;
-        public int? minDay;
-        public int? maxDay;
-        public string requiresNodeId;
-        public bool? requiresSecured;
-        public int? minLocalPanic;
-        public string taskType;
-        public bool? onlyAffectOriginTask;
-    }
-
     [Serializable]
     public class GameDataTable
     {
