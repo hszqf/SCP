@@ -1,8 +1,7 @@
 {
   "meta": {
     "schemaVersion": "0.1",
-    "dataVersion": "2026.01.25b",
-    "comment": "Expanded content pack: more nodes/anomalies/events/effects for prototyping"
+    "dataVersion": "2026.01.25b"
   },
   "tables": {
     "Meta": {
@@ -15,17 +14,12 @@
         {
           "name": "dataVersion",
           "type": "string"
-        },
-        {
-          "name": "comment",
-          "type": "string"
         }
       ],
       "rows": [
         {
           "schemaVersion": "0.1",
-          "dataVersion": "2026.01.25b",
-          "comment": "Expanded content pack: more nodes/anomalies/events/effects for prototyping"
+          "dataVersion": "2026.01.25b"
         }
       ]
     },
@@ -2489,7 +2483,9 @@
           "minDay": 1,
           "maxDay": null,
           "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [
             "stealth"
           ],
@@ -2506,7 +2502,9 @@
           "requiresNodeTagsAny": [
             "urban"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": null,
           "minLocalPanic": null,
@@ -2519,7 +2517,9 @@
           "minDay": 1,
           "maxDay": null,
           "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [
             "infohazard",
             "stealth"
@@ -2535,7 +2535,9 @@
           "minDay": 1,
           "maxDay": null,
           "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [
             "memetic",
             "infohazard"
@@ -2553,7 +2555,9 @@
           "requiresNodeTagsAny": [
             "urban"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": 0,
           "minLocalPanic": 2.0,
@@ -2570,7 +2574,9 @@
             "industrial",
             "port"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": null,
           "minLocalPanic": 2.0,
@@ -2583,7 +2589,9 @@
           "minDay": 5,
           "maxDay": null,
           "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": null,
           "minLocalPanic": null,
@@ -2599,7 +2607,9 @@
             "urban",
             "academic"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [
             "memetic",
             "infohazard"
@@ -2619,7 +2629,9 @@
             "rural",
             "temple"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [
             "religion",
             "tao"
@@ -2639,7 +2651,9 @@
             "industrial",
             "lab"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": null,
           "minLocalPanic": 3.0,
@@ -2652,7 +2666,9 @@
           "minDay": 1,
           "maxDay": null,
           "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": 1,
           "minLocalPanic": null,
@@ -2668,7 +2684,9 @@
             "port",
             "urban"
           ],
-          "requiresNodeTagsAll": [],
+          "requiresNodeTagsAll": [
+            "rural"
+          ],
           "requiresAnomalyTagsAny": [],
           "requiresSecured": null,
           "minLocalPanic": 1.0,
