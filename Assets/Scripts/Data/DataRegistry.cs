@@ -492,7 +492,7 @@ namespace Data
         private static string NormalizeColumnName(string name)
             => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
 
-        private static bool IsRowIdOptionalForKey(string tableName, Table table)
+        private static bool IsRowIdOptionalForKey(string tableName, GameDataTable table)
         {
             if (table?.columns == null || table.columns.Count == 0) return false;
             if (!string.Equals(tableName, "EventOptions", StringComparison.Ordinal) &&
