@@ -435,7 +435,7 @@ namespace Data
             });
             CheckTableColumns("Anomalies", new[]
             {
-                "anomalyId", "name", "class", "tags", "baseThreat", "investigateDifficulty",
+                "anomalyId", "name", "class", "baseThreat", "investigateDifficulty",
                 "containDifficulty", "manageRisk", "worldPanicPerDayUncontained", "maintenanceCostPerDay",
             });
             CheckTableColumns("Events", new[]
@@ -472,14 +472,38 @@ namespace Data
                 .Select(col => col?.name)
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList() ?? new List<string>();
+            var normalizedColumns = new HashSet<string>(columnNames.Select(NormalizeColumnName), StringComparer.Ordinal);
+
+            if (IsRowIdOptionalForKey(tableName, table))
+            {
+                normalizedColumns.Add(NormalizeColumnName("rowId"));
+            }
+
             var missing = requiredColumns
-                .Where(name => !columnNames.Contains(name, StringComparer.Ordinal))
+                .Where(name => !normalizedColumns.Contains(NormalizeColumnName(name)))
                 .ToList();
             if (missing.Count > 0)
             {
                 var columns = columnNames.Count > 0 ? string.Join(", ", columnNames) : "none";
                 Debug.LogWarning($"[Tables] {tableName} missing columns: {string.Join(", ", missing)}. columns=[{columns}]");
             }
+        }
+
+        private static string NormalizeColumnName(string name)
+            => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
+
+        private static bool IsRowIdOptionalForKey(string tableName, Table table)
+        {
+            if (table?.columns == null || table.columns.Count == 0) return false;
+            if (!string.Equals(tableName, "EventOptions", StringComparison.Ordinal) &&
+                !string.Equals(tableName, "EffectOps", StringComparison.Ordinal) &&
+                !string.Equals(tableName, "EventTriggers", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var firstColumn = table.columns[0]?.name;
+            return string.Equals(NormalizeColumnName(firstColumn), "key", StringComparison.Ordinal);
         }
 
         private int GetTableRowCountWithWarn(string tableName)
