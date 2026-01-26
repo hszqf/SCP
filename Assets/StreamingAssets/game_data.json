@@ -409,9 +409,9 @@
             "bio",
             "stealth"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 3,
-          "containDifficulty": 4,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -424,9 +424,9 @@
             "memetic",
             "panic"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 5,
-          "containDifficulty": 6,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -440,9 +440,9 @@
             "toxic",
             "water"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 2,
-          "containDifficulty": 3,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -455,9 +455,9 @@
             "memetic",
             "infohazard"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 4,
-          "containDifficulty": 2,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -470,9 +470,9 @@
             "spatial",
             "urban"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 4,
-          "containDifficulty": 5,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -485,9 +485,9 @@
             "bio",
             "panic"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 3,
-          "containDifficulty": 4,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -500,9 +500,9 @@
             "memetic",
             "signal"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 5,
-          "containDifficulty": 5,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -515,9 +515,9 @@
             "bio",
             "spore"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 3,
-          "containDifficulty": 4,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -531,8 +531,8 @@
             "optic"
           ],
           "baseThreat": 1,
-          "investigateDifficulty": 2,
-          "containDifficulty": 3,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -545,9 +545,9 @@
             "material",
             "lab"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 3,
-          "containDifficulty": 3,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -561,8 +561,8 @@
             "info"
           ],
           "baseThreat": 1,
-          "investigateDifficulty": 2,
-          "containDifficulty": 2,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -576,9 +576,9 @@
             "stealth",
             "embryo"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 4,
-          "containDifficulty": 6,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -592,9 +592,9 @@
             "incense",
             "merit"
           ],
-          "baseThreat": 2,
-          "investigateDifficulty": 3,
-          "containDifficulty": 4,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -608,9 +608,9 @@
             "qi",
             "sigil"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 5,
-          "containDifficulty": 5,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -624,9 +624,9 @@
             "wuxing",
             "panic"
           ],
-          "baseThreat": 4,
-          "investigateDifficulty": 5,
-          "containDifficulty": 6,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -639,9 +639,9 @@
             "tao",
             "spatial"
           ],
-          "baseThreat": 4,
-          "investigateDifficulty": 6,
-          "containDifficulty": 7,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -655,9 +655,9 @@
             "memetic",
             "signal"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 5,
-          "containDifficulty": 6,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -671,9 +671,9 @@
             "fire",
             "karma"
           ],
-          "baseThreat": 4,
-          "investigateDifficulty": 5,
-          "containDifficulty": 7,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 5,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -687,9 +687,9 @@
             "rule",
             "panic"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 4,
-          "containDifficulty": 6,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -703,9 +703,9 @@
             "toxic",
             "lab"
           ],
-          "baseThreat": 3,
-          "investigateDifficulty": 4,
-          "containDifficulty": 5,
+          "baseThreat": 1,
+          "investigateDifficulty": 1,
+          "containDifficulty": 10,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
