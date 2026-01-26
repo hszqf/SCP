@@ -19,6 +19,9 @@ namespace Core
 
         public static event Action OnIgnorePenaltyApplied;
 
+        private static readonly HashSet<TaskType> WarnedMissingYieldFields = new();
+        private static readonly HashSet<TaskType> WarnedUnknownYieldKey = new();
+
         public static void StepDay(GameState s, Random rng)
         {
             var registry = DataRegistry.Instance;
@@ -92,6 +95,9 @@ namespace Core
 
             // 1.5) 收容后管理（负熵产出）
             StepManageTasks(s, rng, registry);
+
+            // 1.75) 任务日结算产出（TaskDefs.yieldKey / yieldPerDay）
+            StepTaskDailyYield(s, registry);
 
             // 2) 不处理的后果（按 IgnoreApplyMode 执行）
             ApplyIgnorePenaltyOnDayEnd(s, registry);
@@ -775,6 +781,93 @@ namespace Core
 
             if (totalAllNodes > 0)
                 s.NegEntropy += totalAllNodes;
+        }
+
+        static void StepTaskDailyYield(GameState s, DataRegistry registry)
+        {
+            if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
+
+            int moneyDeltaSum = 0;
+            float worldPanicDeltaSum = 0f;
+            int intelDeltaSum = 0;
+            int yieldedTasks = 0;
+
+            foreach (var node in s.Nodes)
+            {
+                if (node == null || node.Tasks == null || node.Tasks.Count == 0) continue;
+
+                foreach (var task in node.Tasks)
+                {
+                    if (task == null) continue;
+                    if (task.State != TaskState.Active) continue;
+
+                    if (!registry.TryGetTaskDefForType(task.Type, out var def)) continue;
+
+                    if (!def.hasYieldKey || !def.hasYieldPerDay)
+                    {
+                        if (WarnedMissingYieldFields.Add(task.Type))
+                        {
+                            Debug.LogWarning($"[TaskYield] Missing yieldKey/yieldPerDay for taskType={task.Type}. Skipping daily yield.");
+                        }
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(def.yieldKey)) continue;
+
+                    float yieldPerDay = def.yieldPerDay;
+                    if (Math.Abs(yieldPerDay) < 0.0001f) continue;
+
+                    switch (def.yieldKey)
+                    {
+                        case "Money":
+                        {
+                            int delta = Mathf.RoundToInt(yieldPerDay);
+                            if (delta == 0) continue;
+                            int before = s.Money;
+                            s.Money = before + delta;
+                            int after = s.Money;
+                            moneyDeltaSum += delta;
+                            yieldedTasks++;
+                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Money delta={delta} before={before} after={after}");
+                            break;
+                        }
+                        case "WorldPanic":
+                        {
+                            float delta = yieldPerDay;
+                            float before = s.WorldPanic;
+                            s.WorldPanic = before + delta;
+                            float after = s.WorldPanic;
+                            worldPanicDeltaSum += delta;
+                            yieldedTasks++;
+                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=WorldPanic delta={delta:0.##} before={before:0.##} after={after:0.##}");
+                            break;
+                        }
+                        case "Intel":
+                        {
+                            int delta = Mathf.RoundToInt(yieldPerDay);
+                            if (delta == 0) continue;
+                            int before = s.Intel;
+                            s.Intel = before + delta;
+                            int after = s.Intel;
+                            intelDeltaSum += delta;
+                            yieldedTasks++;
+                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Intel delta={delta} before={before} after={after}");
+                            break;
+                        }
+                        default:
+                            if (WarnedUnknownYieldKey.Add(task.Type))
+                            {
+                                Debug.LogWarning($"[TaskYield] Unknown yieldKey={def.yieldKey} for taskType={task.Type}. Skipping daily yield.");
+                            }
+                            break;
+                    }
+                }
+            }
+
+            if (yieldedTasks > 0)
+            {
+                Debug.Log($"[TaskYieldSummary] day={s.Day} moneyDelta={moneyDeltaSum} worldPanicDelta={worldPanicDeltaSum:0.##} intelDelta={intelDeltaSum} tasks={yieldedTasks}");
+            }
         }
 
         static int CalcDailyNegEntropyYield(ManagedAnomalyState m, List<AgentState> managers, Random rng)

@@ -71,6 +71,8 @@ namespace Data
         public int agentSlotsMax;
         public string yieldKey;
         public float yieldPerDay;
+        public bool hasYieldKey;
+        public bool hasYieldPerDay;
     }
 
     [Serializable]
