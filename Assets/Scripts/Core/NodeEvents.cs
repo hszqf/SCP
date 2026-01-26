@@ -4,17 +4,6 @@ using Data;
 
 namespace Core
 {
-    public enum EventSource
-    {
-        Investigate,
-        Contain,
-        Manage,
-        LocalPanicHigh,
-        Fixed,
-        SecuredManage,
-        Random,
-    }
-
     [Serializable]
     public class EventInstance
     {
@@ -25,6 +14,7 @@ namespace Core
         public int AgeDays;
         public string SourceTaskId;
         public string SourceAnomalyId;
+        public string CauseType;
 
         // Runtime metadata for ignore-apply policies.
         public bool IgnoreAppliedOnce;
@@ -32,7 +22,7 @@ namespace Core
 
     public static class EventInstanceFactory
     {
-        public static EventInstance Create(string eventDefId, string nodeId, int day, string sourceTaskId = null, string sourceAnomalyId = null)
+        public static EventInstance Create(string eventDefId, string nodeId, int day, string sourceTaskId = null, string sourceAnomalyId = null, string causeType = null)
         {
             return new EventInstance
             {
@@ -43,6 +33,7 @@ namespace Core
                 AgeDays = 0,
                 SourceTaskId = sourceTaskId,
                 SourceAnomalyId = sourceAnomalyId,
+                CauseType = causeType,
                 IgnoreAppliedOnce = false,
             };
         }

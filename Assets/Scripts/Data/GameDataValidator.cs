@@ -19,7 +19,6 @@ namespace Data
             ValidateEnums(registry, errors);
             ValidateForeignKeys(registry, errors);
             ValidatePrimaryKeys(registry, errors);
-            ValidateTriggers(registry, errors);
             ValidateBlockOriginTaskLogic(registry, errors);
 
             if (errors.Count > 0)
@@ -33,8 +32,7 @@ namespace Data
             int optionsCount = GetTableRowCount(registry, "EventOptions");
             int effectsCount = GetTableRowCount(registry, "Effects");
             int opsCount = GetTableRowCount(registry, "EffectOps");
-            int triggersCount = GetTableRowCount(registry, "EventTriggers");
-            Debug.Log($"[GameDataValidator] Validation passed. events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount} triggers={triggersCount}");
+            Debug.Log($"[GameDataValidator] Validation passed. events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount}");
         }
 
         private static void ValidateEnums(DataRegistry registry, List<string> errors)
@@ -47,13 +45,10 @@ namespace Data
                 int row = i + 1;
 
                 var source = GetRowString(ev, "source");
-                var causeType = GetRowString(ev, "causeType");
                 var blockPolicy = GetRowString(ev, "blockPolicy");
 
-                if (!DataRegistry.TryParseEventSource(source, out _, out var sourceError))
-                    errors.Add(FormatCellError("Events", row, "source", source, sourceError));
-                if (!DataRegistry.TryParseCauseType(causeType, out _, out var causeError))
-                    errors.Add(FormatCellError("Events", row, "causeType", causeType, causeError));
+                if (!string.IsNullOrEmpty(source) && !string.Equals(source, "RandomDaily", StringComparison.OrdinalIgnoreCase))
+                    errors.Add(FormatCellError("Events", row, "source", source, "RandomDaily"));
                 if (!DataRegistry.TryParseBlockPolicy(blockPolicy, out _, out var blockError))
                     errors.Add(FormatCellError("Events", row, "blockPolicy", blockPolicy, blockError));
 
@@ -91,17 +86,6 @@ namespace Data
                     errors.Add(FormatCellError("EffectOps", rowIndex, "op", op, opError));
             }
 
-            var triggers = GetTableRows(registry, "EventTriggers");
-            for (int i = 0; i < triggers.Count; i++)
-            {
-                var trigger = triggers[i];
-                if (trigger == null) continue;
-                int row = i + 1;
-                var taskType = GetRowString(trigger, "taskType");
-                if (string.IsNullOrEmpty(taskType)) continue;
-                if (!DataRegistry.TryParseTaskType(taskType, out _, out var taskTypeError))
-                    errors.Add(FormatCellError("EventTriggers", row, "taskType", taskType, taskTypeError));
-            }
         }
 
         private static void ValidateForeignKeys(DataRegistry registry, List<string> errors)
@@ -154,19 +138,6 @@ namespace Data
                 }
             }
 
-            var triggers = GetTableRows(registry, "EventTriggers");
-            for (int i = 0; i < triggers.Count; i++)
-            {
-                var trigger = triggers[i];
-                if (trigger == null) continue;
-                int row = i + 1;
-                var eventDefId = GetRowString(trigger, "eventDefId");
-                if (string.IsNullOrEmpty(eventDefId) || !eventIds.Contains(eventDefId))
-                {
-                    errors.Add(FormatCellError("EventTriggers", row, "eventDefId", eventDefId, "existing Events.eventDefId"));
-                }
-            }
-
             var optionRows = GetTableRows(registry, "EventOptions");
             var duplicates = optionRows
                 .Select((option, index) => new { option, row = index + 1 })
@@ -181,29 +152,6 @@ namespace Data
                 })
                 .ToList();
             if (duplicates.Count > 0) errors.AddRange(duplicates);
-        }
-
-        private static void ValidateTriggers(DataRegistry registry, List<string> errors)
-        {
-            var triggers = GetTableRows(registry, "EventTriggers");
-            for (int i = 0; i < triggers.Count; i++)
-            {
-                var trigger = triggers[i];
-                if (trigger == null) continue;
-                int row = i + 1;
-                var minDay = GetRowIntNullable(trigger, "minDay");
-                var maxDay = GetRowIntNullable(trigger, "maxDay");
-                if (minDay.HasValue && maxDay.HasValue && minDay.Value > maxDay.Value)
-                {
-                    errors.Add(FormatCellError("EventTriggers", row, "minDay/maxDay", $"{minDay}>{maxDay}", "minDay <= maxDay"));
-                }
-
-                var minLocalPanic = GetRowIntNullable(trigger, "minLocalPanic");
-                if (minLocalPanic.HasValue && minLocalPanic.Value < 0)
-                {
-                    errors.Add(FormatCellError("EventTriggers", row, "minLocalPanic", minLocalPanic.Value.ToString(), ">= 0"));
-                }
-            }
         }
 
         private static void ValidateBlockOriginTaskLogic(DataRegistry registry, List<string> errors)
@@ -298,12 +246,6 @@ namespace Data
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return string.Empty;
             return TableRegistry.TryCoerceString(raw, out var value) ? value ?? string.Empty : string.Empty;
-        }
-
-        private static int? GetRowIntNullable(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return null;
-            return TableRegistry.TryCoerceInt(raw, out var value) ? value : null;
         }
 
         private static List<string> GetRowStringList(Dictionary<string, object> row, string column)
