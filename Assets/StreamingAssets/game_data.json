@@ -366,10 +366,6 @@
           "type": "string"
         },
         {
-          "name": "tags",
-          "type": "string[]"
-        },
-        {
           "name": "baseThreat",
           "type": "int"
         },
@@ -399,10 +395,6 @@
           "anomalyId": "AN_001",
           "name": "镜面渗漏",
           "class": "Euclid",
-          "tags": [
-            "bio",
-            "stealth"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -414,10 +406,6 @@
           "anomalyId": "AN_002",
           "name": "失声合唱",
           "class": "Keter",
-          "tags": [
-            "memetic",
-            "panic"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -429,11 +417,6 @@
           "anomalyId": "AN_003",
           "name": "嗜盐水雾",
           "class": "Euclid",
-          "tags": [
-            "bio",
-            "toxic",
-            "water"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -445,10 +428,6 @@
           "anomalyId": "AN_004",
           "name": "空白日记",
           "class": "Euclid",
-          "tags": [
-            "memetic",
-            "infohazard"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -460,10 +439,6 @@
           "anomalyId": "AN_005",
           "name": "逆向楼梯间",
           "class": "Keter",
-          "tags": [
-            "spatial",
-            "urban"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -475,10 +450,6 @@
           "anomalyId": "AN_006",
           "name": "自复原蜡像",
           "class": "Euclid",
-          "tags": [
-            "bio",
-            "panic"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -490,10 +461,6 @@
           "anomalyId": "AN_007",
           "name": "午夜电台",
           "class": "Keter",
-          "tags": [
-            "memetic",
-            "signal"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -505,10 +472,6 @@
           "anomalyId": "AN_008",
           "name": "低语菌落",
           "class": "Euclid",
-          "tags": [
-            "bio",
-            "spore"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -520,10 +483,6 @@
           "anomalyId": "AN_009",
           "name": "无影灯",
           "class": "Euclid",
-          "tags": [
-            "stealth",
-            "optic"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -535,10 +494,6 @@
           "anomalyId": "AN_010",
           "name": "恒温灰尘",
           "class": "Euclid",
-          "tags": [
-            "material",
-            "lab"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -550,10 +505,6 @@
           "anomalyId": "AN_011",
           "name": "回声邮筒",
           "class": "Euclid",
-          "tags": [
-            "spatial",
-            "info"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -565,11 +516,6 @@
           "anomalyId": "AN_012",
           "name": "镜中幼体",
           "class": "Keter",
-          "tags": [
-            "bio",
-            "stealth",
-            "embryo"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -581,11 +527,6 @@
           "anomalyId": "AN_013",
           "name": "祈香残火",
           "class": "Euclid",
-          "tags": [
-            "religion",
-            "incense",
-            "merit"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -597,11 +538,6 @@
           "anomalyId": "AN_014",
           "name": "符箓回路",
           "class": "Euclid",
-          "tags": [
-            "tao",
-            "qi",
-            "sigil"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -613,11 +549,6 @@
           "anomalyId": "AN_015",
           "name": "五行失衡井",
           "class": "Keter",
-          "tags": [
-            "tao",
-            "wuxing",
-            "panic"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -629,10 +560,6 @@
           "anomalyId": "AN_016",
           "name": "洞天影门",
           "class": "Keter",
-          "tags": [
-            "tao",
-            "spatial"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -644,11 +571,6 @@
           "anomalyId": "AN_017",
           "name": "天人回响",
           "class": "Keter",
-          "tags": [
-            "tao",
-            "memetic",
-            "signal"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -660,11 +582,6 @@
           "anomalyId": "AN_018",
           "name": "业火余烬",
           "class": "Keter",
-          "tags": [
-            "religion",
-            "fire",
-            "karma"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -676,11 +593,6 @@
           "anomalyId": "AN_019",
           "name": "戒律钟摆",
           "class": "Euclid",
-          "tags": [
-            "religion",
-            "rule",
-            "panic"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -692,11 +604,6 @@
           "anomalyId": "AN_020",
           "name": "丹砂雾化",
           "class": "Euclid",
-          "tags": [
-            "tao",
-            "toxic",
-            "lab"
-          ],
           "baseThreat": 1,
           "investigateDifficulty": 1,
           "containDifficulty": 10,
@@ -2448,16 +2355,16 @@
           "type": "int"
         },
         {
-          "name": "requiresNodeTagsAny",
-          "type": "string[]"
+          "name": "requiresnodeId",
+          "type": "string"
         },
         {
-          "name": "requiresNodeTagsAll",
-          "type": "string[]"
+          "name": "requiresAnomalyId",
+          "type": "string"
         },
         {
-          "name": "requiresAnomalyTagsAny",
-          "type": "string[]"
+          "name": "requirestaskType",
+          "type": "string"
         },
         {
           "name": "requiresSecured",
@@ -2482,13 +2389,9 @@
           "eventDefId": "EVT_INVESTIGATE_SPOTTED",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [
-            "stealth"
-          ],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_001",
+          "requirestaskType": "Any",
           "requiresSecured": 0,
           "minLocalPanic": 0.0,
           "taskType": "Investigate",
@@ -2499,13 +2402,9 @@
           "eventDefId": "EVT_RANDOM_SHORTAGE",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "urban"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_002",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": null,
           "taskType": "",
@@ -2516,14 +2415,9 @@
           "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [
-            "infohazard",
-            "stealth"
-          ],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_003",
+          "requirestaskType": "Any",
           "requiresSecured": 0,
           "minLocalPanic": 0.0,
           "taskType": "Investigate",
@@ -2534,14 +2428,9 @@
           "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [
-            "memetic",
-            "infohazard"
-          ],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_004",
+          "requirestaskType": "Any",
           "requiresSecured": 0,
           "minLocalPanic": 0.0,
           "taskType": "Investigate",
@@ -2552,13 +2441,9 @@
           "eventDefId": "EVT_INVESTIGATE_BRIBERY",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "urban"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_005",
+          "requirestaskType": "Any",
           "requiresSecured": 0,
           "minLocalPanic": 2.0,
           "taskType": "Investigate",
@@ -2569,15 +2454,9 @@
           "eventDefId": "EVT_RANDOM_BLACKOUT",
           "minDay": 2,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "urban",
-            "industrial",
-            "port"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_006",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": 2.0,
           "taskType": "",
@@ -2588,11 +2467,9 @@
           "eventDefId": "EVT_RANDOM_AUDIT",
           "minDay": 5,
           "maxDay": null,
-          "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_007",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": null,
           "taskType": "",
@@ -2603,17 +2480,9 @@
           "eventDefId": "EVT_RANDOM_LEAK",
           "minDay": 3,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "urban",
-            "academic"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [
-            "memetic",
-            "infohazard"
-          ],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_008",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": 1.0,
           "taskType": "",
@@ -2624,18 +2493,9 @@
           "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
           "minDay": 2,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "mountain",
-            "rural",
-            "temple"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [
-            "religion",
-            "tao"
-          ],
+          "requiresnodeId": "Any",
+          "requiresAnomalyId": "AN_009",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": 1.0,
           "taskType": "",
@@ -2646,15 +2506,9 @@
           "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
           "minDay": 3,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "urban",
-            "industrial",
-            "lab"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "N3",
+          "requiresAnomalyId": "AN_010",
+          "requirestaskType": "Any",
           "requiresSecured": null,
           "minLocalPanic": 3.0,
           "taskType": "",
@@ -2665,11 +2519,9 @@
           "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
           "minDay": 1,
           "maxDay": null,
-          "requiresNodeTagsAny": [],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "N2",
+          "requiresAnomalyId": "AN_011",
+          "requirestaskType": "Investigate",
           "requiresSecured": 1,
           "minLocalPanic": null,
           "taskType": "",
@@ -2680,14 +2532,9 @@
           "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
           "minDay": 2,
           "maxDay": null,
-          "requiresNodeTagsAny": [
-            "port",
-            "urban"
-          ],
-          "requiresNodeTagsAll": [
-            "rural"
-          ],
-          "requiresAnomalyTagsAny": [],
+          "requiresnodeId": "N1",
+          "requiresAnomalyId": "AN_012",
+          "requirestaskType": "Investigate",
           "requiresSecured": null,
           "minLocalPanic": 1.0,
           "taskType": "",
