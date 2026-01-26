@@ -84,9 +84,7 @@ namespace Data
         public string EventDefId;
         public int? MinDay;
         public int? MaxDay;
-        public List<string> RequiresNodeTagsAny = new();
-        public List<string> RequiresNodeTagsAll = new();
-        public List<string> RequiresAnomalyTagsAny = new();
+        public string RequiresNodeId;
         public bool? RequiresSecured;
         public int? MinLocalPanic;
         public TaskType? TaskType;
@@ -101,6 +99,11 @@ namespace Data
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
         private readonly HashSet<TaskType> _taskDefMissingWarned = new();
+        private bool _warnedMissingTriggerRequiresNodeId;
+        private bool _warnedMissingEventRequiresAnomalyId;
+        private bool _warnedMissingEventRequiresTaskType;
+        private bool _warnedDeprecatedTriggerNodeTags;
+        private bool _warnedDeprecatedTriggerAnomalyTags;
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
@@ -252,6 +255,7 @@ namespace Data
             {
                 var eventDefId = GetRowString(row, "eventDefId");
                 if (string.IsNullOrEmpty(eventDefId)) continue;
+                WarnOnMissingEventRequirements();
                 EventsById[eventDefId] = new EventDef
                 {
                     eventDefId = eventDefId,
@@ -265,6 +269,8 @@ namespace Data
                     autoResolveAfterDays = GetRowInt(row, "autoResolveAfterDays"),
                     ignoreApplyMode = GetRowString(row, "ignoreApplyMode"),
                     ignoreEffectId = GetRowString(row, "ignoreEffectId"),
+                    requiresAnomalyId = NormalizeRequirement(GetRowString(row, "requiresAnomalyId")),
+                    requiresTaskType = NormalizeRequirement(GetEventTaskTypeAlias(row)),
                 };
             }
 
@@ -343,6 +349,8 @@ namespace Data
             {
                 var eventDefId = GetRowString(row, "eventDefId");
                 if (string.IsNullOrEmpty(eventDefId)) continue;
+                WarnOnDeprecatedTriggerFields();
+                WarnOnMissingTriggerRequiresNodeId();
                 var rowId = GetRowString(row, "rowId");
                 if (string.IsNullOrEmpty(rowId))
                 {
@@ -359,9 +367,7 @@ namespace Data
                     eventDefId = eventDefId,
                     minDay = GetRowIntNullable(row, "minDay"),
                     maxDay = GetRowIntNullable(row, "maxDay"),
-                    requiresNodeTagsAny = GetRowStringList(row, "requiresNodeTagsAny"),
-                    requiresNodeTagsAll = GetRowStringList(row, "requiresNodeTagsAll"),
-                    requiresAnomalyTagsAny = GetRowStringList(row, "requiresAnomalyTagsAny"),
+                    requiresNodeId = NormalizeRequirement(GetRowString(row, "requiresNodeId")),
                     requiresSecured = GetRowBoolNullable(row, "requiresSecured"),
                     minLocalPanic = GetRowIntNullable(row, "minLocalPanic"),
                     taskType = GetRowString(row, "taskType"),
@@ -436,6 +442,7 @@ namespace Data
             {
                 "eventDefId", "source", "causeType", "weight", "title", "desc", "blockPolicy",
                 "defaultAffects", "autoResolveAfterDays", "ignoreApplyMode", "ignoreEffectId",
+                "requiresAnomalyId", "requiresTaskType",
             });
             CheckTableColumns("EventOptions", new[]
             {
@@ -449,8 +456,7 @@ namespace Data
             CheckTableColumns("EventTriggers", new[]
             {
                 "rowId", "eventDefId", "taskType", "onlyAffectOriginTask", "minDay", "maxDay",
-                "requiresNodeTagsAny", "requiresNodeTagsAll", "requiresAnomalyTagsAny", "requiresSecured",
-                "minLocalPanic",
+                "requiresNodeId", "requiresSecured", "minLocalPanic",
             });
         }
 
@@ -567,9 +573,7 @@ namespace Data
                 EventDefId = row.eventDefId,
                 MinDay = row.minDay,
                 MaxDay = row.maxDay,
-                RequiresNodeTagsAny = row.requiresNodeTagsAny ?? new List<string>(),
-                RequiresNodeTagsAll = row.requiresNodeTagsAll ?? new List<string>(),
-                RequiresAnomalyTagsAny = row.requiresAnomalyTagsAny ?? new List<string>(),
+                RequiresNodeId = NormalizeRequirement(row.requiresNodeId),
                 RequiresSecured = row.requiresSecured,
                 MinLocalPanic = row.minLocalPanic,
                 OnlyAffectOriginTask = row.onlyAffectOriginTask,
@@ -582,6 +586,64 @@ namespace Data
             }
 
             return true;
+        }
+
+        private string NormalizeRequirement(string raw)
+            => string.IsNullOrWhiteSpace(raw) ? "Any" : raw;
+
+        private string GetEventTaskTypeAlias(Dictionary<string, object> row)
+        {
+            var value = GetRowString(row, "requiresTaskType");
+            if (!string.IsNullOrEmpty(value)) return value;
+            return GetRowString(row, "requirestaskType");
+        }
+
+        private void WarnOnMissingTriggerRequiresNodeId()
+        {
+            if (_warnedMissingTriggerRequiresNodeId) return;
+            if (TableHasColumn("EventTriggers", "requiresNodeId")) return;
+            _warnedMissingTriggerRequiresNodeId = true;
+            Debug.LogWarning("[DataWarn] missing trigger field requiresNodeId; defaulting to Any");
+        }
+
+        private void WarnOnMissingEventRequirements()
+        {
+            if (!_warnedMissingEventRequiresAnomalyId && !TableHasColumn("Events", "requiresAnomalyId"))
+            {
+                _warnedMissingEventRequiresAnomalyId = true;
+                Debug.LogWarning("[DataWarn] missing event field requiresAnomalyId; defaulting to Any");
+            }
+
+            if (!_warnedMissingEventRequiresTaskType &&
+                !TableHasColumn("Events", "requiresTaskType") &&
+                !TableHasColumn("Events", "requirestaskType"))
+            {
+                _warnedMissingEventRequiresTaskType = true;
+                Debug.LogWarning("[DataWarn] missing event field requiresTaskType; defaulting to Any");
+            }
+        }
+
+        private void WarnOnDeprecatedTriggerFields()
+        {
+            if (!_warnedDeprecatedTriggerNodeTags &&
+                (TableHasColumn("EventTriggers", "requiresNodeTagsAny") || TableHasColumn("EventTriggers", "requiresNodeTagsAll")))
+            {
+                _warnedDeprecatedTriggerNodeTags = true;
+                Debug.LogWarning("[DataWarn] deprecated trigger field requiresNodeTagsAny/All ignored");
+            }
+
+            if (!_warnedDeprecatedTriggerAnomalyTags && TableHasColumn("EventTriggers", "requiresAnomalyTagsAny"))
+            {
+                _warnedDeprecatedTriggerAnomalyTags = true;
+                Debug.LogWarning("[DataWarn] deprecated trigger field requiresAnomalyTagsAny ignored");
+            }
+        }
+
+        private bool TableHasColumn(string tableName, string columnName)
+        {
+            if (Tables == null || string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(columnName)) return false;
+            if (!Tables.TryGetTable(tableName, out var table) || table?.columns == null) return false;
+            return table.columns.Any(col => string.Equals(col?.name, columnName, StringComparison.Ordinal));
         }
 
         public bool TryGetEvent(string eventDefId, out EventDef def)

@@ -17,6 +17,8 @@ namespace Core
         private const int FIXED_EVENT_DAY = 3;
         private const string FIXED_EVENT_NODE_ID = "N1";
         private const bool EnableTriggerSkipLogs = false;
+        private const string RequirementAny = "Any";
+        private const string RequirementNoneTaskType = "None";
 
         private static int _triggerRowsScanned;
         private static int _triggerCandidates;
@@ -248,7 +250,8 @@ namespace Core
                 GameController.I.MarkGameOver($"reason=WorldPanic day={s.Day} value={s.WorldPanic:0.##} threshold={failThreshold:0.##}");
             }
 
-            Debug.Log($"[TriggerSummary] day={s.Day} rows={_triggerRowsScanned} candidates={_triggerCandidates} fired={_triggerFired}");
+            int totalTriggerRows = registry.TriggersByEventDefId?.Sum(entry => entry.Value?.Count ?? 0) ?? 0;
+            Debug.Log($"[TriggerSummary] day={s.Day} rows={totalTriggerRows} checked={_triggerRowsScanned} fired={_triggerFired}");
             s.News.Add($"Day {s.Day} 结束");
         }
 
@@ -303,7 +306,9 @@ namespace Core
             AddEventToNode(node, instance);
 
             _triggerFired++;
-            Debug.Log($"[TriggerFire] day={s.Day} rowId={matchedTrigger?.RowId ?? "none"} eventDefId={eventDef.eventDefId} nodeId={nodeId} taskId={sourceTask?.Id ?? "none"} anomalyId={finalAnomalyId ?? "none"} reason=Matched");
+            var ctxTaskType = GetContextTaskType(sourceTask);
+            var ctxAnomalyId = GetContextAnomalyId(node, sourceTask, sourceAnomalyId, matchedAnomalyId);
+            Debug.Log($"[TriggerFire] day={s.Day} rowId={matchedTrigger?.RowId ?? "none"} eventDefId={eventDef.eventDefId} nodeId={nodeId} ctxTaskType={ctxTaskType} ctxAnomalyId={ctxAnomalyId} reqTaskType={eventDef.requiresTaskType} reqAnomalyId={eventDef.requiresAnomalyId}");
             Debug.Log($"[EventGen] day={s.Day} node={nodeId} def={eventDef.eventDefId} inst={instance.EventInstanceId} sourceTask={sourceTask?.Id ?? "none"} sourceAnomaly={finalAnomalyId ?? "none"} reason={reason}");
             s.News.Add($"- {node.Name} 发生事件：{eventDef.title}");
             return true;
@@ -542,20 +547,23 @@ namespace Core
         private static bool TryGetMatchingTrigger(DataRegistry registry, GameState state, NodeState node, EventDef ev, NodeTask sourceTask, string sourceAnomalyId, out EventTrigger matchedTrigger, out string matchedAnomalyId)
         {
             matchedTrigger = null;
-            matchedAnomalyId = sourceAnomalyId;
+            matchedAnomalyId = null;
 
             if (!registry.TriggersByEventDefId.TryGetValue(ev.eventDefId, out var triggers) || triggers == null || triggers.Count == 0)
-                return true;
+            {
+                return EventDefMatches(ev, node, sourceTask, sourceAnomalyId, out matchedAnomalyId, out _);
+            }
 
-            var nodeDef = registry.NodesById.TryGetValue(node.Id, out var def) ? def : null;
             foreach (var trigger in triggers)
             {
                 if (trigger == null) continue;
                 _triggerRowsScanned++;
-                if (TriggerMatches(trigger, state.Day, node, nodeDef, sourceTask, sourceAnomalyId, registry, out var anomalyId, out var skipReason))
+                var eventSkipReason = string.Empty;
+                if (TriggerMatches(trigger, state.Day, node, sourceTask, out var skipReason) &&
+                    EventDefMatches(ev, node, sourceTask, sourceAnomalyId, out var anomalyId, out eventSkipReason))
                 {
                     matchedTrigger = trigger;
-                    matchedAnomalyId = anomalyId ?? sourceAnomalyId;
+                    matchedAnomalyId = anomalyId;
                     return true;
                 }
 
@@ -563,14 +571,18 @@ namespace Core
                 {
                     Debug.Log($"[TriggerSkip] day={state.Day} rowId={trigger.RowId ?? "none"} eventDefId={ev.eventDefId} nodeId={node.Id} reason={skipReason}");
                 }
+
+                if (EnableTriggerSkipLogs && !string.IsNullOrEmpty(eventSkipReason))
+                {
+                    Debug.Log($"[TriggerSkip] day={state.Day} rowId={trigger.RowId ?? "none"} eventDefId={ev.eventDefId} nodeId={node.Id} reason={eventSkipReason}");
+                }
             }
 
             return false;
         }
 
-        private static bool TriggerMatches(EventTrigger trigger, int day, NodeState nodeState, NodeDef nodeDef, NodeTask originTask, string originAnomalyId, DataRegistry registry, out string matchedAnomalyId, out string skipReason)
+        private static bool TriggerMatches(EventTrigger trigger, int day, NodeState nodeState, NodeTask originTask, out string skipReason)
         {
-            matchedAnomalyId = string.IsNullOrEmpty(originAnomalyId) ? null : originAnomalyId;
             skipReason = null;
 
             if (nodeState == null) return false;
@@ -599,6 +611,14 @@ namespace Core
                 return false;
             }
 
+            if (!string.IsNullOrEmpty(trigger.RequiresNodeId) &&
+                !string.Equals(trigger.RequiresNodeId, RequirementAny, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(nodeState.Id, trigger.RequiresNodeId, StringComparison.Ordinal))
+            {
+                skipReason = "NodeId";
+                return false;
+            }
+
             if (trigger.TaskType.HasValue)
             {
                 if (originTask == null)
@@ -620,108 +640,82 @@ namespace Core
                 return false;
             }
 
-            if (!MatchesTagRequirement(nodeState.Tags, trigger.RequiresNodeTagsAll, requireAll: true))
-            {
-                skipReason = "Tags";
-                return false;
-            }
-
-            if (!MatchesTagRequirement(nodeState.Tags, trigger.RequiresNodeTagsAny, requireAll: false))
-            {
-                skipReason = "Tags";
-                return false;
-            }
-
-            if (trigger.RequiresAnomalyTagsAny != null && trigger.RequiresAnomalyTagsAny.Count > 0)
-            {
-                var originCandidateId = !string.IsNullOrEmpty(originAnomalyId) ? originAnomalyId : GetTaskAnomalyId(nodeState, originTask);
-                if (!string.IsNullOrEmpty(originCandidateId))
-                {
-                    if (AnomalyHasRequiredTags(originCandidateId, trigger.RequiresAnomalyTagsAny, registry))
-                    {
-                        matchedAnomalyId = originCandidateId;
-                        return true;
-                    }
-
-                    skipReason = "AnomalyTags";
-                    return false;
-                }
-
-                foreach (var anomalyId in GetCandidateAnomalyIds(nodeState, nodeDef))
-                {
-                    if (!AnomalyHasRequiredTags(anomalyId, trigger.RequiresAnomalyTagsAny, registry)) continue;
-                    matchedAnomalyId = anomalyId;
-                    return true;
-                }
-
-                skipReason = "AnomalyTags";
-                return false;
-            }
-
             return true;
         }
 
-        private static bool MatchesTagRequirement(IEnumerable<string> subjectTags, List<string> requiredTags, bool requireAll)
+        private static bool EventDefMatches(EventDef ev, NodeState nodeState, NodeTask originTask, string originAnomalyId, out string matchedAnomalyId, out string skipReason)
         {
-            if (requiredTags == null || requiredTags.Count == 0) return true;
-            var set = new HashSet<string>((subjectTags ?? Array.Empty<string>()).Where(t => !string.IsNullOrWhiteSpace(t)));
-            if (set.Count == 0) return false;
+            matchedAnomalyId = null;
+            skipReason = null;
 
-            if (requireAll)
+            if (ev == null || nodeState == null) return false;
+
+            var reqTaskType = string.IsNullOrWhiteSpace(ev.requiresTaskType) ? RequirementAny : ev.requiresTaskType;
+            var reqAnomalyId = string.IsNullOrWhiteSpace(ev.requiresAnomalyId) ? RequirementAny : ev.requiresAnomalyId;
+
+            var ctxTaskType = GetContextTaskType(originTask);
+            if (!string.Equals(reqTaskType, RequirementAny, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(reqTaskType, ctxTaskType, StringComparison.OrdinalIgnoreCase))
             {
-                return requiredTags.All(set.Contains);
+                skipReason = "EventTaskType";
+                return false;
             }
 
-            return requiredTags.Any(set.Contains);
+            if (originTask != null)
+            {
+                var ctxAnomalyId = string.IsNullOrEmpty(originAnomalyId) ? GetTaskAnomalyId(nodeState, originTask) : originAnomalyId;
+                if (string.IsNullOrEmpty(ctxAnomalyId))
+                {
+                    skipReason = "NoOriginAnomalyId";
+                    return false;
+                }
+
+                if (!string.Equals(reqAnomalyId, RequirementAny, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(ctxAnomalyId, reqAnomalyId, StringComparison.Ordinal))
+                {
+                    skipReason = "EventAnomalyId";
+                    return false;
+                }
+
+                matchedAnomalyId = ctxAnomalyId;
+                return true;
+            }
+
+            if (string.Equals(reqAnomalyId, RequirementAny, StringComparison.OrdinalIgnoreCase))
+            {
+                matchedAnomalyId = null;
+                return true;
+            }
+
+            if (NodeHasActiveAnomaly(nodeState, reqAnomalyId))
+            {
+                matchedAnomalyId = reqAnomalyId;
+                return true;
+            }
+
+            skipReason = "EventAnomalyId";
+            return false;
         }
 
-        private static bool AnomalyHasRequiredTags(string anomalyId, List<string> requiredTags, DataRegistry registry)
+        private static bool NodeHasActiveAnomaly(NodeState nodeState, string anomalyId)
         {
-            if (string.IsNullOrEmpty(anomalyId)) return false;
-            if (!registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly)) return false;
-            return MatchesTagRequirement(anomaly.tags, requiredTags, requireAll: false);
+            if (nodeState?.ActiveAnomalyIds == null || string.IsNullOrEmpty(anomalyId)) return false;
+            return nodeState.ActiveAnomalyIds.Contains(anomalyId);
         }
 
-        private static IEnumerable<string> GetCandidateAnomalyIds(NodeState nodeState, NodeDef nodeDef)
+        private static string GetContextTaskType(NodeTask originTask)
+            => originTask == null ? RequirementNoneTaskType : originTask.Type.ToString();
+
+        private static string GetContextAnomalyId(NodeState nodeState, NodeTask originTask, string originAnomalyId, string matchedAnomalyId)
         {
-            var seen = new HashSet<string>();
-            if (nodeState?.ActiveAnomalyIds != null)
+            if (originTask != null)
             {
-                foreach (var anomalyId in nodeState.ActiveAnomalyIds)
-                {
-                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
-                    yield return anomalyId;
-                }
+                var ctxAnomalyId = string.IsNullOrEmpty(originAnomalyId) ? GetTaskAnomalyId(nodeState, originTask) : originAnomalyId;
+                return string.IsNullOrEmpty(ctxAnomalyId) ? RequirementNoneTaskType : ctxAnomalyId;
             }
 
-            if (nodeState?.ManagedAnomalies != null)
-            {
-                foreach (var managed in nodeState.ManagedAnomalies)
-                {
-                    var anomalyId = managed?.AnomalyId;
-                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
-                    yield return anomalyId;
-                }
-            }
-
-            if (nodeState?.Containables != null)
-            {
-                foreach (var containable in nodeState.Containables)
-                {
-                    var anomalyId = containable?.AnomalyId;
-                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
-                    yield return anomalyId;
-                }
-            }
-
-            if (nodeDef?.startAnomalyIds != null)
-            {
-                foreach (var anomalyId in nodeDef.startAnomalyIds)
-                {
-                    if (string.IsNullOrEmpty(anomalyId) || !seen.Add(anomalyId)) continue;
-                    yield return anomalyId;
-                }
-            }
+            if (!string.IsNullOrEmpty(matchedAnomalyId)) return matchedAnomalyId;
+            return RequirementNoneTaskType;
         }
 
         // =====================

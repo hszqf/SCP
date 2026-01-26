@@ -89,6 +89,8 @@ namespace Data
         public int autoResolveAfterDays;
         public string ignoreApplyMode;
         public string ignoreEffectId;
+        public string requiresAnomalyId;
+        public string requiresTaskType;
     }
 
     [Serializable]
@@ -129,9 +131,7 @@ namespace Data
         public string eventDefId;
         public int? minDay;
         public int? maxDay;
-        public List<string> requiresNodeTagsAny = new();
-        public List<string> requiresNodeTagsAll = new();
-        public List<string> requiresAnomalyTagsAny = new();
+        public string requiresNodeId;
         public bool? requiresSecured;
         public int? minLocalPanic;
         public string taskType;
