@@ -21,6 +21,7 @@ namespace Core
 
         private static readonly HashSet<TaskType> WarnedMissingYieldFields = new();
         private static readonly HashSet<TaskType> WarnedUnknownYieldKey = new();
+        private static readonly HashSet<string> WarnedDifficultyAnomalies = new();
 
         public static void StepDay(GameState s, Random rng)
         {
@@ -66,24 +67,38 @@ namespace Core
                     var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
 
-                    float delta = CalcDailyProgressDelta(t, squad, rng, registry);
+                    float baseDelta = CalcDailyProgressDelta(t, squad, rng, registry);
+                    string anomalyId = GetTaskAnomalyId(n, t);
+                    int diff = 1;
+                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
+                    {
+                        diff = GetTaskDifficulty(anomalyId, t.Type, registry);
+                    }
+
+                    float effDelta = baseDelta / Math.Max(1, diff);
+                    int manageRisk = (t.Type == TaskType.Manage) ? GetManageRisk(anomalyId, registry) : 0;
 
                     // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
                     // They should never auto-complete.
                     if (t.Type == TaskType.Manage)
                     {
+                        float beforeManage = t.Progress;
                         t.Progress = Math.Max(t.Progress, 0f);
-                        t.Progress = Clamp01(t.Progress + delta);
+                        t.Progress = Clamp01(t.Progress + effDelta);
                         if (t.Progress >= 1f) t.Progress = 0.99f;
+                        if (Math.Abs(t.Progress - beforeManage) > 0.0001f)
+                        {
+                            Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId} diff={diff} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} risk={manageRisk} progress={t.Progress:0.00}/1 (baseDays=1)");
+                        }
                         continue;
                     }
 
                     int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(t.Type, 1));
                     float before = t.Progress;
-                    t.Progress = Mathf.Clamp(t.Progress + delta, 0f, baseDays);
+                    t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, baseDays);
                     if (Math.Abs(t.Progress - before) > 0.0001f)
                     {
-                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId} diff={diff} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
                     }
 
                     if (t.Progress >= baseDays)
@@ -723,6 +738,57 @@ namespace Core
 
             float min = (t.Type == TaskType.Manage) ? 0.005f : 0.05f;
             return Math.Max(min, baseDelta + statBonus + noise);
+        }
+
+        static string GetTaskAnomalyId(NodeState node, NodeTask task)
+        {
+            if (node == null || task == null) return null;
+
+            if (task.Type == TaskType.Manage)
+            {
+                if (node.ManagedAnomalies == null) return null;
+                var managed = node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == task.TargetManagedAnomalyId);
+                return managed?.AnomalyId;
+            }
+
+            if (task.Type == TaskType.Contain)
+            {
+                if (node.Containables != null && node.Containables.Count > 0)
+                {
+                    ContainableItem target = null;
+                    if (!string.IsNullOrEmpty(task.TargetContainableId))
+                        target = node.Containables.FirstOrDefault(c => c != null && c.Id == task.TargetContainableId);
+                    target ??= node.Containables.FirstOrDefault(c => c != null);
+                    if (target != null) return target.AnomalyId;
+                }
+            }
+
+            return node.ActiveAnomalyIds?.FirstOrDefault(id => !string.IsNullOrEmpty(id));
+        }
+
+        static int GetTaskDifficulty(string anomalyId, TaskType type, DataRegistry registry)
+        {
+            int raw = 0;
+            if (!string.IsNullOrEmpty(anomalyId) && registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly))
+            {
+                raw = type == TaskType.Investigate ? anomaly.investigateDifficulty : anomaly.containDifficulty;
+            }
+
+            if (raw > 0) return raw;
+
+            var key = string.IsNullOrEmpty(anomalyId) ? "<unknown>" : anomalyId;
+            if (WarnedDifficultyAnomalies.Add(key))
+            {
+                Debug.LogWarning($"[WARN] Anomaly difficulty missing or <=0: anomalyId={key}. Using fallback=1.");
+            }
+
+            return 1;
+        }
+
+        static int GetManageRisk(string anomalyId, DataRegistry registry)
+        {
+            if (string.IsNullOrEmpty(anomalyId)) return 0;
+            return registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly) ? anomaly.manageRisk : 0;
         }
 
         // =====================
