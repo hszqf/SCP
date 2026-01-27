@@ -1,0 +1,31 @@
+using System;
+
+namespace Core
+{
+    [Serializable]
+    public class NewsInstance
+    {
+        public string Id;
+        public string NewsDefId;
+        public string NodeId;
+        public string SourceAnomalyId;
+        public string CauseType;
+        public int AgeDays;
+    }
+
+    public static class NewsInstanceFactory
+    {
+        public static NewsInstance Create(string newsDefId, string nodeId, string sourceAnomalyId, string causeType)
+        {
+            return new NewsInstance
+            {
+                Id = $"NEWS_{Guid.NewGuid():N}",
+                NewsDefId = newsDefId,
+                NodeId = nodeId,
+                SourceAnomalyId = sourceAnomalyId,
+                CauseType = causeType,
+                AgeDays = 0,
+            };
+        }
+    }
+}

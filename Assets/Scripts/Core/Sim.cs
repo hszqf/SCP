@@ -123,6 +123,9 @@ namespace Core
             // 3) RandomDaily 事件生成
             GenerateRandomDailyEvents(s, rng, registry);
 
+            // 3.5) RandomDaily 新闻生成
+            GenerateRandomDailyNews(s, rng, registry);
+
             // 4) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
             int wagePerAgentPerDay = registry.GetBalanceIntWithWarn("WagePerAgentPerDay", 0);
@@ -345,6 +348,85 @@ namespace Core
             Debug.Log($"[RandomDailySummary] day={s.Day} taskCtxChecked={taskCtxChecked} taskFired={taskFired} nodeCtxChecked={nodeCtxChecked} nodeFired={nodeFired}");
         }
 
+        private static void GenerateRandomDailyNews(GameState s, Random rng, DataRegistry registry)
+        {
+            if (s == null || s.Nodes == null) return;
+
+            var randomDailyDefs = registry.NewsDefsById.Values
+                .Where(def => def != null &&
+                              !string.IsNullOrEmpty(def.newsDefId) &&
+                              string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            int nodeAnomCtxChecked = 0;
+            int nodeAnomPicked = 0;
+            int nodeAnomEmitted = 0;
+            int nodeCtxChecked = 0;
+            int nodePicked = 0;
+            int nodeEmitted = 0;
+
+            var firedCounts = s.NewsFiredCounts ??= new Dictionary<string, int>();
+            var lastFiredDay = s.NewsLastFiredDay ??= new Dictionary<string, int>();
+
+            foreach (var node in s.Nodes)
+            {
+                if (node?.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0) continue;
+
+                foreach (var anomalyId in node.ActiveAnomalyIds)
+                {
+                    if (string.IsNullOrEmpty(anomalyId)) continue;
+                    nodeAnomCtxChecked += 1;
+
+                    var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, anomalyId, firedCounts, lastFiredDay, requireAnomalyAny: false);
+                    if (matched.Count == 0) continue;
+
+                    if (!TryPickWeightedNews(matched, rng, out var picked)) continue;
+                    nodeAnomPicked += 1;
+
+                    double roll = rng.NextDouble();
+                    bool emit = roll <= picked.p;
+                    string reason = emit ? "Picked" : "RolledAboveP";
+                    Debug.Log($"[NewsPick] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
+                    if (!emit) continue;
+
+                    string sourceAnomalyId = IsRequirementAny(picked.requiresAnomalyId) ? null : anomalyId;
+                    var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, sourceAnomalyId, RandomDailySource);
+                    AddNewsToLog(s, instance);
+                    UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
+                    nodeAnomEmitted += 1;
+
+                    Debug.Log($"[NewsGen] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} instId={instance.Id} cause={RandomDailySource}");
+                }
+            }
+
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+                nodeCtxChecked += 1;
+
+                var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, null, firedCounts, lastFiredDay, requireAnomalyAny: true);
+                if (matched.Count == 0) continue;
+
+                if (!TryPickWeightedNews(matched, rng, out var picked)) continue;
+                nodePicked += 1;
+
+                double roll = rng.NextDouble();
+                bool emit = roll <= picked.p;
+                string reason = emit ? "Picked" : "RolledAboveP";
+                Debug.Log($"[NewsPick] day={s.Day} ctx=Node nodeId={node.Id} anomalyId=none newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
+                if (!emit) continue;
+
+                var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, null, RandomDailySource);
+                AddNewsToLog(s, instance);
+                UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
+                nodeEmitted += 1;
+
+                Debug.Log($"[NewsGen] day={s.Day} ctx=Node nodeId={node.Id} anomalyId=none newsDefId={picked.newsDefId} instId={instance.Id} cause={RandomDailySource}");
+            }
+
+            Debug.Log($"[RandomDailyNewsSummary] day={s.Day} nodeAnomCtxChecked={nodeAnomCtxChecked} nodeAnomPicked={nodeAnomPicked} nodeAnomEmitted={nodeAnomEmitted} nodeCtxChecked={nodeCtxChecked} nodePicked={nodePicked} nodeEmitted={nodeEmitted} newsTotal={(s.NewsLog?.Count ?? 0)}");
+        }
+
         public static bool ApplyIgnorePenaltyOnDayEnd(GameState s, DataRegistry registry)
         {
             bool anyApplied = false;
@@ -462,6 +544,12 @@ namespace Core
             node.PendingEvents.Add(ev);
         }
 
+        private static void AddNewsToLog(GameState s, NewsInstance news)
+        {
+            if (s.NewsLog == null) s.NewsLog = new List<NewsInstance>();
+            s.NewsLog.Add(news);
+        }
+
         private static List<AffectScope> ResolveAffects(EventDef eventDef, EventOptionDef optionDef, DataRegistry registry)
         {
             if (optionDef?.affects != null && optionDef.affects.Count > 0 &&
@@ -577,6 +665,50 @@ namespace Core
             return matched;
         }
 
+        private static List<NewsDef> GetRandomDailyNewsMatches(
+            IReadOnlyList<NewsDef> candidates,
+            int day,
+            string nodeId,
+            string anomalyId,
+            Dictionary<string, int> firedCounts,
+            Dictionary<string, int> lastFiredDay,
+            bool requireAnomalyAny)
+        {
+            var matched = new List<NewsDef>();
+            if (candidates == null || candidates.Count == 0) return matched;
+
+            foreach (var news in candidates)
+            {
+                if (news == null || string.IsNullOrEmpty(news.newsDefId)) continue;
+                if (news.weight <= 0) continue;
+                if (!IsWithinDayWindow(news, day)) continue;
+                if (!RequirementMatches(news.requiresNodeId, nodeId)) continue;
+
+                if (requireAnomalyAny)
+                {
+                    if (!IsRequirementAny(news.requiresAnomalyId)) continue;
+                }
+                else
+                {
+                    if (!IsRequirementAny(news.requiresAnomalyId))
+                    {
+                        if (string.IsNullOrEmpty(anomalyId)) continue;
+                        if (!string.Equals(news.requiresAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)) continue;
+                    }
+                }
+
+                if (news.limitNum > 0 && firedCounts.TryGetValue(news.newsDefId, out var fired) && fired >= news.limitNum)
+                    continue;
+
+                if (news.cd > 0 && lastFiredDay.TryGetValue(news.newsDefId, out var lastDay) && day - lastDay < news.cd)
+                    continue;
+
+                matched.Add(news);
+            }
+
+            return matched;
+        }
+
         private static bool TryPickWeighted(IReadOnlyList<EventDef> candidates, Random rng, out EventDef picked)
         {
             picked = null;
@@ -607,6 +739,36 @@ namespace Core
             return picked != null;
         }
 
+        private static bool TryPickWeightedNews(IReadOnlyList<NewsDef> candidates, Random rng, out NewsDef picked)
+        {
+            picked = null;
+            if (candidates == null || candidates.Count == 0) return false;
+
+            int totalWeight = 0;
+            foreach (var news in candidates)
+            {
+                if (news == null || news.weight <= 0) continue;
+                totalWeight += news.weight;
+            }
+
+            if (totalWeight <= 0) return false;
+
+            int roll = rng.Next(totalWeight);
+            foreach (var news in candidates)
+            {
+                if (news == null || news.weight <= 0) continue;
+                roll -= news.weight;
+                if (roll < 0)
+                {
+                    picked = news;
+                    return true;
+                }
+            }
+
+            picked = candidates.FirstOrDefault(news => news != null && news.weight > 0);
+            return picked != null;
+        }
+
         private static void UpdateEventFireTracking(int day, string eventDefId, Dictionary<string, int> firedCounts, Dictionary<string, int> lastFiredDay)
         {
             if (string.IsNullOrEmpty(eventDefId)) return;
@@ -620,7 +782,28 @@ namespace Core
             if (lastFiredDay != null) lastFiredDay[eventDefId] = day;
         }
 
+        private static void UpdateNewsFireTracking(int day, string newsDefId, Dictionary<string, int> firedCounts, Dictionary<string, int> lastFiredDay)
+        {
+            if (string.IsNullOrEmpty(newsDefId)) return;
+            if (firedCounts != null)
+            {
+                firedCounts.TryGetValue(newsDefId, out var fired);
+                firedCounts[newsDefId] = fired + 1;
+            }
+
+            lastFiredDay?.TryGetValue(newsDefId, out _);
+            if (lastFiredDay != null) lastFiredDay[newsDefId] = day;
+        }
+
         private static bool IsWithinDayWindow(EventDef def, int day)
+        {
+            if (def == null) return false;
+            if (def.minDay > 0 && day < def.minDay) return false;
+            if (def.maxDay > 0 && day > def.maxDay) return false;
+            return true;
+        }
+
+        private static bool IsWithinDayWindow(NewsDef def, int day)
         {
             if (def == null) return false;
             if (def.minDay > 0 && day < def.minDay) return false;
