@@ -124,8 +124,8 @@ public class UIPanelRoot : MonoBehaviour
         _nodePanel = Instantiate(nodePanelPrefab, transform);
         // Inject callbacks
         _nodePanel.Init(
-            onInvestigate: () => OpenPicker(AgentPickerView.Mode.Investigate),
-            onContain: () => OpenPicker(AgentPickerView.Mode.Contain),
+            onInvestigate: () => OpenInvestigateAssignPanel(),
+            onContain: () => OpenContainAssignPanel(),
             onClose: () => CloseNode()
         );
     }
@@ -153,112 +153,231 @@ public class UIPanelRoot : MonoBehaviour
         }
     }
 
-    // ================== AGENT PICKER ==================
+    // ================== ASSIGNMENT PANEL (Investigate / Contain) ==================
 
-    void OpenPicker(AgentPickerView.Mode mode)
+    void OpenInvestigateAssignPanel()
     {
         if (GameController.I == null) return;
         if (string.IsNullOrEmpty(_currentNodeId)) return;
 
-        ForceCancelPickerIfNeeded(true);
+        EnsureManagePanel();
+        if (!_managePanelView) return;
 
-        if (!_agentPicker)
-        {
-            if (!agentPickerPrefab) return;
-            _agentPicker = Instantiate(agentPickerPrefab, transform);
-        }
-
-        var node = GameController.I.GetNode(_currentNodeId);
+        var gc = GameController.I;
+        var node = gc.GetNode(_currentNodeId);
         if (node == null)
         {
             ShowInfo("派遣失败", "节点不存在");
             return;
         }
 
-        // Create a NEW task for this dispatch action.
-        NodeTask createdTask = null;
-        TaskType taskType = TaskType.Investigate;
-        if (mode == AgentPickerView.Mode.Investigate)
-        {
-            createdTask = GameController.I.CreateInvestigateTask(_currentNodeId);
-            taskType = TaskType.Investigate;
-        }
-        else
-        {
-            // Contain requires containables.
-            if (node.Containables == null || node.Containables.Count == 0)
-            {
-                ShowInfo("派遣失败", "未发现可收容目标：请先完成调查产出收容物");
-                return;
-            }
-
-            string targetId = PickNextContainableId(node);
-            createdTask = GameController.I.CreateContainTask(_currentNodeId, targetId);
-            taskType = TaskType.Contain;
-        }
-
-        if (createdTask == null)
-        {
-            ShowInfo("派遣失败", "创建任务失败");
-            return;
-        }
-
-        string taskId = createdTask.Id;
-        _pickerTaskId = taskId;
-
-        if (_agentPicker == null)
-        {
-            ShowInfo("派遣失败", "派遣界面未就绪");
-            ForceCancelPickerIfNeeded(false);
-            return;
-        }
-
-        // Prepare data
-        var agents = GameController.I.State.Agents;
-        var pre = new List<string>(); // new task => no preselected agents
-
-        _agentPicker.transform.SetAsLastSibling();
         var registry = DataRegistry.Instance;
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(taskType, 1, int.MaxValue);
-        _agentPicker.Show(
-            mode,
-            _currentNodeId,
-            agents,
-            pre,
-            // Busy means: already assigned to ANY active task (any node) OR managing ANY anomaly (any node).
-            // Do NOT ignore current node here; otherwise agents could be double-assigned within the same node.
-            isBusyOtherNode: (aid) => GameControllerTaskExt.AreAgentsBusy(GameController.I, new List<string> { aid }, null),
-            slotsMin: slotsMin,
-            slotsMax: slotsMax,
-            onConfirm: (ids) =>
+        var targets = BuildInvestigateTargets(node, registry, gc.State?.NewsLog);
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Investigate, 1, int.MaxValue);
+
+        _manageNodeId = _currentNodeId;
+        if (_managePanel) _managePanel.SetActive(true);
+        _managePanel.transform.SetAsLastSibling();
+        _managePanelView.ShowGeneric(
+            header: $"Investigate | {_currentNodeId}",
+            hint: "选择新闻线索（可选）并派遣干员",
+            targets: targets,
+            agentSlotsMin: slotsMin,
+            agentSlotsMax: slotsMax,
+            onConfirm: (targetId, agentIds) =>
             {
-                if (ids == null || ids.Count == 0)
+                if (agentIds == null || agentIds.Count == 0)
                 {
                     ShowInfo("派遣失败", "未选择干员");
                     return;
                 }
 
-                // Global busy check (multi-select)
-                if (GameControllerTaskExt.AreAgentsBusy(GameController.I, ids, null))
+                if (GameControllerTaskExt.AreAgentsBusy(gc, agentIds, null))
                 {
                     ShowInfo("派遣失败", "部分干员正在其他任务执行中");
                     return;
                 }
 
-                GameController.I.AssignTask(taskId, ids);
-                _pickerTaskId = null;
+                var task = gc.CreateInvestigateTask(_currentNodeId);
+                if (task == null)
+                {
+                    ShowInfo("派遣失败", "创建任务失败");
+                    return;
+                }
+
+                string targetNewsId = string.IsNullOrEmpty(targetId) ? null : targetId;
+                task.TargetNewsId = targetNewsId;
+
+                string sourceAnomalyId = null;
+                if (!string.IsNullOrEmpty(targetNewsId))
+                {
+                    var news = gc.State?.NewsLog?.FirstOrDefault(n => n != null && n.Id == targetNewsId);
+                    sourceAnomalyId = news?.SourceAnomalyId;
+                    task.SourceAnomalyId = sourceAnomalyId;
+                    Debug.Log($"[InvestigateBindNews] taskId={task.Id} newsId={targetNewsId} srcAnom={sourceAnomalyId} nodeId={_currentNodeId}");
+                }
+
+                gc.AssignTask(task.Id, agentIds);
+                _managePanelView.Hide();
                 RefreshNodePanel();
             },
-            onCancel: () =>
-            {
-                // Cancel the newly created task if the user backs out of picker.
-                if (string.IsNullOrEmpty(_pickerTaskId)) return;
-                _pickerTaskId = null;
-                GameController.I.CancelOrRetreatTask(taskId);
-                RefreshNodePanel();
-            },
-            multiSelect: true
+            modeLabel: "Investigate"
         );
+    }
+
+    void OpenContainAssignPanel()
+    {
+        if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(_currentNodeId)) return;
+
+        EnsureManagePanel();
+        if (!_managePanelView) return;
+
+        var gc = GameController.I;
+        var node = gc.GetNode(_currentNodeId);
+        if (node == null)
+        {
+            ShowInfo("派遣失败", "节点不存在");
+            return;
+        }
+
+        if (node.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0)
+        {
+            ShowInfo("派遣失败", "未发现可收容目标：该节点暂无异常");
+            return;
+        }
+
+        var registry = DataRegistry.Instance;
+        var targets = BuildContainTargets(node, registry);
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Contain, 1, int.MaxValue);
+
+        _manageNodeId = _currentNodeId;
+        if (_managePanel) _managePanel.SetActive(true);
+        _managePanel.transform.SetAsLastSibling();
+        _managePanelView.ShowGeneric(
+            header: $"Contain | {_currentNodeId}",
+            hint: "选择要收容的异常并派遣干员",
+            targets: targets,
+            agentSlotsMin: slotsMin,
+            agentSlotsMax: slotsMax,
+            onConfirm: (targetAnomalyId, agentIds) =>
+            {
+                if (string.IsNullOrEmpty(targetAnomalyId))
+                {
+                    ShowInfo("派遣失败", "未选择收容目标");
+                    return;
+                }
+
+                if (agentIds == null || agentIds.Count == 0)
+                {
+                    ShowInfo("派遣失败", "未选择干员");
+                    return;
+                }
+
+                if (GameControllerTaskExt.AreAgentsBusy(gc, agentIds, null))
+                {
+                    ShowInfo("派遣失败", "部分干员正在其他任务执行中");
+                    return;
+                }
+
+                string containableId = EnsureContainableForAnomaly(node, registry, targetAnomalyId);
+                var task = gc.CreateContainTask(_currentNodeId, containableId);
+                if (task == null)
+                {
+                    ShowInfo("派遣失败", "创建任务失败");
+                    return;
+                }
+
+                task.SourceAnomalyId = targetAnomalyId;
+                gc.AssignTask(task.Id, agentIds);
+                _managePanelView.Hide();
+                RefreshNodePanel();
+            },
+            modeLabel: "Contain"
+        );
+    }
+
+    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(NodeState node, DataRegistry registry, List<NewsInstance> newsLog)
+    {
+        var targets = new List<AnomalyManagePanel.TargetEntry>
+        {
+            new AnomalyManagePanel.TargetEntry
+            {
+                id = "",
+                title = "随意调查",
+                subtitle = "不针对任何新闻（较慢）",
+                disabled = false
+            }
+        };
+
+        if (newsLog == null) return targets;
+
+        foreach (var news in newsLog)
+        {
+            if (news == null) continue;
+            if (!string.Equals(news.NodeId, node.Id, StringComparison.OrdinalIgnoreCase)) continue;
+            if (news.IsResolved) continue;
+
+            var def = registry.GetNewsDefById(news.NewsDefId);
+            string title = def?.title ?? news.NewsDefId ?? "";
+            string subtitle = !string.IsNullOrEmpty(news.SourceAnomalyId)
+                ? $"线索指向：{news.SourceAnomalyId}"
+                : "线索来源未知";
+
+            targets.Add(new AnomalyManagePanel.TargetEntry
+            {
+                id = news.Id,
+                title = title,
+                subtitle = subtitle,
+                disabled = false
+            });
+        }
+
+        return targets;
+    }
+
+    private List<AnomalyManagePanel.TargetEntry> BuildContainTargets(NodeState node, DataRegistry registry)
+    {
+        var targets = new List<AnomalyManagePanel.TargetEntry>();
+        if (node.ActiveAnomalyIds == null) return targets;
+
+        foreach (var anomalyId in node.ActiveAnomalyIds)
+        {
+            if (string.IsNullOrEmpty(anomalyId)) continue;
+            var def = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
+            string title = def?.name ?? anomalyId;
+
+            targets.Add(new AnomalyManagePanel.TargetEntry
+            {
+                id = anomalyId,
+                title = title,
+                subtitle = null,
+                disabled = false
+            });
+        }
+
+        return targets;
+    }
+
+    private string EnsureContainableForAnomaly(NodeState node, DataRegistry registry, string anomalyId)
+    {
+        if (node == null || string.IsNullOrEmpty(anomalyId)) return null;
+        if (node.Containables == null) node.Containables = new List<ContainableItem>();
+
+        var existing = node.Containables.FirstOrDefault(c => c != null && c.AnomalyId == anomalyId);
+        if (existing != null) return existing.Id;
+
+        var def = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
+        int level = def != null ? Math.Max(1, def.baseThreat) : Math.Max(1, node.AnomalyLevel);
+        var item = new ContainableItem
+        {
+            Id = $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}",
+            Name = def != null ? $"{def.name} 线索（{node.Name}）" : $"未编号异常（{node.Name}）",
+            Level = level,
+            AnomalyId = anomalyId,
+        };
+        node.Containables.Add(item);
+        return item.Id;
     }
 
     // ================== MANAGE PANEL ==================

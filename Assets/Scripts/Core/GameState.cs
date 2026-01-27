@@ -78,6 +78,12 @@ namespace Core
         // Only for containment tasks: which containable we are trying to contain.
         public string TargetContainableId;
 
+        // Investigate: which news clue we are targeting (empty => generic investigation).
+        public string TargetNewsId;
+
+        // Investigate/Contain: anomaly id associated with this task (optional).
+        public string SourceAnomalyId;
+
         // Only for management tasks: which managed anomaly we are managing.
         public string TargetManagedAnomalyId;
 
