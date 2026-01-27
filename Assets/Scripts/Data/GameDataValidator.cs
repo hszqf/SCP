@@ -30,9 +30,10 @@ namespace Data
 
             int eventsCount = GetTableRowCount(registry, "Events");
             int optionsCount = GetTableRowCount(registry, "EventOptions");
+            int newsCount = GetTableRowCount(registry, "NewsDefs");
             int effectsCount = GetTableRowCount(registry, "Effects");
             int opsCount = GetTableRowCount(registry, "EffectOps");
-            Debug.Log($"[GameDataValidator] Validation passed. events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount}");
+            Debug.Log($"[GameDataValidator] Validation passed. events={eventsCount} options={optionsCount} news={newsCount} effects={effectsCount} ops={opsCount}");
         }
 
         private static void ValidateEnums(DataRegistry registry, List<string> errors)
@@ -70,6 +71,17 @@ namespace Data
                 var affects = GetRowStringList(opt, "affects");
                 if (!DataRegistry.TryParseAffectScopes(affects, out _, out var affectsError))
                     errors.Add(FormatCellError("EventOptions", row, "affects", string.Join(";", affects), affectsError));
+            }
+
+            var newsDefs = GetTableRows(registry, "NewsDefs");
+            for (int i = 0; i < newsDefs.Count; i++)
+            {
+                var news = newsDefs[i];
+                if (news == null) continue;
+                int row = i + 1;
+                var source = GetRowString(news, "source");
+                if (!string.IsNullOrEmpty(source) && !string.Equals(source, "RandomDaily", StringComparison.OrdinalIgnoreCase))
+                    errors.Add(FormatCellError("NewsDefs", row, "source", source, "RandomDaily"));
             }
 
             var opRows = GetTableRows(registry, "EffectOps");

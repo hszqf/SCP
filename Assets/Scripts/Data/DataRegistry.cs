@@ -71,6 +71,7 @@ namespace Data
     {
         private const string GameDataFileName = "game_data.json";
         private const string RequirementAny = "ANY";
+        private const string RandomDailySource = "RandomDaily";
 
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
@@ -85,6 +86,15 @@ namespace Data
         private bool _warnedMissingEventMaxDay;
         private bool _warnedMissingEventCd;
         private bool _warnedMissingEventLimitNum;
+        private bool _warnedMissingNewsRequiresNodeId;
+        private bool _warnedMissingNewsRequiresAnomalyId;
+        private bool _warnedMissingNewsSource;
+        private bool _warnedMissingNewsP;
+        private bool _warnedMissingNewsWeight;
+        private bool _warnedMissingNewsMinDay;
+        private bool _warnedMissingNewsMaxDay;
+        private bool _warnedMissingNewsCd;
+        private bool _warnedMissingNewsLimitNum;
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
@@ -94,6 +104,7 @@ namespace Data
         public Dictionary<string, EventDef> EventsById { get; private set; } = new();
         public Dictionary<string, List<EventOptionDef>> OptionsByEventId { get; private set; } = new();
         public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
+        public Dictionary<string, NewsDef> NewsDefsById { get; private set; } = new();
         public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
@@ -258,6 +269,35 @@ namespace Data
                 };
             }
 
+            NewsDefsById = new Dictionary<string, NewsDef>();
+            foreach (var row in Tables.GetRows("NewsDefs"))
+            {
+                var newsDefId = GetRowString(row, "newsDefId");
+                if (string.IsNullOrEmpty(newsDefId)) continue;
+                NewsDefsById[newsDefId] = new NewsDef
+                {
+                    newsDefId = newsDefId,
+                    source = GetNewsStringWithDefault(row, "source", "RandomDaily", ref _warnedMissingNewsSource, "RandomDaily"),
+                    weight = GetNewsIntWithDefault(row, "weight", 1, ref _warnedMissingNewsWeight),
+                    p = Mathf.Clamp01(GetNewsFloatWithDefault(row, "p", 1f, ref _warnedMissingNewsP)),
+                    minDay = GetNewsIntWithDefault(row, "minDay", 0, ref _warnedMissingNewsMinDay),
+                    maxDay = GetNewsIntWithDefault(row, "maxDay", 0, ref _warnedMissingNewsMaxDay),
+                    cd = GetNewsIntWithDefault(row, "CD", 0, ref _warnedMissingNewsCd),
+                    limitNum = GetNewsIntWithDefault(row, "limitNum", 0, ref _warnedMissingNewsLimitNum),
+                    requiresNodeId = NormalizeRequirement(GetNewsStringWithDefault(row, "requiresNodeId", RequirementAny, ref _warnedMissingNewsRequiresNodeId, "ANY")),
+                    requiresAnomalyId = NormalizeRequirement(GetNewsStringWithDefault(row, "requiresAnomalyId", RequirementAny, ref _warnedMissingNewsRequiresAnomalyId, "ANY")),
+                    title = GetRowString(row, "title"),
+                    desc = GetRowString(row, "desc"),
+                };
+            }
+
+            if (NewsDefsById.Count > 0)
+            {
+                int randomDailyCount = NewsDefsById.Values.Count(def =>
+                    def != null && string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase));
+                Debug.Log($"[NewsDefs] rows={NewsDefsById.Count} (source RandomDaily={randomDailyCount})");
+            }
+
             OptionsByEventId = new Dictionary<string, List<EventOptionDef>>();
             OptionsByEventAndId = new Dictionary<string, Dictionary<string, EventOptionDef>>();
             foreach (var row in Tables.GetRows("EventOptions"))
@@ -353,10 +393,11 @@ namespace Data
 
             int eventsCount = GetTableRowCountWithWarn("Events");
             int optionsCount = GetTableRowCountWithWarn("EventOptions");
+            int newsCount = GetTableRowCountWithWarn("NewsDefs");
             int effectsCount = GetTableRowCountWithWarn("Effects");
             int opsCount = GetTableRowCountWithWarn("EffectOps");
 
-            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} effects={effectsCount} ops={opsCount}");
+            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} news={newsCount} effects={effectsCount} ops={opsCount}");
         }
 
         private void LogTablesSanity()
@@ -387,6 +428,12 @@ namespace Data
                 "eventDefId", "source", "weight", "title", "desc", "blockPolicy",
                 "defaultAffects", "autoResolveAfterDays", "ignoreApplyMode", "ignoreEffectId",
                 "requiresNodeId", "requiresAnomalyId", "requiresTaskType",
+                "p", "minDay", "maxDay", "CD", "limitNum",
+            });
+            CheckTableColumns("NewsDefs", new[]
+            {
+                "newsDefId", "source", "weight", "title", "desc",
+                "requiresNodeId", "requiresAnomalyId",
                 "p", "minDay", "maxDay", "CD", "limitNum",
             });
             CheckTableColumns("EventOptions", new[]
@@ -494,6 +541,31 @@ namespace Data
             return value;
         }
 
+        private string GetNewsStringWithDefault(Dictionary<string, object> row, string column, string fallback, ref bool warned, string fallbackLabel)
+        {
+            if (!TableHasColumn("NewsDefs", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallbackLabel}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceString(raw, out var value) || string.IsNullOrWhiteSpace(value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallbackLabel}");
+                }
+                return fallback;
+            }
+
+            return value;
+        }
+
         private static int GetRowInt(Dictionary<string, object> row, string column, int fallback = 0)
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
@@ -518,6 +590,31 @@ namespace Data
                 {
                     warned = true;
                     Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            return value;
+        }
+
+        private int GetNewsIntWithDefault(Dictionary<string, object> row, string column, int fallback, ref bool warned)
+        {
+            if (!TableHasColumn("NewsDefs", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceInt(raw, out var value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallback}");
                 }
                 return fallback;
             }
@@ -555,6 +652,31 @@ namespace Data
                 {
                     warned = true;
                     Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            return value;
+        }
+
+        private float GetNewsFloatWithDefault(Dictionary<string, object> row, string column, float fallback, ref bool warned)
+        {
+            if (!TableHasColumn("NewsDefs", column))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallback}");
+                }
+                return fallback;
+            }
+
+            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceFloat(raw, out var value))
+            {
+                if (!warned)
+                {
+                    warned = true;
+                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallback}");
                 }
                 return fallback;
             }

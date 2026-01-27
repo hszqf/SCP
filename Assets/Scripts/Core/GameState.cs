@@ -182,9 +182,12 @@ namespace Core
 
         public List<PendingEvent> PendingEvents = new();
         public List<string> News = new();
+        public List<NewsInstance> NewsLog = new();
 
         public Dictionary<string, int> EventFiredCounts = new();
         public Dictionary<string, int> EventLastFiredDay = new();
+        public Dictionary<string, int> NewsFiredCounts = new();
+        public Dictionary<string, int> NewsLastFiredDay = new();
     }
 }
 // </EXPORT_BLOCK>

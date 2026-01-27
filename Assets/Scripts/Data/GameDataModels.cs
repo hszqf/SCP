@@ -13,6 +13,7 @@ namespace Data
         public List<TaskDef> taskDefs = new();
         public List<EventDef> events = new();
         public List<EventOptionDef> eventOptions = new();
+        public List<NewsDef> newsDefs = new();
         public List<EffectDef> effects = new();
         public List<EffectOpRow> effectOps = new();
         public Dictionary<string, GameDataTable> tables = new();
@@ -106,6 +107,23 @@ namespace Data
         public string resultText;
         public List<string> affects = new();
         public string effectId;
+    }
+
+    [Serializable]
+    public class NewsDef
+    {
+        public string newsDefId;
+        public string source;
+        public int weight;
+        public float p;
+        public int minDay;
+        public int maxDay;
+        public int cd;
+        public int limitNum;
+        public string requiresNodeId;
+        public string requiresAnomalyId;
+        public string title;
+        public string desc;
     }
 
     [Serializable]
