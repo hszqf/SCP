@@ -397,7 +397,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -408,7 +408,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -419,7 +419,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -430,7 +430,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -441,7 +441,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -452,7 +452,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -463,7 +463,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -474,7 +474,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -485,7 +485,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -496,7 +496,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -507,7 +507,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -518,7 +518,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -529,7 +529,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -540,7 +540,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -551,7 +551,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -562,7 +562,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -573,7 +573,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -584,7 +584,7 @@
           "class": "Keter",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 5,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -595,7 +595,7 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
@@ -606,10 +606,79 @@
           "class": "Euclid",
           "baseThreat": 1,
           "investigateDifficulty": 1,
-          "containDifficulty": 10,
+          "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100
+        }
+      ]
+    },
+    "NewsDefs": {
+      "idField": "newsDefId",
+      "columns": [
+        {
+          "name": "newsDefId",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "requiresNodeId",
+          "type": "string"
+        },
+        {
+          "name": "requiresAnomalyId",
+          "type": "string"
+        },
+        {
+          "name": "weight",
+          "type": "int"
+        },
+        {
+          "name": "p",
+          "type": "float"
+        },
+        {
+          "name": "minDay",
+          "type": "int"
+        },
+        {
+          "name": "maxDay",
+          "type": "int"
+        },
+        {
+          "name": "CD",
+          "type": "int"
+        },
+        {
+          "name": "limitNum",
+          "type": "int"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "desc",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "newsDefId": "TEST",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 0,
+          "maxDay": 0,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "TEST",
+          "desc": "TEST"
         }
       ]
     },
@@ -660,8 +729,8 @@
           "name": "调查",
           "baseDays": 1,
           "progressPerDay": 0.12,
-          "agentSlotsMin": 3,
-          "agentSlotsMax": 3,
+          "agentSlotsMin": 1,
+          "agentSlotsMax": 5,
           "yieldKey": "Intel",
           "yieldPerDay": 1
         },
@@ -672,7 +741,7 @@
           "baseDays": 6,
           "progressPerDay": 0.1,
           "agentSlotsMin": 3,
-          "agentSlotsMax": 3,
+          "agentSlotsMax": 5,
           "yieldKey": "Money",
           "yieldPerDay": 0
         },
@@ -683,7 +752,7 @@
           "baseDays": 999,
           "progressPerDay": 0.02,
           "agentSlotsMin": 3,
-          "agentSlotsMax": 2,
+          "agentSlotsMax": 5,
           "yieldKey": "NegEntropy",
           "yieldPerDay": 2
         }
