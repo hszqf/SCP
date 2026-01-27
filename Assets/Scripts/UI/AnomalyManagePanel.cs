@@ -174,9 +174,10 @@ public class AnomalyManagePanel : MonoBehaviour
         List<TargetEntry> targets,
         int agentSlotsMin,
         int agentSlotsMax,
-        Action<string, List<string>> onConfirm)
+        Action<string, List<string>> onConfirm,
+        string modeLabel = "Generic")
     {
-        ShowGenericInternal(header, hint, targets, agentSlotsMin, agentSlotsMax, onConfirm, "Generic");
+        ShowGenericInternal(header, hint, targets, agentSlotsMin, agentSlotsMax, onConfirm, modeLabel);
     }
 
     private void ShowGenericInternal(

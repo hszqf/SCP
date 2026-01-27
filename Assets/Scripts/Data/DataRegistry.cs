@@ -745,6 +745,9 @@ namespace Data
             return dict.TryGetValue(optionId, out option);
         }
 
+        public NewsDef GetNewsDefById(string newsDefId)
+            => !string.IsNullOrEmpty(newsDefId) && NewsDefsById.TryGetValue(newsDefId, out var def) ? def : null;
+
         public bool TryGetTaskDef(TaskType type, out TaskDef def)
             => TaskDefsByType.TryGetValue(type, out def);
 

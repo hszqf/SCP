@@ -869,6 +869,17 @@ namespace Core
                 node.HasAnomaly = true;
 
                 s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1 ({anomalyId})");
+
+                if (!string.IsNullOrEmpty(task.TargetNewsId) && s.NewsLog != null)
+                {
+                    var news = s.NewsLog.FirstOrDefault(n => n != null && n.Id == task.TargetNewsId);
+                    if (news != null)
+                    {
+                        news.IsResolved = true;
+                        news.ResolvedDay = s.Day;
+                        Debug.Log($"[NewsResolve] day={s.Day} newsId={news.Id} nodeId={news.NodeId} anomalyId={news.SourceAnomalyId} resolved=1");
+                    }
+                }
             }
             else if (task.Type == TaskType.Contain)
             {
