@@ -21,6 +21,20 @@ using UnityEngine.UI;
 
 public class AnomalyManagePanel : MonoBehaviour
 {
+    public class TargetEntry
+    {
+        public string id;
+        public string title;
+        public string subtitle;
+        public bool disabled;
+    }
+
+    private enum AssignPanelMode
+    {
+        Manage,
+        Generic
+    }
+
     [Header("Left: Anomaly list")]
     [SerializeField] private Transform anomalyListContent;
     [SerializeField] private GameObject anomalyListItemPrefab; // must have Button + TMP_Text named "Label" (or any TMP_Text)
@@ -37,12 +51,15 @@ public class AnomalyManagePanel : MonoBehaviour
 
     private readonly List<GameObject> _anomalyItems = new();
     private readonly List<AgentPickerItemView> _agentItems = new();
+    private readonly List<TargetEntry> _currentTargets = new();
 
-    private string _selectedAnomalyId;
+    private string _selectedTargetId;
     private string _nodeId; // management context node id (set by UIPanelRoot.ManageNodeId)
     private readonly HashSet<string> _selectedAgentIds = new();
     private int _slotsMin = 1;
     private int _slotsMax = int.MaxValue;
+    private AssignPanelMode _mode = AssignPanelMode.Manage;
+    private Action<string, List<string>> _onConfirm;
 
     void Awake()
     {
@@ -108,16 +125,36 @@ public class AnomalyManagePanel : MonoBehaviour
         var list = GetFavoritedAnomalies(node);
 
         // Keep selection valid
-        if (string.IsNullOrEmpty(_selectedAnomalyId) || !list.Any(x => x.Id == _selectedAnomalyId))
-            _selectedAnomalyId = list.FirstOrDefault()?.Id;
+        if (string.IsNullOrEmpty(_selectedTargetId) || !list.Any(x => x.Id == _selectedTargetId))
+            _selectedTargetId = list.FirstOrDefault()?.Id;
         if (list.Count == 0)
         {
-            _selectedAnomalyId = null;
+            _selectedTargetId = null;
             _selectedAgentIds.Clear();
         }
 
-        RebuildAnomalyList(list);
-        RebuildAgentList();
+        var targets = list
+            .Select(a => new TargetEntry
+            {
+                id = a.Id,
+                title = BuildAnomalyLabel(a, GetCurrentManagerCount(node, a.Id)),
+                subtitle = null,
+                disabled = false
+            })
+            .ToList();
+
+        string hint = "";
+        if (list.Count == 0)
+        {
+            if (string.IsNullOrEmpty(_nodeId)) hint = "管理面板缺少节点上下文（ManageNodeId 为空）。";
+            else hint = "该节点暂无已收容异常。请先完成收容。";
+        }
+        else
+        {
+            hint = "选择异常，然后分配干员开始管理（每日产出负熵）。";
+        }
+
+        ShowGenericInternal("管理：选择异常", hint, targets, _slotsMin, _slotsMax, HandleManageConfirm, "Manage");
         UpdateHeader();
     }
 
@@ -131,52 +168,78 @@ public class AnomalyManagePanel : MonoBehaviour
             .ToList();
     }
 
-    private void RebuildAnomalyList(List<ManagedAnomalyState> list)
+    public void ShowGeneric(
+        string header,
+        string hint,
+        List<TargetEntry> targets,
+        int agentSlotsMin,
+        int agentSlotsMax,
+        Action<string, List<string>> onConfirm)
+    {
+        ShowGenericInternal(header, hint, targets, agentSlotsMin, agentSlotsMax, onConfirm, "Generic");
+    }
+
+    private void ShowGenericInternal(
+        string header,
+        string hint,
+        List<TargetEntry> targets,
+        int agentSlotsMin,
+        int agentSlotsMax,
+        Action<string, List<string>> onConfirm,
+        string modeLabel)
+    {
+        _mode = modeLabel == "Manage" ? AssignPanelMode.Manage : AssignPanelMode.Generic;
+        _onConfirm = onConfirm;
+        _slotsMin = agentSlotsMin;
+        _slotsMax = agentSlotsMax;
+
+        if (headerText) headerText.text = header ?? "";
+        if (hintText) hintText.text = hint ?? "";
+
+        var safeTargets = targets ?? new List<TargetEntry>();
+        if (string.IsNullOrEmpty(_selectedTargetId) || !safeTargets.Any(x => x != null && x.id == _selectedTargetId))
+            _selectedTargetId = safeTargets.FirstOrDefault()?.id;
+
+        RebuildTargetList(safeTargets);
+        RebuildAgentList();
+        RefreshConfirmState();
+
+        Debug.Log($"[AssignPanel] mode={modeLabel} targets={safeTargets.Count} slots={_slotsMin}-{_slotsMax}");
+    }
+
+    private void RebuildTargetList(List<TargetEntry> list)
     {
         // Clear
         for (int i = 0; i < _anomalyItems.Count; i++)
             if (_anomalyItems[i]) Destroy(_anomalyItems[i]);
         _anomalyItems.Clear();
+        _currentTargets.Clear();
 
         if (!anomalyListContent || !anomalyListItemPrefab)
             return;
 
-        if (list == null || list.Count == 0)
-        {
-            // Optional hint
-            if (hintText)
-            {
-                if (string.IsNullOrEmpty(_nodeId)) hintText.text = "管理面板缺少节点上下文（ManageNodeId 为空）。";
-                else hintText.text = "该节点暂无已收容异常。请先完成收容。";
-            }
-            return;
-        }
+        if (list == null || list.Count == 0) return;
 
-        if (hintText) hintText.text = "选择异常，然后分配干员开始管理（每日产出负熵）。";
-
-        foreach (var a in list)
+        foreach (var entry in list)
         {
             var go = Instantiate(anomalyListItemPrefab, anomalyListContent);
-            go.name = "Anomaly_" + a.Id;
+            string entryId = entry?.id ?? "";
+            go.name = "Target_" + entryId;
             _anomalyItems.Add(go);
+            _currentTargets.Add(entry);
 
-            var btn = go.GetComponentInChildren<Button>(true);
-            var label = go.GetComponentsInChildren<TMP_Text>(true).FirstOrDefault();
-            int mgr = 0;
-            var nodeForLabel = (GameController.I != null && !string.IsNullOrEmpty(_nodeId)) ? GameController.I.GetNode(_nodeId) : null;
-            var mtForLabel = FindManageTask(nodeForLabel, a.Id);
-            if (mtForLabel?.AssignedAgentIds != null) mgr = mtForLabel.AssignedAgentIds.Count;
+            SetListItemLabels(go, entry);
 
-            if (label) label.text = BuildAnomalyLabel(a, mgr);
-
-            bool selected = (a.Id == _selectedAnomalyId);
+            bool selected = (entryId == _selectedTargetId);
             SetListItemSelectedVisual(go, selected);
 
+            var btn = go.GetComponentInChildren<Button>(true);
             if (btn)
             {
                 btn.onClick.RemoveAllListeners();
-                string id = a.Id;
-                btn.onClick.AddListener(() => SelectAnomaly(id));
+                string id = entryId;
+                btn.interactable = entry == null || !entry.disabled;
+                btn.onClick.AddListener(() => SelectTarget(id));
             }
         }
     }
@@ -197,22 +260,29 @@ public class AnomalyManagePanel : MonoBehaviour
         }
     }
 
-    private void SelectAnomaly(string anomalyId)
+    private void SelectTarget(string targetId)
     {
-        _selectedAnomalyId = anomalyId;
+        _selectedTargetId = targetId;
         _selectedAgentIds.Clear();
 
-        // Pull current assignment (prefer Manage Task, fallback legacy field)
-        var gc = GameController.I;
-        var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
-        var mt = FindManageTask(node, anomalyId);
-        if (mt?.AssignedAgentIds != null)
+        Debug.Log($"[AssignPanelSelect] targetId={_selectedTargetId}");
+
+        if (_mode == AssignPanelMode.Manage)
         {
-            foreach (var id in mt.AssignedAgentIds)
-                _selectedAgentIds.Add(id);
+            // Pull current assignment (prefer Manage Task, fallback legacy field)
+            var gc = GameController.I;
+            var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
+            var mt = FindManageTask(node, targetId);
+            if (mt?.AssignedAgentIds != null)
+            {
+                foreach (var id in mt.AssignedAgentIds)
+                    _selectedAgentIds.Add(id);
+            }
         }
 
-        RefreshUI();
+        RebuildAgentList();
+        RefreshTargetSelectionVisuals();
+        UpdateHeader();
     }
 
     private void RebuildAgentList()
@@ -229,15 +299,18 @@ public class AnomalyManagePanel : MonoBehaviour
         if (gc == null) return;
 
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
-        var anomaly = FindManagedAnomaly(node, _selectedAnomalyId);
-        if (anomaly == null)
-            return;
+        if (_mode == AssignPanelMode.Manage)
+        {
+            var anomaly = FindManagedAnomaly(node, _selectedTargetId);
+            if (anomaly == null)
+                return;
 
-        // Sync selection from Manage Task (source of truth), fallback legacy.
-        var mt = FindManageTask(node, anomaly.Id);
-        _selectedAgentIds.Clear();
-        if (mt?.AssignedAgentIds != null)
-            foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
+            // Sync selection from Manage Task (source of truth), fallback legacy.
+            var mt = FindManageTask(node, anomaly.Id);
+            _selectedAgentIds.Clear();
+            if (mt?.AssignedAgentIds != null)
+                foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
+        }
 
         foreach (var ag in gc.State.Agents)
         {
@@ -314,36 +387,18 @@ public class AnomalyManagePanel : MonoBehaviour
 
         if (_selectedAgentIds.Count < _slotsMin || _selectedAgentIds.Count > _slotsMax)
         {
+            string message = $"需要选择 {_slotsMin}-{_slotsMax} 名干员，目前为 {_selectedAgentIds.Count}。";
+            if (hintText) hintText.text = message;
             Debug.LogWarning($"[TaskDef] manage slot selection invalid. count={_selectedAgentIds.Count} slotsMin={_slotsMin} slotsMax={_slotsMax}");
             return;
         }
 
-        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
-        var m = FindManagedAnomaly(node, _selectedAnomalyId);
-        if (m == null) return;
+        var targetId = _selectedTargetId ?? "";
+        var agentIds = _selectedAgentIds.ToList();
 
-        // Write back as a formal Manage task.
-        var mt = gc.CreateManageTask(_nodeId, m.Id);
-        if (mt == null) return;
+        Debug.Log($"[AssignPanelConfirm] targetId={targetId} agents={string.Join(",", agentIds)}");
 
-        var newIds = _selectedAgentIds.ToList();
-
-        // If clearing selection, cancel/retreat the manage task to release occupancy.
-        if (newIds.Count == 0)
-        {
-            gc.CancelOrRetreatTask(mt.Id);
-        }
-        else
-        {
-            gc.AssignTask(mt.Id, newIds);
-
-            // Optional: set StartDay for UX (Sim will also set on first yield)
-            if (m.StartDay <= 0) m.StartDay = gc.State.Day;
-        }
-
-        // Update UI
-        RefreshUI();
-        gc.Notify();
+        _onConfirm?.Invoke(targetId, agentIds);
     }
 
     private void RefreshConfirmState()
@@ -357,10 +412,11 @@ public class AnomalyManagePanel : MonoBehaviour
     private void UpdateHeader()
     {
         if (!headerText) return;
+        if (_mode != AssignPanelMode.Manage) return;
 
         var gc = GameController.I;
         var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
-        var m = FindManagedAnomaly(node, _selectedAnomalyId);
+        var m = FindManagedAnomaly(node, _selectedTargetId);
 
         if (m == null)
         {
@@ -383,6 +439,37 @@ public class AnomalyManagePanel : MonoBehaviour
             : $"管理：[{nodeName}] {m.Name}  Lv{m.Level}  管理人数:{mgr}  累计负熵:{m.TotalNegEntropy}";
     }
 
+    private void HandleManageConfirm(string targetId, List<string> agentIds)
+    {
+        var gc = GameController.I;
+        if (gc == null) return;
+
+        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
+        var m = FindManagedAnomaly(node, targetId);
+        if (m == null) return;
+
+        // Write back as a formal Manage task.
+        var mt = gc.CreateManageTask(_nodeId, m.Id);
+        if (mt == null) return;
+
+        // If clearing selection, cancel/retreat the manage task to release occupancy.
+        if (agentIds.Count == 0)
+        {
+            gc.CancelOrRetreatTask(mt.Id);
+        }
+        else
+        {
+            gc.AssignTask(mt.Id, agentIds);
+
+            // Optional: set StartDay for UX (Sim will also set on first yield)
+            if (m.StartDay <= 0) m.StartDay = gc.State.Day;
+        }
+
+        // Update UI
+        RefreshUI();
+        gc.Notify();
+    }
+
     // --------------------
     // Data helpers
     // --------------------
@@ -403,6 +490,60 @@ public class AnomalyManagePanel : MonoBehaviour
 
         // Fallback: any manage task (history)
         return node.Tasks.LastOrDefault(t => t != null && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
+    }
+
+    private static int GetCurrentManagerCount(NodeState node, string anomalyId)
+    {
+        int mgr = 0;
+        var mtForLabel = FindManageTask(node, anomalyId);
+        if (mtForLabel?.AssignedAgentIds != null) mgr = mtForLabel.AssignedAgentIds.Count;
+        return mgr;
+    }
+
+    private void SetListItemLabels(GameObject go, TargetEntry entry)
+    {
+        if (go == null || entry == null) return;
+
+        var labels = go.GetComponentsInChildren<TextMeshProUGUI>(true);
+        if (labels == null || labels.Length == 0) return;
+
+        if (labels.Length == 1)
+        {
+            labels[0].text = entry.title ?? "";
+            return;
+        }
+
+        TextMeshProUGUI titleLabel = null;
+        TextMeshProUGUI subtitleLabel = null;
+
+        foreach (var label in labels)
+        {
+            if (label == null) continue;
+            string name = label.name.ToLowerInvariant();
+            if (titleLabel == null && (name.Contains("title") || name.Contains("name") || name.Contains("label")))
+                titleLabel = label;
+            if (subtitleLabel == null && (name.Contains("sub") || name.Contains("desc") || name.Contains("detail")))
+                subtitleLabel = label;
+        }
+
+        titleLabel ??= labels[0];
+        if (labels.Length > 1 && subtitleLabel == null)
+            subtitleLabel = labels[1];
+
+        if (titleLabel) titleLabel.text = entry.title ?? "";
+        if (subtitleLabel) subtitleLabel.text = entry.subtitle ?? "";
+    }
+
+    private void RefreshTargetSelectionVisuals()
+    {
+        for (int i = 0; i < _anomalyItems.Count; i++)
+        {
+            var go = _anomalyItems[i];
+            if (go == null) continue;
+            string targetId = i < _currentTargets.Count ? _currentTargets[i]?.id : null;
+            bool selected = !string.IsNullOrEmpty(targetId) && targetId == _selectedTargetId;
+            SetListItemSelectedVisual(go, selected);
+        }
     }
 }
 // </EXPORT_BLOCK>
