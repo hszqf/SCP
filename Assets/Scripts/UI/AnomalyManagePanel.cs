@@ -340,6 +340,9 @@ public class AnomalyManagePanel : MonoBehaviour
 
             // Busy check (global): any active task (including Manage) OR legacy management occupancy.
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
+            
+            // Get busy text using BuildAgentBusyText
+            string busyText = Core.Sim.BuildAgentBusyText(gc.State, ag.Id);
 
             // Allow clicking to deselect even if currently busy (soft lock)
             bool isBusyOther = (!selected) && busyTask;
@@ -350,14 +353,15 @@ public class AnomalyManagePanel : MonoBehaviour
             var item = go.GetComponent<AgentPickerItemView>();
             if (item == null) item = go.AddComponent<AgentPickerItemView>();
 
-            // 先全部不选
+            // 先全部不选 - pass busyText to display
             item.Bind(
                 ag.Id,
                 ag.Name,
                 BuildAgentAttrLine(ag),
                 isBusyOther,
                 false,
-                OnAgentClicked);
+                OnAgentClicked,
+                busyText);
 
             // 再按预选集置 true
             if (_selectedAgentIds.Contains(ag.Id))
