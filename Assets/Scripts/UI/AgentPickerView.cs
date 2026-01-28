@@ -113,6 +113,7 @@ public class AgentPickerView : MonoBehaviour
 
         if (!itemPrefab) return;
 
+        var gc = GameController.I;
         foreach (var agent in agents)
         {
             var item = Instantiate(itemPrefab, contentRoot);
@@ -120,6 +121,9 @@ public class AgentPickerView : MonoBehaviour
 
             // 预定占用：即便是当前节点的预选成员，也保持 busy（锁定不可点）。
             bool isBusy = isBusyOtherNode(agent.Id);
+            
+            // Get busy text using BuildAgentBusyText
+            string busyText = (gc != null) ? Sim.BuildAgentBusyText(gc.State, agent.Id) : null;
 
             item.Bind(
                 agent.Id,
@@ -127,7 +131,8 @@ public class AgentPickerView : MonoBehaviour
                 $"Agent {agent.Id}",
                 isBusy,
                 _selected.Contains(agent.Id),
-                OnItemClicked
+                OnItemClicked,
+                busyText
             );
             _items.Add(item);
         }
