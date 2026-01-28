@@ -1,4 +1,4 @@
-// Canvas-maintained file: Core/Sim (v4 - data driven events)
+﻿// Canvas-maintained file: Core/Sim (v4 - data driven events)
 // Source: Assets/Scripts/Core/Sim.cs
 // Goal: Load all game data from DataRegistry and drive events/effects via config.
 // <EXPORT_BLOCK>
@@ -848,27 +848,16 @@ namespace Core
 
             if (task.Type == TaskType.Investigate)
             {
-                if (node.Containables == null) node.Containables = new List<ContainableItem>();
-
+                // 只记录已知 anomalyDefId，不再产出 ContainableItem
                 string anomalyId = GetOrCreateAnomalyForNode(node, registry, rng);
                 var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
                 int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
-
-                // 每完成一次调查，都产出一个可收容目标（支持无限调查）
-                var item = new ContainableItem
-                {
-                    Id = $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}",
-                    Name = anomaly != null ? $"{anomaly.name} 线索（{node.Name}）" : $"未编号异常（{node.Name}）",
-                    Level = level,
-                    AnomalyId = anomalyId,
-                };
-                node.Containables.Add(item);
 
                 // 调查完成不会自动收容
                 node.Status = NodeStatus.Calm;
                 node.HasAnomaly = true;
 
-                s.News.Add($"- {node.Name} 调查完成：新增可收容目标 x1 ({anomalyId})");
+                s.News.Add($"- {node.Name} 调查完成：发现异常 {anomalyId}");
 
                 if (!string.IsNullOrEmpty(task.TargetNewsId) && s.NewsLog != null)
                 {
@@ -919,21 +908,10 @@ namespace Core
             }
             else if (task.Type == TaskType.Contain)
             {
-                // Containment consumes one containable
-                ContainableItem target = null;
-                if (node.Containables != null && node.Containables.Count > 0)
-                {
-                    if (!string.IsNullOrEmpty(task.TargetContainableId))
-                        target = node.Containables.FirstOrDefault(c => c != null && c.Id == task.TargetContainableId);
-
-                    if (target == null)
-                        target = node.Containables[0];
-
-                    if (target != null)
-                        node.Containables.Remove(target);
-                }
-
-                string anomalyId = target?.AnomalyId ?? GetOrCreateAnomalyForNode(node, registry, rng);
+                // 只用 anomalyId 进行收容
+                string anomalyId = !string.IsNullOrEmpty(task.SourceAnomalyId)
+                    ? task.SourceAnomalyId
+                    : GetOrCreateAnomalyForNode(node, registry, rng);
                 var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
                 int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
                 int reward = 200 + 50 * level;
@@ -947,31 +925,10 @@ namespace Core
                 Debug.Log($"[WorldPanic] day={s.Day} source=ContainComplete relief={relief} before={beforePanic:0.##} after={s.WorldPanic:0.##}");
 
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, WorldPanic -{relief}）");
-                // 收容成功：将该可收容目标加入“已收藏异常”（用于后续管理）。
-                {
-                    ContainableItem recordItem = target;
-                    if (recordItem == null)
-                    {
-                        string rid = !string.IsNullOrEmpty(task.TargetContainableId)
-                            ? task.TargetContainableId
-                            : $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}";
+                // 收容成功：将该 anomalyId 加入“已收藏异常”（用于后续管理）。
+                EnsureManagedAnomalyRecorded(node, anomalyId, anomaly);
 
-                        recordItem = new ContainableItem
-                        {
-                            Id = rid,
-                            Name = anomaly != null ? anomaly.name : $"已收容异常（{node.Name}）",
-                            Level = level,
-                            AnomalyId = anomalyId,
-                        };
-
-                        s.News.Add($"- {node.Name} 收容成功：目标信息缺失，已用占位记录写入收藏列表");
-                    }
-
-                    EnsureManagedAnomalyRecorded(node, recordItem, anomaly);
-                }
-
-                // 若已无可收容目标且无进行中的收容任务，则节点可视为“清空异常”。
-                bool hasMoreContainables = node.Containables != null && node.Containables.Count > 0;
+                // 若无进行中的收容任务，则节点可视为“清空异常”。
                 bool hasActiveContainTask = node.Tasks != null && node.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain);
                 bool hasActiveInvestigateWithSquad = node.Tasks != null && node.Tasks.Any(t =>
                     t != null &&
@@ -980,21 +937,15 @@ namespace Core
                     t.AssignedAgentIds != null &&
                     t.AssignedAgentIds.Count > 0);
 
-                if (!hasMoreContainables && !hasActiveContainTask)
+                if (!hasActiveContainTask)
                 {
                     node.HasAnomaly = false;
                     node.ActiveAnomalyIds?.Clear();
                     node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
                 }
-                else
-                {
-                    node.Status = NodeStatus.Calm;
-                    node.HasAnomaly = true;
-                }
             }
-            else if (task.Type == TaskType.Manage)
-            {
-            }
+            node.Status = NodeStatus.Calm;
+            node.HasAnomaly = true;
         }
 
         // =====================
@@ -1043,14 +994,9 @@ namespace Core
 
             if (task.Type == TaskType.Contain)
             {
-                if (node.Containables != null && node.Containables.Count > 0)
-                {
-                    ContainableItem target = null;
-                    if (!string.IsNullOrEmpty(task.TargetContainableId))
-                        target = node.Containables.FirstOrDefault(c => c != null && c.Id == task.TargetContainableId);
-                    target ??= node.Containables.FirstOrDefault(c => c != null);
-                    if (target != null) return target.AnomalyId;
-                }
+                // 直接返回 task.SourceAnomalyId
+                if (!string.IsNullOrEmpty(task.SourceAnomalyId))
+                    return task.SourceAnomalyId;
             }
 
             return node.ActiveAnomalyIds?.FirstOrDefault(id => !string.IsNullOrEmpty(id));
@@ -1152,12 +1098,16 @@ namespace Core
             {
                 if (node == null || node.Tasks == null || node.Tasks.Count == 0) continue;
 
+
                 foreach (var task in node.Tasks)
                 {
                     if (task == null) continue;
                     if (task.State != TaskState.Active) continue;
 
-                    if (!registry.TryGetTaskDefForType(task.Type, out var def)) continue;
+                    // 获取任务定义
+                    if (!registry.TryGetTaskDef(task.Type, out var def) || def == null)
+                        continue;
+                    float yieldPerDay = def.yieldPerDay;
 
                     if (!def.hasYieldKey || !def.hasYieldPerDay)
                     {
@@ -1167,11 +1117,6 @@ namespace Core
                         }
                         continue;
                     }
-
-                    if (string.IsNullOrEmpty(def.yieldKey)) continue;
-
-                    float yieldPerDay = def.yieldPerDay;
-                    if (Math.Abs(yieldPerDay) < 0.0001f) continue;
 
                     switch (def.yieldKey)
                     {
@@ -1218,11 +1163,11 @@ namespace Core
                             break;
                     }
                 }
-            }
 
-            if (yieldedTasks > 0)
-            {
-                Debug.Log($"[TaskYieldSummary] day={s.Day} moneyDelta={moneyDeltaSum} worldPanicDelta={worldPanicDeltaSum:0.##} intelDelta={intelDeltaSum} tasks={yieldedTasks}");
+                if (yieldedTasks > 0)
+                {
+                    Debug.Log($"[TaskYieldSummary] day={s.Day} moneyDelta={moneyDeltaSum} worldPanicDelta={worldPanicDeltaSum:0.##} intelDelta={intelDeltaSum} tasks={yieldedTasks}");
+                }
             }
         }
 
@@ -1246,26 +1191,25 @@ namespace Core
             return Math.Max(1, baseYield + bonus + noise);
         }
 
-        static void EnsureManagedAnomalyRecorded(NodeState node, ContainableItem item, AnomalyDef anomaly)
+        static void EnsureManagedAnomalyRecorded(NodeState node, string anomalyId, AnomalyDef anomaly)
         {
             if (node.ManagedAnomalies == null) node.ManagedAnomalies = new List<ManagedAnomalyState>();
-            if (item == null) return;
+            if (string.IsNullOrEmpty(anomalyId)) return;
 
-            var existing = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.Id == item.Id);
+            var existing = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyId == anomalyId);
             if (existing != null)
             {
-                existing.Level = Math.Max(existing.Level, item.Level);
-                if (!string.IsNullOrEmpty(item.AnomalyId)) existing.AnomalyId = item.AnomalyId;
+                existing.Level = Math.Max(existing.Level, anomaly?.baseThreat ?? 1);
                 if (!string.IsNullOrEmpty(anomaly?.@class)) existing.AnomalyClass = anomaly.@class;
                 return;
             }
 
             node.ManagedAnomalies.Add(new ManagedAnomalyState
             {
-                Id = item.Id,
-                Name = item.Name,
-                Level = Math.Max(1, item.Level),
-                AnomalyId = item.AnomalyId,
+                Id = $"MANAGED_{anomalyId}_{Guid.NewGuid().ToString("N")[..6]}",
+                Name = anomaly != null ? anomaly.name : $"已收容异常（{node.Name}）",
+                Level = Math.Max(1, anomaly?.baseThreat ?? 1),
+                AnomalyId = anomalyId,
                 AnomalyClass = anomaly?.@class,
                 Favorited = true,
                 StartDay = 0,
@@ -1343,7 +1287,9 @@ namespace Core
         // Math helpers
         // =====================
 
-        static float Clamp01(float v) => Mathf.Clamp01(v);
+        static float Clamp01(float v)
+        {
+            return Mathf.Clamp01(v);
+        }
     }
 }
-// </EXPORT_BLOCK>

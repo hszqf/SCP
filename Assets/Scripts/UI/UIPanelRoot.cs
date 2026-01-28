@@ -366,22 +366,10 @@ public class UIPanelRoot : MonoBehaviour
     private string EnsureContainableForAnomaly(NodeState node, DataRegistry registry, string anomalyId)
     {
         if (node == null || string.IsNullOrEmpty(anomalyId)) return null;
-        if (node.Containables == null) node.Containables = new List<ContainableItem>();
-
-        var existing = node.Containables.FirstOrDefault(c => c != null && c.AnomalyId == anomalyId);
-        if (existing != null) return existing.Id;
-
-        var def = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
-        int level = def != null ? Math.Max(1, def.baseThreat) : Math.Max(1, node.AnomalyLevel);
-        var item = new ContainableItem
-        {
-            Id = $"SCP_{node.Id}_{Guid.NewGuid().ToString("N")[..6]}",
-            Name = def != null ? $"{def.name} 线索（{node.Name}）" : $"未编号异常（{node.Name}）",
-            Level = level,
-            AnomalyId = anomalyId,
-        };
-        node.Containables.Add(item);
-        return item.Id;
+        node.KnownAnomalyDefIds ??= new List<string>();
+        if (!node.KnownAnomalyDefIds.Contains(anomalyId))
+            node.KnownAnomalyDefIds.Add(anomalyId);
+        return anomalyId;
     }
 
     // ================== MANAGE PANEL ==================
@@ -561,23 +549,22 @@ public class UIPanelRoot : MonoBehaviour
     // Pick a containable that is not already targeted by an active containment task when possible.
     string PickNextContainableId(NodeState node)
     {
-        if (node == null || node.Containables == null || node.Containables.Count == 0) return null;
+        if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return null;
 
         var activeTargets = (node.Tasks == null)
             ? new HashSet<string>()
             : new HashSet<string>(node.Tasks
                 .Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain)
-                .Select(t => t.TargetContainableId)
+                .Select(t => t.SourceAnomalyId)
                 .Where(x => !string.IsNullOrEmpty(x)));
 
-        foreach (var c in node.Containables)
+        foreach (var defId in node.KnownAnomalyDefIds)
         {
-            if (c == null) continue;
-            if (!activeTargets.Contains(c.Id)) return c.Id;
+            if (!activeTargets.Contains(defId)) return defId;
         }
 
-        // Fallback: allow multiple tasks for same containable if all are already targeted.
-        return node.Containables[0].Id;
+        // Fallback: allow multiple tasks for same anomaly if all are already targeted.
+        return node.KnownAnomalyDefIds[0];
     }
 }
 // </EXPORT_BLOCK>

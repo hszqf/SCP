@@ -229,12 +229,14 @@ public class GameController : MonoBehaviour
     {
         var n = GetNode(nodeId);
         if (n == null) return null;
-        if (n.Containables == null || n.Containables.Count == 0) return null;
+        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return null;
 
         // Validate target; fallback to first
         string target = containableId;
-        if (string.IsNullOrEmpty(target) || !n.Containables.Any(c => c != null && c.Id == target))
-            target = n.Containables[0].Id;
+        if (string.IsNullOrEmpty(target))
+            target = n.KnownAnomalyDefIds[0];
+        else if (!n.KnownAnomalyDefIds.Contains(target))
+            return null;
 
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();
 
@@ -245,7 +247,7 @@ public class GameController : MonoBehaviour
             State = TaskState.Active,
             CreatedDay = State.Day,
             Progress = 0f,
-            TargetContainableId = target,
+            SourceAnomalyId = target,
         };
         WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
@@ -397,10 +399,10 @@ public class GameController : MonoBehaviour
     {
         var n = GetNode(nodeId);
         if (n == null) return;
-        if (n.Containables == null || n.Containables.Count == 0) return;
+        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return;
 
-        // Legacy: default to first containable
-        var t = CreateContainTask(nodeId, n.Containables[0].Id);
+        // Use first known anomaly as default
+        var t = CreateContainTask(nodeId, n.KnownAnomalyDefIds[0]);
         if (t == null) return;
         AssignTask(t.Id, agentIds);
     }
@@ -513,7 +515,7 @@ public static class GameControllerTaskExt
         // 收容前置：必须有调查产出的可收容目标
         if (type == TaskType.Contain)
         {
-            int c = (n.Containables != null) ? n.Containables.Count : 0;
+            int c = (n.KnownAnomalyDefIds != null) ? n.KnownAnomalyDefIds.Count : 0;
             if (c <= 0)
                 return AssignResult.Fail("未发现可收容目标：请先派遣调查完成后再进行收容");
         }
@@ -531,8 +533,8 @@ public static class GameControllerTaskExt
                 current = gc.CreateInvestigateTask(nodeId);
             else
             {
-                // default to first containable
-                string target = n.Containables[0].Id;
+                // default to first known anomaly
+                string target = (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Count > 0) ? n.KnownAnomalyDefIds[0] : null;
                 current = gc.CreateContainTask(nodeId, target);
             }
         }
@@ -542,11 +544,11 @@ public static class GameControllerTaskExt
         // Validate containment target still exists
         if (type == TaskType.Contain)
         {
-            if (n.Containables == null || n.Containables.Count == 0)
+            if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0)
                 return AssignResult.Fail("可收容目标已为空");
 
-            if (string.IsNullOrEmpty(current.TargetContainableId) || !n.Containables.Any(c => c != null && c.Id == current.TargetContainableId))
-                current.TargetContainableId = n.Containables[0].Id;
+            if (string.IsNullOrEmpty(current.SourceAnomalyId) || !n.KnownAnomalyDefIds.Contains(current.SourceAnomalyId))
+                current.SourceAnomalyId = n.KnownAnomalyDefIds[0];
         }
 
         // Enforce "no repick" per task

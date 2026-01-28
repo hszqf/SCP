@@ -32,14 +32,6 @@ namespace Core
         public int Power = 5;
     }
 
-    [Serializable]
-    public class ContainableItem
-    {
-        public string Id;
-        public string Name;
-        public int Level = 1;
-        public string AnomalyId;
-    }
 
     // 收容后进入“已收藏异常”，可被分配干员进行长期管理，按天产出负熵。
     [Serializable]
@@ -114,7 +106,7 @@ namespace Core
         public List<string> KnownAnomalyDefIds = new();
 
         // 调查产出：可收容目标列表（调查完成后写入）
-        public List<ContainableItem> Containables = new();
+        // public List<ContainableItem> Containables = new(); // 已移除
         // 收容产出：已收容目标列表（收容完成后写入）
         public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
 

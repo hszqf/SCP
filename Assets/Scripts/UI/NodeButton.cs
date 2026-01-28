@@ -2,6 +2,7 @@
 // Source: Assets/Scripts/UI/NodeButton.cs
 // N-task model compatible: summarizes active investigate/contain tasks from node.Tasks.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Core;
@@ -102,9 +103,32 @@ public class NodeButton : MonoBehaviour
                         sb.Append($" <color=#00FFFF>(+{con.Count - 1})</color>");
                 }
 
-                int containables = (node.Containables != null) ? node.Containables.Count : 0;
-                if (con.Count == 0 && containables > 0)
-                    sb.Append($"\n<color=#00FFFF>可收容 {containables}</color>");
+                var known = node.KnownAnomalyDefIds ?? new List<string>();
+                var contained = node.ManagedAnomalies != null
+                    ? node.ManagedAnomalies.Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
+                        .Select(m => m.AnomalyId)
+                        .ToList()
+                    : new List<string>();
+
+                var inProgressDefIds = new HashSet<string>(tasks
+                    .Where(t => t != null && t.State == TaskState.Active &&
+                                (t.Type == TaskType.Contain || t.Type == TaskType.Manage) &&
+                                !string.IsNullOrEmpty(t.SourceAnomalyId))
+                    .Select(t => t.SourceAnomalyId));
+
+                int containableCount = known
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Except(contained.Where(id => !string.IsNullOrEmpty(id)))
+                    .Except(inProgressDefIds)
+                    .Count();
+
+                int managingCount = inProgressDefIds.Count;
+
+                if (con.Count == 0 && containableCount > 0)
+                    sb.Append($"\n<color=#00FFFF>可收容 {containableCount}</color>");
+
+                if (managingCount > 0)
+                    sb.Append($"\n<color=#00FFFF>管理中 {managingCount}</color>");
 
                 // 3) Squad count (sum of active task squads, distinct)
                 int busy = tasks

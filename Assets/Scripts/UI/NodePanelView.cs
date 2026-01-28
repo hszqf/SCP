@@ -88,6 +88,13 @@ public class NodePanelView : MonoBehaviour
     private string _invTaskId;
     private string _conTaskId;
 
+
+    // Track if contain button is disabled and why
+    private bool _containDisabledForNoAnomalies = false;
+    // Track current containables state for guard checks
+    // Track last statusText for hint reset
+    private string _lastStatusText = null;
+
     private const float EPS = 0.0001f;
 
     public void Init(Action onInvestigate, Action onContain, Action onClose)
@@ -193,12 +200,29 @@ public class NodePanelView : MonoBehaviour
 
         if (titleText) titleText.text = n.Name;
 
+
         string s = $"{n.Status}";
         if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
         if (n.HasPendingEvent) s += " <color=#FFA500>[ATTENTION]</color>";
+
+        // 记录原始状态文本
+        _lastStatusText = s;
+
+
+        // 统一口径：可收容 = 已发现 - 已收容
+        int containableCount = GetContainableCount(n);
+        bool hasContainables = containableCount > 0;
+
+        UpdateDispatchButtons(n, containableCount, hasContainables);
+
+        // Add hint if contain button is disabled due to no anomalies
+        if (_containDisabledForNoAnomalies)
+        {
+            s += " <color=#FFAA00>[请先调查发现异常]</color>";
+        }
+
         if (statusText) statusText.text = s;
 
-        UpdateDispatchButtons(n);
         UpdateManageButton(n);
 
         int pendingEvents = n.HasPendingEvent ? n.PendingEvents.Count : 0;
@@ -219,7 +243,7 @@ public class NodePanelView : MonoBehaviour
             int invActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate) ?? 0;
             int conActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain) ?? 0;
             int manActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage) ?? 0;
-            int containables = n.Containables?.Count ?? 0;
+            int containables = GetContainableCount(n);
 
             int busy = 0;
             if (n.Tasks != null)
@@ -333,7 +357,7 @@ public class NodePanelView : MonoBehaviour
         _invTaskId = invMain?.Id;
         _conTaskId = conMain?.Id;
 
-        int containablesCount = node.Containables?.Count ?? 0;
+        int containablesCount = GetContainableCount(node);
 
         // Investigate card
         if (_invStatus)
@@ -387,21 +411,14 @@ public class NodePanelView : MonoBehaviour
             {
                 int c = (conMain.AssignedAgentIds != null) ? conMain.AssignedAgentIds.Count : 0;
 
-                string targetName = "";
-                if (node.Containables != null && node.Containables.Count > 0)
-                {
-                    var target = node.Containables.FirstOrDefault(x => x != null && x.Id == conMain.TargetContainableId)
-                                 ?? node.Containables[0];
-                    targetName = target?.Name ?? "";
-                }
-
+                string targetName = ResolveContainableName(node, conMain.SourceAnomalyId);
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? $"人员：{c}人"
                     : $"目标：{targetName}\n人员：{c}人";
             }
             else if (containablesCount > 0)
             {
-                string targetName = node.Containables[0]?.Name ?? "";
+                string targetName = ResolveContainableName(node, null);
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? "目标：可收容\n人员：0人"
                     : $"目标：{targetName}\n人员：0人";
@@ -719,15 +736,39 @@ public class NodePanelView : MonoBehaviour
         };
     }
 
+    private static int GetContainableCount(NodeState node)
+    {
+        if (node?.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return 0;
+
+        HashSet<string> contained = null;
+        if (node.ManagedAnomalies != null && node.ManagedAnomalies.Count > 0)
+        {
+            contained = new HashSet<string>(node.ManagedAnomalies
+                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
+                .Select(m => m.AnomalyId));
+        }
+
+        int count = 0;
+        foreach (var defId in node.KnownAnomalyDefIds)
+        {
+            if (string.IsNullOrEmpty(defId)) continue;
+            if (contained != null && contained.Contains(defId)) continue;
+            count += 1;
+        }
+        return count;
+    }
+
     private static string ResolveContainableName(NodeState node, string containableId)
     {
-        if (node == null || node.Containables == null || node.Containables.Count == 0) return "";
-        if (!string.IsNullOrEmpty(containableId))
-        {
-            var c = node.Containables.FirstOrDefault(x => x != null && x.Id == containableId);
-            if (c != null) return c.Name ?? "";
-        }
-        return node.Containables[0]?.Name ?? "";
+        if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return "";
+        var registry = DataRegistry.Instance;
+        string defId = containableId;
+        if (string.IsNullOrEmpty(defId))
+            defId = node.KnownAnomalyDefIds[0];
+        if (string.IsNullOrEmpty(defId)) return "";
+        if (registry.AnomaliesById.TryGetValue(defId, out var def) && def != null)
+            return def.name;
+        return defId;
     }
 
     private static string ResolveManagedAnomalyName(NodeState node, string managedAnomalyId)
@@ -800,7 +841,7 @@ public class NodePanelView : MonoBehaviour
     // Dispatch buttons
     // ----------------------
 
-    private void UpdateDispatchButtons(NodeState n)
+    private void UpdateDispatchButtons(NodeState n, int containableCount, bool hasContainables)
     {
         if (n == null) return;
 
@@ -808,13 +849,16 @@ public class NodePanelView : MonoBehaviour
         // - Investigate: can be initiated freely.
         // - Contain: requires discovered containables.
 
-        bool hasContainables = (n.Containables != null && n.Containables.Count > 0);
-
         bool canInvestigate = true; // 调查随时可发起
         bool canContain = n.Status != NodeStatus.Secured && hasContainables; // 收容必须有可收容物
 
+        _containDisabledForNoAnomalies = !hasContainables && n.Status != NodeStatus.Secured;
+
+
         if (investigateButton) investigateButton.interactable = canInvestigate;
-        if (containButton) containButton.interactable = canContain;
+        if (containButton) containButton.interactable = canContain && hasContainables;
+
+        Debug.Log($"[NodePanelContainGate] nodeId={_nodeId} containableCount={containableCount} hasContainables={hasContainables} canContain={canContain} btn={(containButton ? containButton.interactable : false)}");
     }
 
     private void UpdateManageButton(NodeState n)

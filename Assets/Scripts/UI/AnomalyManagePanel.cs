@@ -82,10 +82,12 @@ public class AnomalyManagePanel : MonoBehaviour
         _nodeId = root != null ? root.ManageNodeId : null;
         // IMPORTANT: do not auto RefreshUI here.
         // This panel is reused for Investigate/Contain assignment and auto-refresh would rebuild Manage mode & spam logs.
+        // Only RefreshUI will be called by explicit Show() calls.
     }
 
     public void Show()
     {
+        ClearSelectionState();
         _mode = AssignPanelMode.Manage;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
@@ -95,6 +97,7 @@ public class AnomalyManagePanel : MonoBehaviour
     // Optional explicit node binding (recommended if you call panel directly)
     public void Show(string nodeId)
     {
+        ClearSelectionState();
         ShowForNode(nodeId);
     }
 
@@ -106,6 +109,7 @@ public class AnomalyManagePanel : MonoBehaviour
 
     public void ShowForNode(string nodeId)
     {
+        ClearSelectionState();
         _mode = AssignPanelMode.Manage;
         _nodeId = nodeId;
         gameObject.SetActive(true);
@@ -119,6 +123,7 @@ public class AnomalyManagePanel : MonoBehaviour
 
     public void RefreshUI()
     {
+        // Only refresh in Manage mode; other modes use ShowGenericInternal
         if (_mode != AssignPanelMode.Manage) return;
 
         var gc = GameController.I;
@@ -194,6 +199,7 @@ public class AnomalyManagePanel : MonoBehaviour
         Action<string, List<string>> onConfirm,
         string modeLabel)
     {
+        ClearSelectionState();
         _mode = modeLabel == "Manage" ? AssignPanelMode.Manage : AssignPanelMode.Generic;
         _onConfirm = onConfirm;
         _slotsMin = agentSlotsMin;
@@ -209,8 +215,14 @@ public class AnomalyManagePanel : MonoBehaviour
         RebuildTargetList(safeTargets);
         RebuildAgentList();
         RefreshConfirmState();
-        if (confirmButton) confirmButton.interactable = confirmButton.interactable && safeTargets.Count > 0;
 
+        // Disable confirm if no targets available (targets=0 must disable Confirm)
+        if (confirmButton)
+        {
+            confirmButton.interactable = (safeTargets.Count > 0) && confirmButton.interactable;
+        }
+
+        // Log assignment panel state (Investigate/Contain should not trigger this repeatedly)
         Debug.Log($"[AssignPanel] mode={modeLabel} targets={safeTargets.Count} slots={_slotsMin}-{_slotsMax}");
     }
 
@@ -323,7 +335,8 @@ public class AnomalyManagePanel : MonoBehaviour
         {
             if (ag == null) continue;
 
-            bool selected = _selectedAgentIds.Contains(ag.Id);
+            // 先全部不选，避免池化残留
+            bool selected = false;
 
             // Busy check (global): any active task (including Manage) OR legacy management occupancy.
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
@@ -337,13 +350,18 @@ public class AnomalyManagePanel : MonoBehaviour
             var item = go.GetComponent<AgentPickerItemView>();
             if (item == null) item = go.AddComponent<AgentPickerItemView>();
 
+            // 先全部不选
             item.Bind(
                 ag.Id,
                 ag.Name,
                 BuildAgentAttrLine(ag),
                 isBusyOther,
-                selected,
+                false,
                 OnAgentClicked);
+
+            // 再按预选集置 true
+            if (_selectedAgentIds.Contains(ag.Id))
+                item.SetSelected(true);
 
             _agentItems.Add(item);
         }
@@ -552,5 +570,27 @@ public class AnomalyManagePanel : MonoBehaviour
             SetListItemSelectedVisual(go, selected);
         }
     }
+
+    // 清空所有选中状态（agent/target/缓存）
+    private void ClearSelectionState()
+    {
+        _selectedAgentIds.Clear();
+        _selectedTargetId = null;
+        // 清空 agent item 选中
+        foreach (var item in _agentItems)
+        {
+            if (item != null) item.SetSelected(false);
+        }
+        // 清空 target item 选中
+        for (int i = 0; i < _anomalyItems.Count; i++)
+        {
+            var go = _anomalyItems[i];
+            if (go == null) continue;
+            SetListItemSelectedVisual(go, false);
+        }
+    }
+
+
+
 }
 // </EXPORT_BLOCK>
