@@ -1319,12 +1319,12 @@ namespace Core
                                 // Has a specific news target
                                 var newsDef = registry?.GetNewsDefById(task.TargetNewsId);
                                 string newsTitle = newsDef?.title ?? task.TargetNewsId;
-                                busyText = $"在{node.Id}调查《{newsTitle}》";
+                                busyText = $"在{node.Name}调查《{newsTitle}》";
                             }
                             else
                             {
                                 // Generic investigation
-                                busyText = $"在{node.Id}随意调查";
+                                busyText = $"在{node.Name}随意调查";
                             }
                             break;
 
@@ -1340,7 +1340,7 @@ namespace Core
                                         anomalyName = anomalyDef.name;
                                     }
                                 }
-                                busyText = $"在{node.Id}收容 {anomalyName}";
+                                busyText = $"在{node.Name}收容 {anomalyName}";
                             }
                             break;
 
@@ -1363,13 +1363,22 @@ namespace Core
                                         anomalyName = anomalyDef.name;
                                     }
                                 }
-                                busyText = $"在{node.Id}管理 {anomalyName}";
+                                busyText = $"在{node.Name}管理 {anomalyName}";
                             }
+                            break;
+
+                        default:
+                            Debug.LogWarning($"[AgentBusy] Unhandled task type: {task.Type} for agent {agentId}");
+                            busyText = $"在{node.Name}执行任务";
                             break;
                     }
 
-                    // Debug log
-                    Debug.Log($"[AgentBusy] agent={agentId} task={task.Id} text={busyText}");
+                    // Optional debug log (only when agent is busy)
+                    if (!string.IsNullOrEmpty(busyText))
+                    {
+                        Debug.Log($"[AgentBusy] agent={agentId} task={task.Id} text={busyText}");
+                    }
+
                     return busyText;
                 }
             }
