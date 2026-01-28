@@ -241,22 +241,20 @@ public class UIPanelRoot : MonoBehaviour
             return;
         }
 
-        if (node.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0)
-        {
-            ShowInfo("派遣失败", "未发现可收容目标：该节点暂无异常");
-            return;
-        }
-
         var registry = DataRegistry.Instance;
         var targets = BuildContainTargets(node, registry);
         var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Contain, 1, int.MaxValue);
+
+        string hint = targets.Count == 0
+            ? "无已确认异常：请先调查（随意或针对新闻）以发现异常"
+            : "选择要收容的异常并派遣干员";
 
         _manageNodeId = _currentNodeId;
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
         _managePanelView.ShowGeneric(
             header: $"Contain | {_currentNodeId}",
-            hint: "选择要收容的异常并派遣干员",
+            hint: hint,
             targets: targets,
             agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
@@ -339,11 +337,17 @@ public class UIPanelRoot : MonoBehaviour
     private List<AnomalyManagePanel.TargetEntry> BuildContainTargets(NodeState node, DataRegistry registry)
     {
         var targets = new List<AnomalyManagePanel.TargetEntry>();
-        if (node.ActiveAnomalyIds == null) return targets;
+        var known = node?.KnownAnomalyDefIds;
+        if (known == null || known.Count == 0) return targets;
 
-        foreach (var anomalyId in node.ActiveAnomalyIds)
+        // Use intersection: Known ∩ ActiveAnomalyIds (to avoid containing anomalies that have disappeared)
+        var activeSet = new HashSet<string>(node.ActiveAnomalyIds ?? new List<string>());
+
+        foreach (var anomalyId in known)
         {
             if (string.IsNullOrEmpty(anomalyId)) continue;
+            if (!activeSet.Contains(anomalyId)) continue;  // Only include if still active
+
             var def = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
             string title = def?.name ?? anomalyId;
 

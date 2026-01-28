@@ -110,6 +110,8 @@ namespace Core
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
         public List<string> ActiveAnomalyIds = new();
+        // 已发现/已知异常（Investigate 完成后写入）；口径为 anomalyDefId（如 AN_002）
+        public List<string> KnownAnomalyDefIds = new();
 
         // 调查产出：可收容目标列表（调查完成后写入）
         public List<ContainableItem> Containables = new();

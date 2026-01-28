@@ -880,6 +880,42 @@ namespace Core
                         Debug.Log($"[NewsResolve] day={s.Day} newsId={news.Id} nodeId={news.NodeId} anomalyId={news.SourceAnomalyId} resolved=1");
                     }
                 }
+
+                // ===== Anomaly Discovery Logic =====
+                const float discoverP = 0.35f;
+                string discovered = null;
+
+                // A) via News (guaranteed)
+                if (!string.IsNullOrEmpty(task.TargetNewsId))
+                {
+                    var news = s.NewsLog?.FirstOrDefault(x => x != null && x.Id == task.TargetNewsId);
+                    if (news != null && !string.IsNullOrEmpty(news.SourceAnomalyId))
+                    {
+                        discovered = news.SourceAnomalyId;
+                        bool added = AddKnown(node, discovered);
+                        Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={discovered} via=News newsId={news.Id} added={(added ? 1 : 0)}");
+                    }
+                }
+
+                // B) random investigate
+                if (string.IsNullOrEmpty(discovered))
+                {
+                    var pool = node.ActiveAnomalyIds?.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+                    if (pool != null && pool.Count > 0)
+                    {
+                        double roll = rng.NextDouble();
+                        if (roll <= discoverP)
+                        {
+                            string pick = pool[rng.Next(pool.Count)];
+                            bool added = AddKnown(node, pick);
+                            Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={pick} via=RandomInvestigate roll={roll:0.00} p={discoverP:0.00} added={(added ? 1 : 0)}");
+                        }
+                        else
+                        {
+                            Debug.Log($"[AnomalyDiscoverCheck] day={s.Day} nodeId={node.Id} via=RandomInvestigate roll={roll:0.00} p={discoverP:0.00} discovered=0");
+                        }
+                    }
+                }
             }
             else if (task.Type == TaskType.Contain)
             {
@@ -1140,40 +1176,40 @@ namespace Core
                     switch (def.yieldKey)
                     {
                         case "Money":
-                        {
-                            int delta = Mathf.RoundToInt(yieldPerDay);
-                            if (delta == 0) continue;
-                            int before = s.Money;
-                            s.Money = before + delta;
-                            int after = s.Money;
-                            moneyDeltaSum += delta;
-                            yieldedTasks++;
-                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Money delta={delta} before={before} after={after}");
-                            break;
-                        }
+                            {
+                                int delta = Mathf.RoundToInt(yieldPerDay);
+                                if (delta == 0) continue;
+                                int before = s.Money;
+                                s.Money = before + delta;
+                                int after = s.Money;
+                                moneyDeltaSum += delta;
+                                yieldedTasks++;
+                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Money delta={delta} before={before} after={after}");
+                                break;
+                            }
                         case "WorldPanic":
-                        {
-                            float delta = yieldPerDay;
-                            float before = s.WorldPanic;
-                            s.WorldPanic = before + delta;
-                            float after = s.WorldPanic;
-                            worldPanicDeltaSum += delta;
-                            yieldedTasks++;
-                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=WorldPanic delta={delta:0.##} before={before:0.##} after={after:0.##}");
-                            break;
-                        }
+                            {
+                                float delta = yieldPerDay;
+                                float before = s.WorldPanic;
+                                s.WorldPanic = before + delta;
+                                float after = s.WorldPanic;
+                                worldPanicDeltaSum += delta;
+                                yieldedTasks++;
+                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=WorldPanic delta={delta:0.##} before={before:0.##} after={after:0.##}");
+                                break;
+                            }
                         case "Intel":
-                        {
-                            int delta = Mathf.RoundToInt(yieldPerDay);
-                            if (delta == 0) continue;
-                            int before = s.Intel;
-                            s.Intel = before + delta;
-                            int after = s.Intel;
-                            intelDeltaSum += delta;
-                            yieldedTasks++;
-                            Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Intel delta={delta} before={before} after={after}");
-                            break;
-                        }
+                            {
+                                int delta = Mathf.RoundToInt(yieldPerDay);
+                                if (delta == 0) continue;
+                                int before = s.Intel;
+                                s.Intel = before + delta;
+                                int after = s.Intel;
+                                intelDeltaSum += delta;
+                                yieldedTasks++;
+                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Intel delta={delta} before={before} after={after}");
+                                break;
+                            }
                         default:
                             if (WarnedUnknownYieldKey.Add(task.Type))
                             {
@@ -1288,6 +1324,19 @@ namespace Core
             if (all.Count == 0) return null;
             int idx = rng.Next(all.Count);
             return all[idx];
+        }
+
+        // =====================
+        // Anomaly discovery helper
+        // =====================
+
+        private static bool AddKnown(NodeState node, string anomalyDefId)
+        {
+            if (node == null || string.IsNullOrEmpty(anomalyDefId)) return false;
+            node.KnownAnomalyDefIds ??= new List<string>();
+            if (node.KnownAnomalyDefIds.Contains(anomalyDefId)) return false;
+            node.KnownAnomalyDefIds.Add(anomalyDefId);
+            return true;
         }
 
         // =====================

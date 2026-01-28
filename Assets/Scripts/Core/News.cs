@@ -9,6 +9,12 @@ namespace Core
         public string NewsDefId;
         public string NodeId;
         public string SourceAnomalyId;
+        // NOTE: SourceAnomalyId is anomalyDefId (e.g., AN_002)
+        public string SourceAnomalyDefId
+        {
+            get => SourceAnomalyId;
+            set => SourceAnomalyId = value;
+        }
         public string CauseType;
         public int AgeDays;
         public bool IsResolved;

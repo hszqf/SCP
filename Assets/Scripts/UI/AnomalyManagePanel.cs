@@ -80,11 +80,13 @@ public class AnomalyManagePanel : MonoBehaviour
     {
         var root = UIPanelRoot.I;
         _nodeId = root != null ? root.ManageNodeId : null;
-        RefreshUI();
+        // IMPORTANT: do not auto RefreshUI here.
+        // This panel is reused for Investigate/Contain assignment and auto-refresh would rebuild Manage mode & spam logs.
     }
 
     public void Show()
     {
+        _mode = AssignPanelMode.Manage;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
         RefreshUI();
@@ -104,6 +106,7 @@ public class AnomalyManagePanel : MonoBehaviour
 
     public void ShowForNode(string nodeId)
     {
+        _mode = AssignPanelMode.Manage;
         _nodeId = nodeId;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
@@ -116,6 +119,8 @@ public class AnomalyManagePanel : MonoBehaviour
 
     public void RefreshUI()
     {
+        if (_mode != AssignPanelMode.Manage) return;
+
         var gc = GameController.I;
         if (gc == null) return;
         var registry = DataRegistry.Instance;
@@ -204,6 +209,7 @@ public class AnomalyManagePanel : MonoBehaviour
         RebuildTargetList(safeTargets);
         RebuildAgentList();
         RefreshConfirmState();
+        if (confirmButton) confirmButton.interactable = confirmButton.interactable && safeTargets.Count > 0;
 
         Debug.Log($"[AssignPanel] mode={modeLabel} targets={safeTargets.Count} slots={_slotsMin}-{_slotsMax}");
     }
