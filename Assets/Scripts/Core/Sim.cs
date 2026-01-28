@@ -1284,6 +1284,101 @@ namespace Core
         }
 
         // =====================
+        // Agent Busy Text
+        // =====================
+
+        /// <summary>
+        /// Builds a descriptive text for what an agent is currently doing.
+        /// Returns empty string if the agent is idle (not assigned to any active task).
+        /// </summary>
+        public static string BuildAgentBusyText(GameState state, string agentId)
+        {
+            if (state?.Nodes == null || string.IsNullOrEmpty(agentId))
+                return string.Empty;
+
+            var registry = DataRegistry.Instance;
+
+            // Traverse all nodes and tasks to find where this agent is assigned
+            foreach (var node in state.Nodes)
+            {
+                if (node?.Tasks == null) continue;
+
+                foreach (var task in node.Tasks)
+                {
+                    if (task == null || task.State != TaskState.Active) continue;
+                    if (task.AssignedAgentIds == null || !task.AssignedAgentIds.Contains(agentId)) continue;
+
+                    // Found the task this agent is working on
+                    string busyText = string.Empty;
+
+                    switch (task.Type)
+                    {
+                        case TaskType.Investigate:
+                            if (!string.IsNullOrEmpty(task.TargetNewsId))
+                            {
+                                // Has a specific news target
+                                var newsDef = registry?.GetNewsDefById(task.TargetNewsId);
+                                string newsTitle = newsDef?.title ?? task.TargetNewsId;
+                                busyText = $"在{node.Id}调查《{newsTitle}》";
+                            }
+                            else
+                            {
+                                // Generic investigation
+                                busyText = $"在{node.Id}随意调查";
+                            }
+                            break;
+
+                        case TaskType.Contain:
+                            {
+                                // Get anomaly name from SourceAnomalyId or TargetContainableId
+                                string anomalyId = task.SourceAnomalyId ?? task.TargetContainableId;
+                                string anomalyName = anomalyId;
+                                if (!string.IsNullOrEmpty(anomalyId) && registry?.AnomaliesById != null)
+                                {
+                                    if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
+                                    {
+                                        anomalyName = anomalyDef.name;
+                                    }
+                                }
+                                busyText = $"在{node.Id}收容 {anomalyName}";
+                            }
+                            break;
+
+                        case TaskType.Manage:
+                            {
+                                // Get managed anomaly name
+                                string anomalyId = task.TargetManagedAnomalyId;
+                                string anomalyName = anomalyId;
+                                
+                                // Try to find the managed anomaly to get its name
+                                if (!string.IsNullOrEmpty(anomalyId) && node.ManagedAnomalies != null)
+                                {
+                                    var managed = node.ManagedAnomalies.FirstOrDefault(m => m.Id == anomalyId);
+                                    if (managed != null)
+                                    {
+                                        anomalyName = managed.Name;
+                                    }
+                                    else if (registry?.AnomaliesById != null && registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
+                                    {
+                                        anomalyName = anomalyDef.name;
+                                    }
+                                }
+                                busyText = $"在{node.Id}管理 {anomalyName}";
+                            }
+                            break;
+                    }
+
+                    // Debug log
+                    Debug.Log($"[AgentBusy] agent={agentId} task={task.Id} text={busyText}");
+                    return busyText;
+                }
+            }
+
+            // Agent not found in any active task - idle
+            return string.Empty;
+        }
+
+        // =====================
         // Math helpers
         // =====================
 
