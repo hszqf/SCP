@@ -601,5 +601,100 @@ public static class GameControllerTaskExt
         var list = string.Join(",", busy.OrderBy(x => x));
         Debug.Log($"[BusySnapshot] {context} => count={busy.Count} ids=[{list}]");
     }
+
+    /// <summary>
+    /// 构建 Agent 的 Busy 文案（纯函数）。
+    /// 遍历所有活跃任务，找到包含该 agentId 的任务，按任务类型返回对应文案。
+    /// 如果找不到任务则返回空字符串（表示 Idle）。
+    /// </summary>
+    public static string BuildAgentBusyText(GameController gc, string agentId)
+    {
+        if (gc == null || gc.State?.Nodes == null || string.IsNullOrEmpty(agentId))
+            return "";
+
+        var registry = Data.DataRegistry.Instance;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.Tasks == null) continue;
+            
+            foreach (var task in node.Tasks)
+            {
+                if (task == null || task.State != TaskState.Active) continue;
+                if (task.AssignedAgentIds == null || !task.AssignedAgentIds.Contains(agentId)) continue;
+
+                // Found the task containing this agent
+                string nodeId = node.Id;
+                string text = "";
+
+                switch (task.Type)
+                {
+                    case TaskType.Investigate:
+                        if (!string.IsNullOrEmpty(task.TargetNewsId))
+                        {
+                            // Get news title from NewsLog
+                            var newsInstance = gc.State.NewsLog?.FirstOrDefault(n => n != null && n.Id == task.TargetNewsId);
+                            if (newsInstance != null)
+                            {
+                                var newsDef = registry?.GetNewsDefById(newsInstance.NewsDefId);
+                                string newsTitle = newsDef?.title ?? newsInstance.NewsDefId;
+                                text = $"在{nodeId}调查《{newsTitle}》";
+                            }
+                            else
+                            {
+                                // Fallback if news not found
+                                text = $"在{nodeId}调查";
+                            }
+                        }
+                        else
+                        {
+                            text = $"在{nodeId}随意调查";
+                        }
+                        break;
+
+                    case TaskType.Contain:
+                        {
+                            string anomalyId = task.SourceAnomalyId;
+                            if (!string.IsNullOrEmpty(anomalyId))
+                            {
+                                var anomalyDef = registry?.AnomaliesById?.GetValueOrDefault(anomalyId);
+                                string anomalyName = anomalyDef?.name ?? anomalyId;
+                                text = $"在{nodeId}收容 {anomalyName}";
+                            }
+                            else
+                            {
+                                text = $"在{nodeId}收容";
+                            }
+                        }
+                        break;
+
+                    case TaskType.Manage:
+                        {
+                            // Find managed anomaly
+                            var managedAnomaly = node.ManagedAnomalies?.FirstOrDefault(ma => ma != null && ma.Id == task.TargetManagedAnomalyId);
+                            if (managedAnomaly != null)
+                            {
+                                var anomalyDef = registry?.AnomaliesById?.GetValueOrDefault(managedAnomaly.AnomalyId);
+                                string anomalyName = anomalyDef?.name ?? managedAnomaly.AnomalyId;
+                                text = $"在{nodeId}管理 {anomalyName}";
+                            }
+                            else
+                            {
+                                text = $"在{nodeId}管理";
+                            }
+                        }
+                        break;
+                }
+
+                // Log debug info
+                Debug.Log($"[AgentBusy] agent={agentId} task={task.Id} text={text}");
+                
+                return text;
+            }
+        }
+
+        // Agent not found in any task (Idle)
+        return "";
+    }
 }
 // </EXPORT_BLOCK>
