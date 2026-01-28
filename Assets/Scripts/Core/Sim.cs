@@ -232,6 +232,41 @@ namespace Core
 
             Debug.Log($"[EventResolve] node={node.Id} inst={ev.EventInstanceId} def={ev.EventDefId} option={optionDef.optionId} effectsApplied={effectsApplied}");
 
+            // ===== HP/SAN Impact for Events (hardcoded examples) =====
+            // Apply impacts to agents assigned to the origin task, if any
+            if (originTask != null && originTask.AssignedAgentIds != null && originTask.AssignedAgentIds.Count > 0)
+            {
+                int hpDelta = 0;
+                int sanDelta = 0;
+                
+                // Hardcoded examples for specific events
+                if (ev.EventDefId == "EV_001") // Example event 1
+                {
+                    hpDelta = -(1 + rng.Next(3)); // -1 to -3
+                    sanDelta = -(2 + rng.Next(3)); // -2 to -4
+                }
+                else if (ev.EventDefId == "EV_002") // Example event 2
+                {
+                    hpDelta = -(2 + rng.Next(4)); // -2 to -5
+                    sanDelta = -(1 + rng.Next(2)); // -1 to -2
+                }
+                else if (ev.EventDefId == "EV_003") // Example event 3
+                {
+                    hpDelta = 0;
+                    sanDelta = -(3 + rng.Next(3)); // -3 to -5
+                }
+                
+                // Apply to all agents on the task if any delta was set
+                if (hpDelta != 0 || sanDelta != 0)
+                {
+                    foreach (var agentId in originTask.AssignedAgentIds)
+                    {
+                        string reason = $"EventResolve:event={ev.EventDefId},option={optionId},node={node.Id}";
+                        ApplyAgentImpact(s, agentId, hpDelta, sanDelta, reason);
+                    }
+                }
+            }
+
             s.News.Add($"- {node.Name} 事件处理：{eventDef.title} -> {optionDef.text}");
 
             var resultText = string.IsNullOrEmpty(optionDef.resultText) ? BuildEffectSummary(optionDef.effectId, affects) : optionDef.resultText;
@@ -843,6 +878,9 @@ namespace Core
             task.State = TaskState.Completed;
             task.CompletedDay = s.Day;
 
+            // Store assigned agents before clearing for HP/SAN impact
+            var assignedAgents = task.AssignedAgentIds != null ? new List<string>(task.AssignedAgentIds) : new List<string>();
+
             // Release squad
             if (task.AssignedAgentIds != null) task.AssignedAgentIds.Clear();
 
@@ -905,6 +943,28 @@ namespace Core
                         }
                     }
                 }
+
+                // ===== HP/SAN Impact for Investigate =====
+                // Base SAN cost: -1 to -3
+                int baseSanCost = -(1 + rng.Next(3)); // -1, -2, or -3
+                
+                // Anomaly-specific modifier (hardcoded examples)
+                float sanMultiplier = 1.0f;
+                if (!string.IsNullOrEmpty(anomalyId))
+                {
+                    // Hardcoded examples for specific anomalies
+                    if (anomalyId == "AN_001") sanMultiplier = 1.5f; // More stressful
+                    else if (anomalyId == "AN_002") sanMultiplier = 2.0f; // Very stressful
+                    else if (anomalyId == "AN_003") sanMultiplier = 1.2f; // Slightly more stressful
+                }
+                
+                int finalSanCost = (int)(baseSanCost * sanMultiplier);
+                
+                foreach (var agentId in assignedAgents)
+                {
+                    string reason = $"InvestigateComplete:node={node.Id},anomaly={anomalyId ?? "unknown"}";
+                    ApplyAgentImpact(s, agentId, 0, finalSanCost, reason);
+                }
             }
             else if (task.Type == TaskType.Contain)
             {
@@ -942,6 +1002,43 @@ namespace Core
                     node.HasAnomaly = false;
                     node.ActiveAnomalyIds?.Clear();
                     node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
+                }
+
+                // ===== HP/SAN Impact for Contain =====
+                // Base HP cost: -0 to -5, SAN cost: -1 to -4
+                int baseHpCost = -(rng.Next(6)); // -0 to -5
+                int baseSanCost = -(1 + rng.Next(4)); // -1 to -4
+                
+                // Anomaly-specific modifier (hardcoded examples)
+                float hpMultiplier = 1.0f;
+                float sanMultiplier = 1.0f;
+                if (!string.IsNullOrEmpty(anomalyId))
+                {
+                    // Hardcoded examples for specific anomalies
+                    if (anomalyId == "AN_001") 
+                    {
+                        hpMultiplier = 1.3f;
+                        sanMultiplier = 1.2f;
+                    }
+                    else if (anomalyId == "AN_002") 
+                    {
+                        hpMultiplier = 1.8f;
+                        sanMultiplier = 1.5f;
+                    }
+                    else if (anomalyId == "AN_003") 
+                    {
+                        hpMultiplier = 1.1f;
+                        sanMultiplier = 1.3f;
+                    }
+                }
+                
+                int finalHpCost = (int)(baseHpCost * hpMultiplier);
+                int finalSanCost = (int)(baseSanCost * sanMultiplier);
+                
+                foreach (var agentId in assignedAgents)
+                {
+                    string reason = $"ContainComplete:node={node.Id},anomaly={anomalyId ?? "unknown"}";
+                    ApplyAgentImpact(s, agentId, finalHpCost, finalSanCost, reason);
                 }
             }
             node.Status = NodeStatus.Calm;
@@ -1027,6 +1124,30 @@ namespace Core
             return registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly) ? anomaly.manageRisk : 0;
         }
 
+        /// <summary>
+        /// Unified entry point for applying HP/SAN impacts to agents.
+        /// Clamps values to [0, max] and logs the impact.
+        /// </summary>
+        public static void ApplyAgentImpact(GameState s, string agentId, int hpDelta, int sanDelta, string reason)
+        {
+            if (s == null || s.Agents == null) return;
+            
+            var agent = s.Agents.FirstOrDefault(a => a != null && a.Id == agentId);
+            if (agent == null)
+            {
+                Debug.LogWarning($"[AgentImpact] day={s.Day} agent={agentId} NOTFOUND reason={reason}");
+                return;
+            }
+
+            int hpBefore = agent.HP;
+            int sanBefore = agent.SAN;
+
+            agent.HP = Math.Max(0, Math.Min(agent.MaxHP, agent.HP + hpDelta));
+            agent.SAN = Math.Max(0, Math.Min(agent.MaxSAN, agent.SAN + sanDelta));
+
+            Debug.Log($"[AgentImpact] day={s.Day} agent={agent.Id} hp={hpDelta:+0;-#} ({hpBefore}->{agent.HP}) san={sanDelta:+0;-#} ({sanBefore}->{agent.SAN}) reason={reason}");
+        }
+
         // =====================
         // Management (NegEntropy) - formalized as NodeTask.Manage
         // =====================
@@ -1067,6 +1188,29 @@ namespace Core
 
                     nodeTotal += yield;
                     m.TotalNegEntropy += yield;
+
+                    // ===== HP/SAN Impact for Manage (daily) =====
+                    // Base SAN cost per day: -1
+                    int baseSanCost = -1;
+                    
+                    // Anomaly-specific modifier (hardcoded examples)
+                    float sanMultiplier = 1.0f;
+                    string anomalyId = m.AnomalyId;
+                    if (!string.IsNullOrEmpty(anomalyId))
+                    {
+                        // Hardcoded examples for specific anomalies
+                        if (anomalyId == "AN_001") sanMultiplier = 1.2f;
+                        else if (anomalyId == "AN_002") sanMultiplier = 1.5f;
+                        else if (anomalyId == "AN_003") sanMultiplier = 1.1f;
+                    }
+                    
+                    int finalSanCost = (int)(baseSanCost * sanMultiplier);
+                    
+                    foreach (var agentId in t.AssignedAgentIds)
+                    {
+                        string reason = $"ManageDaily:node={node.Id},anomaly={anomalyId ?? "unknown"},managed={m.Id}";
+                        ApplyAgentImpact(s, agentId, 0, finalSanCost, reason);
+                    }
                 }
 
                 if (nodeTotal > 0)

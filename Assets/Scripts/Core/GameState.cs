@@ -30,6 +30,12 @@ namespace Core
         public int Operation = 5;
         public int Resistance = 5;
         public int Power = 5;
+
+        // HP and SAN (Sanity) system
+        public int HP = 100;
+        public int MaxHP = 100;
+        public int SAN = 100;
+        public int MaxSAN = 100;
     }
 
 
