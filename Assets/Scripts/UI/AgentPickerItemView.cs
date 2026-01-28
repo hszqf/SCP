@@ -29,7 +29,8 @@ public class AgentPickerItemView : MonoBehaviour
         string attrLine,
         bool isBusyOtherNode,
         bool selected,
-        System.Action<string> onClick)
+        System.Action<string> onClick,
+        string busyText = null)
     {
         AgentId = agentId;
         _isBusy = isBusyOtherNode;
@@ -41,11 +42,11 @@ public class AgentPickerItemView : MonoBehaviour
         if (nameText) nameText.text = string.IsNullOrEmpty(displayName) ? agentId : displayName;
         if (attrText) attrText.text = attrLine;
 
-        // 忙碌状态
+        // 忙碌状态 - 显示完整的 busy text 或默认 "BUSY"
         if (busyTagText)
         {
             busyTagText.gameObject.SetActive(_isBusy);
-            busyTagText.text = _isBusy ? "BUSY" : "";
+            busyTagText.text = _isBusy ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText) : "";
         }
 
         // 按钮交互

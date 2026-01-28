@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Core;
 using Data;
 using TMPro;
 using UnityEngine;
@@ -17,6 +19,12 @@ public class RecruitPanel : MonoBehaviour
     [SerializeField] private TMP_Text confirmLabel;
     [SerializeField] private Button cancelButton;
     [SerializeField] private TMP_Text cancelLabel;
+
+    [Header("Agent List")]
+    [SerializeField] private Transform agentListContent;
+    [SerializeField] private ScrollRect agentListScrollRect;
+
+    private readonly List<GameObject> _agentItems = new();
 
     private void Awake()
     {
@@ -45,7 +53,7 @@ public class RecruitPanel : MonoBehaviour
         int money = GameController.I.State?.Money ?? 0;
         bool canAfford = money >= hireCost;
 
-        if (titleText) titleText.text = "Recruit";
+        if (titleText) titleText.text = "Personnel Management";
         if (moneyText) moneyText.text = $"Money: {money}";
         if (costText) costText.text = $"HireCost: {hireCost}";
         if (statusText) statusText.text = canAfford ? "Ready" : "资金不足";
@@ -53,6 +61,9 @@ public class RecruitPanel : MonoBehaviour
         if (confirmButton) confirmButton.interactable = canAfford;
         if (confirmLabel) confirmLabel.text = "Hire";
         if (cancelLabel) cancelLabel.text = "Close";
+
+        // Rebuild agent list to show current status
+        RebuildAgentList();
     }
 
     private void BindButtons()
@@ -73,6 +84,80 @@ public class RecruitPanel : MonoBehaviour
     private int GetHireCost()
     {
         return DataRegistry.Instance.GetBalanceIntWithWarn("HireCost", 100);
+    }
+
+    private void RebuildAgentList()
+    {
+        // Clear existing items
+        foreach (var item in _agentItems)
+        {
+            if (item) Destroy(item);
+        }
+        _agentItems.Clear();
+
+        if (agentListContent == null)
+        {
+            // Agent list not set up yet
+            return;
+        }
+
+        var gc = GameController.I;
+        if (gc == null || gc.State?.Agents == null) return;
+
+        // Create an item for each agent
+        foreach (var agent in gc.State.Agents)
+        {
+            if (agent == null) continue;
+
+            // Get busy status using BuildAgentBusyText
+            string busyText = Sim.BuildAgentBusyText(gc.State, agent.Id);
+            string statusText = string.IsNullOrEmpty(busyText) ? "Idle" : busyText;
+
+            // Create agent item UI
+            var item = CreateAgentListItem(agentListContent, agent.Name, BuildAgentAttrLine(agent), statusText);
+            _agentItems.Add(item);
+        }
+    }
+
+    private static string BuildAgentAttrLine(AgentState a)
+    {
+        if (a == null) return "";
+        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+    }
+
+    private static GameObject CreateAgentListItem(Transform parent, string name, string attrLine, string statusLine)
+    {
+        var itemGO = new GameObject("AgentItem", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        itemGO.transform.SetParent(parent, false);
+
+        var rt = itemGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(0f, 70f);
+
+        var img = itemGO.GetComponent<Image>();
+        img.color = new Color(0.15f, 0.15f, 0.15f, 0.8f);
+
+        // Name text
+        var nameText = CreateText(itemGO.transform, "Name", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, 1f),
+            new Vector2(-20f, 24f), new Vector2(10f, -5f), 20, TextAlignmentOptions.Left);
+        nameText.text = name;
+        nameText.fontStyle = FontStyles.Bold;
+
+        // Attributes text
+        var attrText = CreateText(itemGO.transform, "Attributes", new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(-20f, 18f), new Vector2(10f, -3f), 16, TextAlignmentOptions.Left);
+        attrText.text = attrLine;
+        attrText.color = new Color(0.8f, 0.8f, 0.8f);
+
+        // Status text
+        var statusText = CreateText(itemGO.transform, "Status", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f),
+            new Vector2(-20f, 18f), new Vector2(10f, 5f), 15, TextAlignmentOptions.Left);
+        statusText.text = statusLine;
+        statusText.color = statusLine == "Idle" ? new Color(0.4f, 0.8f, 0.4f) : new Color(1f, 0.7f, 0.3f);
+
+        return itemGO;
     }
 
     private void OnConfirm()
@@ -105,7 +190,7 @@ public class RecruitPanel : MonoBehaviour
         rootRT.anchorMin = new Vector2(0.5f, 0.5f);
         rootRT.anchorMax = new Vector2(0.5f, 0.5f);
         rootRT.pivot = new Vector2(0.5f, 0.5f);
-        rootRT.sizeDelta = new Vector2(720f, 420f);
+        rootRT.sizeDelta = new Vector2(800f, 600f); // Increased size for agent list
         rootRT.anchoredPosition = Vector2.zero;
 
         var bg = gameObject.GetComponent<Image>();
@@ -122,22 +207,25 @@ public class RecruitPanel : MonoBehaviour
         panelRT.anchorMin = new Vector2(0.5f, 0.5f);
         panelRT.anchorMax = new Vector2(0.5f, 0.5f);
         panelRT.pivot = new Vector2(0.5f, 0.5f);
-        panelRT.sizeDelta = new Vector2(640f, 340f);
+        panelRT.sizeDelta = new Vector2(720f, 520f); // Increased size
         panelRT.anchoredPosition = Vector2.zero;
         var panelImg = panel.GetComponent<Image>();
         panelImg.color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
 
         titleText = CreateText(panel.transform, "Title", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, 70f), new Vector2(0f, -10f), 42, TextAlignmentOptions.Center);
+            new Vector2(0f, 60f), new Vector2(0f, -10f), 36, TextAlignmentOptions.Center);
 
-        moneyText = CreateText(panel.transform, "MoneyText", new Vector2(0f, 0.6f), new Vector2(1f, 0.6f), new Vector2(0.5f, 0.5f),
-            new Vector2(0f, 60f), new Vector2(0f, 40f), 30, TextAlignmentOptions.Center);
+        // Agent list scroll area
+        CreateAgentListScrollArea(panel.transform);
 
-        costText = CreateText(panel.transform, "CostText", new Vector2(0f, 0.45f), new Vector2(1f, 0.45f), new Vector2(0.5f, 0.5f),
-            new Vector2(0f, 60f), new Vector2(0f, 20f), 30, TextAlignmentOptions.Center);
+        moneyText = CreateText(panel.transform, "MoneyText", new Vector2(0f, 0.35f), new Vector2(1f, 0.35f), new Vector2(0.5f, 0.5f),
+            new Vector2(0f, 50f), new Vector2(0f, 40f), 24, TextAlignmentOptions.Center);
 
-        statusText = CreateText(panel.transform, "StatusText", new Vector2(0f, 0.25f), new Vector2(1f, 0.25f), new Vector2(0.5f, 0.5f),
-            new Vector2(0f, 60f), new Vector2(0f, 0f), 24, TextAlignmentOptions.Center);
+        costText = CreateText(panel.transform, "CostText", new Vector2(0f, 0.25f), new Vector2(1f, 0.25f), new Vector2(0.5f, 0.5f),
+            new Vector2(0f, 50f), new Vector2(0f, 20f), 24, TextAlignmentOptions.Center);
+
+        statusText = CreateText(panel.transform, "StatusText", new Vector2(0f, 0.15f), new Vector2(1f, 0.15f), new Vector2(0.5f, 0.5f),
+            new Vector2(0f, 50f), new Vector2(0f, 0f), 20, TextAlignmentOptions.Center);
 
         var btnRow = new GameObject("Buttons", typeof(RectTransform), typeof(HorizontalLayoutGroup));
         btnRow.transform.SetParent(panel.transform, false);
@@ -145,8 +233,8 @@ public class RecruitPanel : MonoBehaviour
         btnRowRT.anchorMin = new Vector2(0f, 0f);
         btnRowRT.anchorMax = new Vector2(1f, 0f);
         btnRowRT.pivot = new Vector2(0.5f, 0f);
-        btnRowRT.sizeDelta = new Vector2(0f, 90f);
-        btnRowRT.anchoredPosition = new Vector2(0f, 15f);
+        btnRowRT.sizeDelta = new Vector2(0f, 70f);
+        btnRowRT.anchoredPosition = new Vector2(0f, 10f);
 
         var hlg = btnRow.GetComponent<HorizontalLayoutGroup>();
         hlg.padding = new RectOffset(40, 40, 10, 10);
@@ -156,6 +244,67 @@ public class RecruitPanel : MonoBehaviour
 
         confirmButton = CreateButton(btnRow.transform, "ConfirmButton", "Hire", out confirmLabel);
         cancelButton = CreateButton(btnRow.transform, "CancelButton", "Close", out cancelLabel);
+    }
+
+    private void CreateAgentListScrollArea(Transform parent)
+    {
+        // Create scroll rect container
+        var scrollGO = new GameObject("AgentListScroll", typeof(RectTransform), typeof(ScrollRect), typeof(Image));
+        scrollGO.transform.SetParent(parent, false);
+        var scrollRT = scrollGO.GetComponent<RectTransform>();
+        scrollRT.anchorMin = new Vector2(0f, 0.4f);
+        scrollRT.anchorMax = new Vector2(1f, 0.95f);
+        scrollRT.offsetMin = new Vector2(20f, 0f);
+        scrollRT.offsetMax = new Vector2(-20f, -60f);
+
+        var scrollImg = scrollGO.GetComponent<Image>();
+        scrollImg.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
+
+        agentListScrollRect = scrollGO.GetComponent<ScrollRect>();
+
+        // Create viewport
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform), typeof(Mask), typeof(Image));
+        viewportGO.transform.SetParent(scrollGO.transform, false);
+        var viewportRT = viewportGO.GetComponent<RectTransform>();
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(5f, 5f);
+        viewportRT.offsetMax = new Vector2(-5f, -5f);
+        
+        var viewportImg = viewportGO.GetComponent<Image>();
+        viewportImg.color = Color.clear;
+
+        var mask = viewportGO.GetComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        // Create content container with VerticalLayoutGroup
+        var contentGO = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0f, 1f);
+        contentRT.anchorMax = new Vector2(1f, 1f);
+        contentRT.pivot = new Vector2(0.5f, 1f);
+        contentRT.anchoredPosition = Vector2.zero;
+
+        var vlg = contentGO.GetComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(5, 5, 5, 5);
+        vlg.spacing = 5f;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlHeight = true;
+        vlg.childControlWidth = true;
+
+        var csf = contentGO.GetComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        agentListContent = contentGO.transform;
+
+        // Configure ScrollRect
+        agentListScrollRect.content = contentRT;
+        agentListScrollRect.viewport = viewportRT;
+        agentListScrollRect.horizontal = false;
+        agentListScrollRect.vertical = true;
+        agentListScrollRect.movementType = ScrollRect.MovementType.Clamped;
     }
 
     private static TMP_Text CreateText(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 size, Vector2 anchoredPos, float fontSize, TextAlignmentOptions align)
