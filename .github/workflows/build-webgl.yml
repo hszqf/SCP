@@ -31,7 +31,7 @@ jobs:
           df -h
           AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
           echo "Root available: ${AVAIL_GB}G"
-          if [ "$AVAIL_GB" -ge 25 ]; then
+          if [ "$AVAIL_GB" -ge 15 ]; then
             echo "Enough disk space, skip cleanup."
             exit 0
           fi
@@ -51,6 +51,12 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
+          echo "Root available: ${AVAIL_GB}G"
+          if [ "$AVAIL_GB" -ge 15 ]; then
+            echo "Enough disk space, skip docker move."
+            exit 0
+          fi
           ROOT_DIR=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)
           echo "DockerRootDir: $ROOT_DIR"
           if [ "$ROOT_DIR" = "/mnt/docker" ]; then
@@ -72,13 +78,14 @@ jobs:
       - name: Cache Library
         uses: actions/cache@v4
         with:
-          path: Library
-          key: Library-${{ runner.os }}-WebGL-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}-${{ hashFiles('Packages/packages-lock.json') }}
+          path: |
+            Library
+            Library/Bee
+            Library/il2cpp_cache
+          key: Library-${{ runner.os }}-WebGL-${{ hashFiles('ProjectSettings/ProjectVersion.txt','Packages/packages-lock.json','Assets/**','ProjectSettings/**') }}
           restore-keys: |
-            Library-${{ runner.os }}-WebGL-${{ hashFiles('ProjectSettings/ProjectVersion.txt') }}-
             Library-${{ runner.os }}-WebGL-
             Library-${{ runner.os }}-
-            Library-
 
       - name: Validate Unity secrets (no secret values printed)
         shell: bash
