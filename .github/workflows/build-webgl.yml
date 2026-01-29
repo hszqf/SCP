@@ -31,7 +31,7 @@ jobs:
           df -h
           AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
           echo "Root available: ${AVAIL_GB}G"
-          if [ "$AVAIL_GB" -ge 15 ]; then
+          if [ "$AVAIL_GB" -ge 25 ]; then
             echo "Enough disk space, skip cleanup."
             exit 0
           fi
@@ -53,7 +53,7 @@ jobs:
           set -euxo pipefail
           AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
           echo "Root available: ${AVAIL_GB}G"
-          if [ "$AVAIL_GB" -ge 15 ]; then
+          if [ "$AVAIL_GB" -ge 25 ]; then
             echo "Enough disk space, skip docker move."
             exit 0
           fi
@@ -95,6 +95,17 @@ jobs:
           [ -n "${{ secrets.UNITY_EMAIL }}" ] || (echo "Missing secret: UNITY_EMAIL" && exit 1)
           [ -n "${{ secrets.UNITY_PASSWORD }}" ] || (echo "Missing secret: UNITY_PASSWORD" && exit 1)
           echo "Unity secrets look present."
+
+      - name: Check disk space before Build WebGL
+        shell: bash
+        run: |
+          echo "Disk space before Build WebGL:"
+          df -h
+          AVAIL_GB=$(df -BG / | tail -1 | awk '{gsub("G","",$4); print $4}')
+          echo "Root available: ${AVAIL_GB}G"
+          if [ "$AVAIL_GB" -lt 25 ]; then
+            echo "WARNING: Root available space is less than 25GB. Build may fail."
+          fi
 
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
