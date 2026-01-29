@@ -210,6 +210,9 @@ namespace Data
                     investigateDifficulty = GetRowInt(row, "investigateDifficulty"),
                     containDifficulty = GetRowInt(row, "containDifficulty"),
                     manageRisk = GetRowInt(row, "manageRisk"),
+                    invExp = GetRowInt(row, "invExp"),
+                    conExp = GetRowInt(row, "conExp"),
+                    manExpPerDay = GetRowInt(row, "manExpPerDay"),
                     invHp = GetRowInt(row, "invHp"),
                     invSan = GetRowInt(row, "invSan"),
                     conHp = GetRowInt(row, "conHp"),
@@ -438,7 +441,8 @@ namespace Data
             CheckTableColumns("Anomalies", new[]
             {
                 "anomalyId", "name", "class", "baseThreat", "investigateDifficulty",
-                "containDifficulty", "manageRisk", "worldPanicPerDayUncontained", "maintenanceCostPerDay",
+                "containDifficulty", "manageRisk", "invExp", "conExp", "manExpPerDay",
+                "worldPanicPerDayUncontained", "maintenanceCostPerDay",
             });
             CheckTableColumns("Events", new[]
             {

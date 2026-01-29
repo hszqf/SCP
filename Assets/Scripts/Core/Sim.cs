@@ -14,6 +14,54 @@ namespace Core
 {
     public static class Sim
     {
+        // Agent Level/Exp helpers
+        public static int ExpToNext(int level)
+        {
+            return 20 + (level - 1) * 10;
+        }
+
+        // Returns true if level up occurred
+        public static bool AddExpAndTryLevelUp(Core.AgentState a, int addExp, System.Random rng)
+        {
+            if (addExp > 0)
+            {
+                Debug.Log($"[AgentLevel] agent={a.Id} lv={a.Level} exp={a.Exp}->{a.Exp + addExp}");
+            }
+            a.Exp += addExp;
+            bool leveled = false;
+            while (a.Exp >= ExpToNext(a.Level))
+            {
+                int oldLv = a.Level;
+                a.Exp -= ExpToNext(a.Level);
+                a.Level += 1;
+                a.TalentPoints += 1;
+                int grow = rng.Next(0, 4);
+                string growStr = "";
+                switch (grow)
+                {
+                    case 0:
+                        a.Perception += 1;
+                        growStr = "Perception+1";
+                        break;
+                    case 1:
+                        a.Resistance += 1;
+                        growStr = "Resistance+1";
+                        break;
+                    case 2:
+                        a.Operation += 1;
+                        growStr = "Operation+1";
+                        break;
+                    case 3:
+                        a.Power += 1;
+                        growStr = "Power+1";
+                        break;
+                }
+                Debug.Log($"[AgentLevel] agent={a.Id} lv={oldLv}->{a.Level} exp={a.Exp} tp={a.TalentPoints} grow={growStr}");
+                leveled = true;
+            }
+            return leveled;
+        }
+
         private const string RequirementAny = "ANY";
         private const string RandomDailySource = "RandomDaily";
 
@@ -985,6 +1033,22 @@ namespace Core
                         string reason = $"InvestigateComplete:node={node.Id},anomaly={defId ?? "unknown"}";
                         ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
                     }
+
+                    int totalExp = def?.invExp ?? 0;
+                    int perAgentExp = (int)Math.Ceiling(totalExp / (double)assignedAgents.Count);
+                    if (totalExp > 0 && perAgentExp > 0)
+                    {
+                        foreach (var agentId in assignedAgents)
+                        {
+                            var a = s.Agents?.FirstOrDefault(x => x != null && x.Id == agentId);
+                            if (a == null) continue;
+                            int expBefore = a.Exp;
+                            int lvBefore = a.Level;
+                            int tpBefore = a.TalentPoints;
+                            AddExpAndTryLevelUp(a, perAgentExp, rng);
+                            Debug.Log($"[AgentExp] day={s.Day} type=Investigate node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                        }
+                    }
                 }
             }
             else if (task.Type == TaskType.Contain)
@@ -1040,6 +1104,22 @@ namespace Core
                     {
                         string reason = $"ContainComplete:node={node.Id},anomaly={defId ?? "unknown"}";
                         ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
+                    }
+
+                    int totalExp = def?.conExp ?? 0;
+                    int perAgentExp = (int)Math.Ceiling(totalExp / (double)assignedAgents.Count);
+                    if (totalExp > 0 && perAgentExp > 0)
+                    {
+                        foreach (var agentId in assignedAgents)
+                        {
+                            var a = s.Agents?.FirstOrDefault(x => x != null && x.Id == agentId);
+                            if (a == null) continue;
+                            int expBefore = a.Exp;
+                            int lvBefore = a.Level;
+                            int tpBefore = a.TalentPoints;
+                            AddExpAndTryLevelUp(a, perAgentExp, rng);
+                            Debug.Log($"[AgentExp] day={s.Day} type=Contain node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                        }
                     }
                 }
             }
@@ -1288,6 +1368,31 @@ namespace Core
 
                     nodeTotal += yield;
                     m.TotalNegEntropy += yield;
+
+                    if (squad.Count > 0)
+                    {
+                        string defId = t.SourceAnomalyId;
+                        if (!string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var manageDef) && manageDef != null)
+                        {
+                            int totalExp = manageDef.manExpPerDay;
+                            if (totalExp > 0)
+                            {
+                                int perAgentExp = (int)Math.Ceiling(totalExp / (double)squad.Count);
+                                if (perAgentExp > 0)
+                                {
+                                    foreach (var a in squad)
+                                    {
+                                        if (a == null) continue;
+                                        int expBefore = a.Exp;
+                                        int lvBefore = a.Level;
+                                        int tpBefore = a.TalentPoints;
+                                        AddExpAndTryLevelUp(a, perAgentExp, rng);
+                                        Debug.Log($"[AgentExp] day={s.Day} type=Manage node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (nodeTotal > 0)

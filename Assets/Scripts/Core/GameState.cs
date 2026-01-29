@@ -30,12 +30,13 @@ namespace Core
         public int Operation = 5;
         public int Resistance = 5;
         public int Power = 5;
-
-        // HP and SAN (Sanity) system
-        public int HP = 100;
-        public int MaxHP = 100;
-        public int SAN = 100;
-        public int MaxSAN = 100;
+        public int HP = 10;
+        public int MaxHP = 10;
+        public int SAN = 10;
+        public int MaxSAN = 10;
+        public int Level = 1;
+        public int Exp = 0;
+        public int TalentPoints = 0;
     }
 
 
@@ -111,8 +112,7 @@ namespace Core
         // 已发现/已知异常（Investigate 完成后写入）；口径为 anomalyDefId（如 AN_002）
         public List<string> KnownAnomalyDefIds = new();
 
-        // 调查产出：可收容目标列表（调查完成后写入）
-        // public List<ContainableItem> Containables = new(); // 已移除
+
         // 收容产出：已收容目标列表（收容完成后写入）
         public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
 

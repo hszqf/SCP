@@ -429,16 +429,13 @@ public class UIPanelRoot : MonoBehaviour
     void EnsureRecruitPanel()
     {
         if (_recruitPanel) return;
-        if (recruitPanelPrefab)
+        if (!recruitPanelPrefab)
         {
-            _recruitPanel = Instantiate(recruitPanelPrefab, transform);
+            Debug.LogError("[UIPanelRoot] recruitPanelPrefab 未配置，无法打开 RecruitPanel。");
+            return;
         }
-        else
-        {
-            var go = new GameObject("RecruitPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image), typeof(RecruitPanel));
-            go.transform.SetParent(transform, false);
-            _recruitPanel = go.GetComponent<RecruitPanel>();
-        }
+
+        _recruitPanel = Instantiate(recruitPanelPrefab, transform);
 
         if (_recruitPanel) _recruitPanel.gameObject.SetActive(false);
     }

@@ -408,6 +408,18 @@
         {
           "name": "sanDmg",
           "type": "int"
+        },
+        {
+          "name": "invExp",
+          "type": "int"
+        },
+        {
+          "name": "conExp",
+          "type": "int"
+        },
+        {
+          "name": "manExpPerDay",
+          "type": "int"
         }
       ],
       "rows": [
@@ -440,7 +452,10 @@
             0
           ],
           "hpDmg": 4,
-          "sanDmg": 5
+          "sanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_002",
@@ -471,7 +486,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_003",
@@ -502,7 +520,10 @@
             0
           ],
           "hpDmg": 4,
-          "sanDmg": 5
+          "sanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_004",
@@ -533,7 +554,10 @@
             0
           ],
           "hpDmg": 5,
-          "sanDmg": 6
+          "sanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_005",
@@ -564,7 +588,10 @@
             4
           ],
           "hpDmg": 7,
-          "sanDmg": 8
+          "sanDmg": 8,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_006",
@@ -595,7 +622,10 @@
             0
           ],
           "hpDmg": 5,
-          "sanDmg": 6
+          "sanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_007",
@@ -626,7 +656,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_008",
@@ -657,7 +690,10 @@
             0
           ],
           "hpDmg": 5,
-          "sanDmg": 6
+          "sanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_009",
@@ -688,7 +724,10 @@
             0
           ],
           "hpDmg": 3,
-          "sanDmg": 4
+          "sanDmg": 4,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_010",
@@ -719,7 +758,10 @@
             0
           ],
           "hpDmg": 4,
-          "sanDmg": 5
+          "sanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_011",
@@ -750,7 +792,10 @@
             0
           ],
           "hpDmg": 3,
-          "sanDmg": 4
+          "sanDmg": 4,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_012",
@@ -781,7 +826,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_013",
@@ -812,7 +860,10 @@
             0
           ],
           "hpDmg": 4,
-          "sanDmg": 5
+          "sanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_014",
@@ -843,7 +894,10 @@
             0
           ],
           "hpDmg": 5,
-          "sanDmg": 6
+          "sanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_015",
@@ -874,7 +928,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_016",
@@ -905,7 +962,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_017",
@@ -936,7 +996,10 @@
             5
           ],
           "hpDmg": 9,
-          "sanDmg": 10
+          "sanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_018",
@@ -967,7 +1030,10 @@
             6
           ],
           "hpDmg": 12,
-          "sanDmg": 13
+          "sanDmg": 13,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30
         },
         {
           "anomalyId": "AN_019",
@@ -998,7 +1064,10 @@
             0
           ],
           "hpDmg": 6,
-          "sanDmg": 7
+          "sanDmg": 7,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         },
         {
           "anomalyId": "AN_020",
@@ -1029,7 +1098,10 @@
             0
           ],
           "hpDmg": 5,
-          "sanDmg": 6
+          "sanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10
         }
       ]
     },
