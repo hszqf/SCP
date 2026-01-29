@@ -124,13 +124,25 @@ jobs:
           echo "WebGL root: $ROOT"
           echo "path=$ROOT" >> "$GITHUB_OUTPUT"
 
-      - name: Disable Jekyll
-        run: touch "${{ steps.webglroot.outputs.path }}/.nojekyll"
+      - name: Prepare Pages staging directory
+        shell: bash
+        run: |
+          set -euxo pipefail
+          # Create staging directory with SCP subdirectory structure
+          mkdir -p public/SCP
+          # Copy entire WebGL build output to public/SCP/ to maintain /SCP/Build/ structure
+          cp -R "${{ steps.webglroot.outputs.path }}"/* public/SCP/
+          # Disable Jekyll processing
+          touch public/.nojekyll
+          echo "==== Staging directory structure ===="
+          ls -la public/SCP/ || true
+          echo "==== Build subdirectory ===="
+          ls -la public/SCP/Build/ || true
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.webglroot.outputs.path }}
+          path: public
 
   deploy:
     environment:
