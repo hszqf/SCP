@@ -131,7 +131,7 @@ jobs:
           # Create staging directory with SCP subdirectory structure
           mkdir -p public/SCP
           # Copy entire WebGL build output to public/SCP/ to maintain /SCP/Build/ structure
-          # Using /. pattern to copy all contents (including hidden files) into destination
+          # Using /. at the end of source path to copy directory contents (including hidden files) into destination
           cp -R "${{ steps.webglroot.outputs.path }}/." public/SCP/
           # Disable Jekyll processing
           touch public/.nojekyll
