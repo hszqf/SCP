@@ -57,6 +57,17 @@ namespace Data
         public int investigateDifficulty;
         public int containDifficulty;
         public int manageRisk;
+        public int invHp;
+        public int invSan;
+        public int conHp;
+        public int conSan;
+        public int manHp;
+        public int manSan;
+        public int hpDmg;
+        public int sanDmg;
+        public int[] invReq = new int[4];
+        public int[] conReq = new int[4];
+        public int[] manReq = new int[4];
     }
 
     [Serializable]

@@ -90,6 +90,31 @@ namespace Core
                         {
                             Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId} diff={diff} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} risk={manageRisk} progress={t.Progress:0.00}/1 (baseDays=1)");
                         }
+
+                        var defId = t.SourceAnomalyId;
+                        if (string.IsNullOrEmpty(defId))
+                        {
+                            Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=MissingSourceAnomalyId target={t.TargetManagedAnomalyId ?? "none"}");
+                            continue;
+                        }
+
+                        if (!registry.AnomaliesById.TryGetValue(defId, out var manageDef) || manageDef == null)
+                        {
+                            Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=UnknownAnomalyDef target={t.TargetManagedAnomalyId ?? "none"} anomaly={defId}");
+                            continue;
+                        }
+                        var impact = ComputeImpact(s, TaskType.Manage, manageDef, t.AssignedAgentIds);
+                        var req = NormalizeIntArray4(manageDef?.manReq);
+                        float magSan = (manageDef?.sanDmg ?? 0) * impact.sanMul * impact.S * impact.sanRand;
+                        Debug.Log(
+                            $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.hpDmg ?? 0},{manageDef?.sanDmg ?? 0}) " +
+                            $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
+                            $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
+                        foreach (var agentId in t.AssignedAgentIds)
+                        {
+                            string reason = $"ManageDaily:node={n.Id},anomaly={defId ?? "unknown"},dayTick={s.Day}";
+                            ApplyAgentImpact(s, agentId, 0, impact.sanDelta, reason);
+                        }
                         continue;
                     }
 
@@ -238,7 +263,7 @@ namespace Core
             {
                 int hpDelta = 0;
                 int sanDelta = 0;
-                
+
                 // Hardcoded examples for specific events
                 if (ev.EventDefId == "EV_001") // Example event 1
                 {
@@ -255,7 +280,7 @@ namespace Core
                     hpDelta = 0;
                     sanDelta = -(3 + rng.Next(3)); // -3 to -5
                 }
-                
+
                 // Apply to all agents on the task if any delta was set
                 if (hpDelta != 0 || sanDelta != 0)
                 {
@@ -945,25 +970,21 @@ namespace Core
                 }
 
                 // ===== HP/SAN Impact for Investigate =====
-                // Base SAN cost: -1 to -3
-                int baseSanCost = -(1 + rng.Next(3)); // -1, -2, or -3
-                
-                // Anomaly-specific modifier (hardcoded examples)
-                float sanMultiplier = 1.0f;
-                if (!string.IsNullOrEmpty(anomalyId))
+                var defId = !string.IsNullOrEmpty(task.SourceAnomalyId) ? task.SourceAnomalyId : anomalyId;
+                var def = !string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var defModel) ? defModel : null;
+                if (assignedAgents.Count > 0)
                 {
-                    // Hardcoded examples for specific anomalies
-                    if (anomalyId == "AN_001") sanMultiplier = 1.5f; // More stressful
-                    else if (anomalyId == "AN_002") sanMultiplier = 2.0f; // Very stressful
-                    else if (anomalyId == "AN_003") sanMultiplier = 1.2f; // Slightly more stressful
-                }
-                
-                int finalSanCost = (int)(baseSanCost * sanMultiplier);
-                
-                foreach (var agentId in assignedAgents)
-                {
-                    string reason = $"InvestigateComplete:node={node.Id},anomaly={anomalyId ?? "unknown"}";
-                    ApplyAgentImpact(s, agentId, 0, finalSanCost, reason);
+                    var impact = ComputeImpact(s, TaskType.Investigate, def, assignedAgents);
+                    var req = NormalizeIntArray4(def?.invReq);
+                    Debug.Log(
+                        $"[ImpactCalc] day={s.Day} type=Investigate node={node.Id} anomaly={defId ?? "unknown"} base=({def?.hpDmg ?? 0},{def?.sanDmg ?? 0}) " +
+                        $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
+                        $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} final=({impact.hpDelta},{impact.sanDelta})");
+                    foreach (var agentId in assignedAgents)
+                    {
+                        string reason = $"InvestigateComplete:node={node.Id},anomaly={defId ?? "unknown"}";
+                        ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
+                    }
                 }
             }
             else if (task.Type == TaskType.Contain)
@@ -1005,44 +1026,123 @@ namespace Core
                 }
 
                 // ===== HP/SAN Impact for Contain =====
-                // Base HP cost: -0 to -5, SAN cost: -1 to -4
-                int baseHpCost = -(rng.Next(6)); // -0 to -5
-                int baseSanCost = -(1 + rng.Next(4)); // -1 to -4
-                
-                // Anomaly-specific modifier (hardcoded examples)
-                float hpMultiplier = 1.0f;
-                float sanMultiplier = 1.0f;
-                if (!string.IsNullOrEmpty(anomalyId))
+                var defId = task.SourceAnomalyId;
+                var def = !string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var defModel) ? defModel : null;
+                if (assignedAgents.Count > 0)
                 {
-                    // Hardcoded examples for specific anomalies
-                    if (anomalyId == "AN_001") 
+                    var impact = ComputeImpact(s, TaskType.Contain, def, assignedAgents);
+                    var req = NormalizeIntArray4(def?.conReq);
+                    Debug.Log(
+                        $"[ImpactCalc] day={s.Day} type=Contain node={node.Id} anomaly={defId ?? "unknown"} base=({def?.hpDmg ?? 0},{def?.sanDmg ?? 0}) " +
+                        $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
+                        $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} final=({impact.hpDelta},{impact.sanDelta})");
+                    foreach (var agentId in assignedAgents)
                     {
-                        hpMultiplier = 1.3f;
-                        sanMultiplier = 1.2f;
+                        string reason = $"ContainComplete:node={node.Id},anomaly={defId ?? "unknown"}";
+                        ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
                     }
-                    else if (anomalyId == "AN_002") 
-                    {
-                        hpMultiplier = 1.8f;
-                        sanMultiplier = 1.5f;
-                    }
-                    else if (anomalyId == "AN_003") 
-                    {
-                        hpMultiplier = 1.1f;
-                        sanMultiplier = 1.3f;
-                    }
-                }
-                
-                int finalHpCost = (int)(baseHpCost * hpMultiplier);
-                int finalSanCost = (int)(baseSanCost * sanMultiplier);
-                
-                foreach (var agentId in assignedAgents)
-                {
-                    string reason = $"ContainComplete:node={node.Id},anomaly={anomalyId ?? "unknown"}";
-                    ApplyAgentImpact(s, agentId, finalHpCost, finalSanCost, reason);
                 }
             }
             node.Status = NodeStatus.Calm;
             node.HasAnomaly = true;
+        }
+
+        private static (int hpDelta, int sanDelta, float D, float S, int[] team, float hpMul, float sanMul, float hpRand, float sanRand) ComputeImpact(GameState state, TaskType type, AnomalyDef def, List<string> agentIds)
+        {
+            var team = new int[4];
+            if (state?.Agents != null && agentIds != null && agentIds.Count > 0)
+            {
+                foreach (var agentId in agentIds)
+                {
+                    var agent = state.Agents.FirstOrDefault(a => a != null && a.Id == agentId);
+                    if (agent == null) continue;
+                    team[0] += agent.Perception;
+                    team[1] += agent.Resistance;
+                    team[2] += agent.Operation;
+                    team[3] += agent.Power;
+                }
+            }
+
+            var req = type switch
+            {
+                TaskType.Investigate => NormalizeIntArray4(def?.invReq),
+                TaskType.Contain => NormalizeIntArray4(def?.conReq),
+                TaskType.Manage => NormalizeIntArray4(def?.manReq),
+                _ => new int[4]
+            };
+
+            var weights = type switch
+            {
+                TaskType.Contain => new[] { 0.15f, 0.40f, 0.05f, 0.40f },
+                TaskType.Manage => new[] { 0.10f, 0.45f, 0.35f, 0.10f },
+                _ => new[] { 0.45f, 0.35f, 0.10f, 0.10f },
+            };
+
+            float weighted = 0f;
+            float weightSum = 0f;
+            for (var i = 0; i < 4; i++)
+            {
+                if (req[i] <= 0) continue;
+                float deficit = Math.Max(0f, (req[i] - team[i]) / (float)req[i]);
+                var w = weights[i];
+                weighted += deficit * w;
+                weightSum += w;
+            }
+
+            float D = weightSum > 0f ? weighted / weightSum : 0f;
+            float S = Mathf.Clamp(D, 0f, 1.5f);
+
+            float hpMul = type switch
+            {
+                TaskType.Investigate => 0.2f,
+                TaskType.Manage => 0f,
+                _ => 1.0f,
+            };
+            float sanMul = type switch
+            {
+                TaskType.Contain => 0.7f,
+                TaskType.Manage => 0.5f,
+                _ => 1.0f,
+            };
+            float hpRand = 1f;
+            float sanRand = 1f;
+            int hpDelta = 0;
+            int sanDelta = 0;
+            if (def != null && S > 0f)
+            {
+                hpRand = UnityEngine.Random.Range(0.8f, 1.2f);
+                sanRand = UnityEngine.Random.Range(0.8f, 1.2f);
+                float hpMag = def.hpDmg * hpMul * S * hpRand;
+                float sanMag = def.sanDmg * sanMul * S * sanRand;
+                hpDelta = -Mathf.RoundToInt(hpMag);
+
+                if (type == TaskType.Manage && sanMag > 0f)
+                {
+                    int sanLoss = Mathf.CeilToInt(sanMag);
+                    sanDelta = -sanLoss;
+                }
+                else
+                {
+                    sanDelta = -Mathf.RoundToInt(sanMag);
+                }
+            }
+
+            return (hpDelta, sanDelta, D, S, team, hpMul, sanMul, hpRand, sanRand);
+        }
+
+        private static int[] NormalizeIntArray4(int[] input)
+        {
+            var result = new int[4];
+            if (input == null) return result;
+            var count = Math.Min(input.Length, 4);
+            Array.Copy(input, result, count);
+            return result;
+        }
+
+        private static string FormatIntArray(int[] values)
+        {
+            if (values == null) return "null";
+            return $"[{string.Join(",", values)}]";
         }
 
         // =====================
@@ -1131,7 +1231,7 @@ namespace Core
         public static void ApplyAgentImpact(GameState s, string agentId, int hpDelta, int sanDelta, string reason)
         {
             if (s == null || s.Agents == null) return;
-            
+
             var agent = s.Agents.FirstOrDefault(a => a != null && a.Id == agentId);
             if (agent == null)
             {
@@ -1188,29 +1288,6 @@ namespace Core
 
                     nodeTotal += yield;
                     m.TotalNegEntropy += yield;
-
-                    // ===== HP/SAN Impact for Manage (daily) =====
-                    // Base SAN cost per day: -1
-                    int baseSanCost = -1;
-                    
-                    // Anomaly-specific modifier (hardcoded examples)
-                    float sanMultiplier = 1.0f;
-                    string anomalyId = m.AnomalyId;
-                    if (!string.IsNullOrEmpty(anomalyId))
-                    {
-                        // Hardcoded examples for specific anomalies
-                        if (anomalyId == "AN_001") sanMultiplier = 1.2f;
-                        else if (anomalyId == "AN_002") sanMultiplier = 1.5f;
-                        else if (anomalyId == "AN_003") sanMultiplier = 1.1f;
-                    }
-                    
-                    int finalSanCost = (int)(baseSanCost * sanMultiplier);
-                    
-                    foreach (var agentId in t.AssignedAgentIds)
-                    {
-                        string reason = $"ManageDaily:node={node.Id},anomaly={anomalyId ?? "unknown"},managed={m.Id}";
-                        ApplyAgentImpact(s, agentId, 0, finalSanCost, reason);
-                    }
                 }
 
                 if (nodeTotal > 0)
@@ -1493,7 +1570,7 @@ namespace Core
                                 // Get managed anomaly name
                                 string anomalyId = task.TargetManagedAnomalyId;
                                 string anomalyName = anomalyId;
-                                
+
                                 // Try to find the managed anomaly to get its name
                                 if (!string.IsNullOrEmpty(anomalyId) && node.ManagedAnomalies != null)
                                 {

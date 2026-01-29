@@ -388,6 +388,26 @@
         {
           "name": "maintenanceCostPerDay",
           "type": "int"
+        },
+        {
+          "name": "invReq",
+          "type": "int[]"
+        },
+        {
+          "name": "conReq",
+          "type": "int[]"
+        },
+        {
+          "name": "manReq",
+          "type": "int[]"
+        },
+        {
+          "name": "hpDmg",
+          "type": "int"
+        },
+        {
+          "name": "sanDmg",
+          "type": "int"
         }
       ],
       "rows": [
@@ -400,7 +420,27 @@
           "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "hpDmg": 4,
+          "sanDmg": 5
         },
         {
           "anomalyId": "AN_002",
@@ -411,7 +451,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_003",
@@ -422,7 +482,27 @@
           "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "hpDmg": 4,
+          "sanDmg": 5
         },
         {
           "anomalyId": "AN_004",
@@ -433,7 +513,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "hpDmg": 5,
+          "sanDmg": 6
         },
         {
           "anomalyId": "AN_005",
@@ -444,7 +544,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            10,
+            9,
+            0,
+            0
+          ],
+          "conReq": [
+            7,
+            10,
+            0,
+            9
+          ],
+          "manReq": [
+            6,
+            10,
+            9,
+            4
+          ],
+          "hpDmg": 7,
+          "sanDmg": 8
         },
         {
           "anomalyId": "AN_006",
@@ -455,7 +575,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "hpDmg": 5,
+          "sanDmg": 6
         },
         {
           "anomalyId": "AN_007",
@@ -466,7 +606,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_008",
@@ -477,7 +637,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "hpDmg": 5,
+          "sanDmg": 6
         },
         {
           "anomalyId": "AN_009",
@@ -488,7 +668,27 @@
           "containDifficulty": 1,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            6,
+            5,
+            0,
+            0
+          ],
+          "conReq": [
+            4,
+            6,
+            0,
+            4
+          ],
+          "manReq": [
+            3,
+            6,
+            5,
+            0
+          ],
+          "hpDmg": 3,
+          "sanDmg": 4
         },
         {
           "anomalyId": "AN_010",
@@ -499,7 +699,27 @@
           "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "hpDmg": 4,
+          "sanDmg": 5
         },
         {
           "anomalyId": "AN_011",
@@ -510,7 +730,27 @@
           "containDifficulty": 1,
           "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            6,
+            5,
+            0,
+            0
+          ],
+          "conReq": [
+            4,
+            6,
+            0,
+            4
+          ],
+          "manReq": [
+            3,
+            6,
+            5,
+            0
+          ],
+          "hpDmg": 3,
+          "sanDmg": 4
         },
         {
           "anomalyId": "AN_012",
@@ -521,7 +761,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_013",
@@ -532,7 +792,27 @@
           "containDifficulty": 1,
           "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "hpDmg": 4,
+          "sanDmg": 5
         },
         {
           "anomalyId": "AN_014",
@@ -543,7 +823,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "hpDmg": 5,
+          "sanDmg": 6
         },
         {
           "anomalyId": "AN_015",
@@ -554,7 +854,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_016",
@@ -565,7 +885,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_017",
@@ -576,7 +916,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "hpDmg": 9,
+          "sanDmg": 10
         },
         {
           "anomalyId": "AN_018",
@@ -587,7 +947,27 @@
           "containDifficulty": 1,
           "manageRisk": 5,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            12,
+            11,
+            0,
+            0
+          ],
+          "conReq": [
+            9,
+            12,
+            0,
+            11
+          ],
+          "manReq": [
+            8,
+            12,
+            11,
+            6
+          ],
+          "hpDmg": 12,
+          "sanDmg": 13
         },
         {
           "anomalyId": "AN_019",
@@ -598,7 +978,27 @@
           "containDifficulty": 1,
           "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            9,
+            8,
+            0,
+            0
+          ],
+          "conReq": [
+            7,
+            9,
+            0,
+            7
+          ],
+          "manReq": [
+            6,
+            9,
+            8,
+            0
+          ],
+          "hpDmg": 6,
+          "sanDmg": 7
         },
         {
           "anomalyId": "AN_020",
@@ -609,7 +1009,27 @@
           "containDifficulty": 1,
           "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
-          "maintenanceCostPerDay": 100
+          "maintenanceCostPerDay": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "hpDmg": 5,
+          "sanDmg": 6
         }
       ]
     },
@@ -740,7 +1160,7 @@
           "name": "收容",
           "baseDays": 6,
           "progressPerDay": 0.1,
-          "agentSlotsMin": 3,
+          "agentSlotsMin": 1,
           "agentSlotsMax": 5,
           "yieldKey": "Money",
           "yieldPerDay": 0
@@ -751,7 +1171,7 @@
           "name": "管理",
           "baseDays": 999,
           "progressPerDay": 0.02,
-          "agentSlotsMin": 3,
+          "agentSlotsMin": 1,
           "agentSlotsMax": 5,
           "yieldKey": "NegEntropy",
           "yieldPerDay": 2

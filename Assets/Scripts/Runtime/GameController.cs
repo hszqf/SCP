@@ -267,11 +267,29 @@ public class GameController : MonoBehaviour
         if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.Id == target))
             return null;
 
+        var managed = n.ManagedAnomalies.FirstOrDefault(m => m != null && m.Id == target);
+        if (managed == null)
+            return null;
+
+        string defId = managed.AnomalyId;
+        if (string.IsNullOrEmpty(defId))
+        {
+            Debug.LogWarning($"[ManageTask] managedAnomalyId={target} missing AnomalyId; ManageDaily impacts will be skipped.");
+        }
+
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();
 
         // If already has an active manage task for this anomaly, reuse (idempotent)
         var existing = n.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == target);
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            if (string.IsNullOrEmpty(existing.SourceAnomalyId) && !string.IsNullOrEmpty(defId))
+            {
+                existing.SourceAnomalyId = defId;
+                Debug.Log($"[ManageTask] taskId={existing.Id} restored SourceAnomalyId={defId} from managed anomaly {target}.");
+            }
+            return existing;
+        }
 
         var t = new NodeTask
         {
@@ -281,6 +299,7 @@ public class GameController : MonoBehaviour
             CreatedDay = State.Day,
             Progress = 0f,
             TargetManagedAnomalyId = target,
+            SourceAnomalyId = string.IsNullOrEmpty(defId) ? null : defId,
         };
         WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
@@ -421,7 +440,7 @@ public class GameController : MonoBehaviour
 /// - 预定占用：派遣=占用（progress==0 也占用）。busy 判定遍历所有节点所有 Active 任务。
 /// - progress==0：不允许在选人面板改派；必须先取消该任务。
 /// - progress>0：不允许更换；必须撤退该任务。
-/// - 收容前置：必须有可收容目标（Containables > 0）。
+
 ///
 /// 注意：为了兼容旧 UI（尚未支持任务列表），TryAssignInvestigate/TryAssignContain 只操作“当前任务”（每类取一条）。
 /// 等 NodePanelView 升级为任务列表后，再引入基于 taskId 的 UI 调度。

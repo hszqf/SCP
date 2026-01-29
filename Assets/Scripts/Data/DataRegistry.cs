@@ -210,7 +210,24 @@ namespace Data
                     investigateDifficulty = GetRowInt(row, "investigateDifficulty"),
                     containDifficulty = GetRowInt(row, "containDifficulty"),
                     manageRisk = GetRowInt(row, "manageRisk"),
+                    invHp = GetRowInt(row, "invHp"),
+                    invSan = GetRowInt(row, "invSan"),
+                    conHp = GetRowInt(row, "conHp"),
+                    conSan = GetRowInt(row, "conSan"),
+                    manHp = GetRowInt(row, "manHp"),
+                    manSan = GetRowInt(row, "manSan"),
+                    hpDmg = GetRowInt(row, "hpDmg"),
+                    sanDmg = GetRowInt(row, "sanDmg"),
+                    invReq = GetRowIntArray4(row, "invReq", anomalyId),
+                    conReq = GetRowIntArray4(row, "conReq", anomalyId),
+                    manReq = GetRowIntArray4(row, "manReq", anomalyId),
                 };
+            }
+
+            if (AnomaliesById.TryGetValue("AN_001", out var sampleAnomaly))
+            {
+                Debug.Log($"[DataSample] AN_001 invHp={sampleAnomaly.invHp} invSan={sampleAnomaly.invSan} conHp={sampleAnomaly.conHp} conSan={sampleAnomaly.conSan} manHp={sampleAnomaly.manHp} manSan={sampleAnomaly.manSan}");
+                Debug.Log($"[DataSample] AN_001 invReq={FormatIntArray(sampleAnomaly.invReq)} conReq={FormatIntArray(sampleAnomaly.conReq)} manReq={FormatIntArray(sampleAnomaly.manReq)}");
             }
 
             TaskDefsByType = new Dictionary<TaskType, TaskDef>();
@@ -688,6 +705,56 @@ namespace Data
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return null;
             return TableRegistry.TryCoerceFloat(raw, out var value) ? value : null;
+        }
+
+        private static int[] GetRowIntArray4(Dictionary<string, object> row, string column, string anomalyId)
+        {
+            object raw = null;
+            if (row == null || !row.TryGetValue(column, out raw) || raw == null)
+            {
+                LogAnomalyArrayParseWarn(anomalyId, column, raw);
+                return new int[4];
+            }
+
+            var list = TableRegistry.CoerceList(raw);
+            if (list == null || list.Count == 0)
+            {
+                LogAnomalyArrayParseWarn(anomalyId, column, raw);
+                return new int[4];
+            }
+
+            var result = new int[4];
+            var count = Math.Min(list.Count, 4);
+            for (var i = 0; i < count; i++)
+            {
+                if (!TableRegistry.TryCoerceInt(list[i], out var value))
+                {
+                    LogAnomalyArrayParseWarn(anomalyId, column, raw);
+                    return new int[4];
+                }
+                result[i] = value;
+            }
+
+            return result;
+        }
+
+        private static void LogAnomalyArrayParseWarn(string anomalyId, string field, object raw)
+        {
+            var rawText = RawToString(raw);
+            Debug.LogWarning($"[DataParseWarn] AnomalyDef {anomalyId} field={field} raw=\"{rawText}\" -> fallback [0,0,0,0]");
+        }
+
+        private static string RawToString(object raw)
+        {
+            if (raw == null) return string.Empty;
+            if (raw is Newtonsoft.Json.Linq.JToken token) return token.ToString();
+            return Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+
+        private static string FormatIntArray(int[] values)
+        {
+            if (values == null) return "null";
+            return $"[{string.Join(",", values)}]";
         }
 
         private static bool? GetRowBoolNullable(Dictionary<string, object> row, string column)
