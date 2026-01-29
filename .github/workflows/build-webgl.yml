@@ -24,7 +24,7 @@ jobs:
           lfs: true
 
       - name: Validate Unity secrets (no secret values printed)
-        shell: pwsh
+        shell: powershell
         run: |
           if (-not '${{ secrets.UNITY_LICENSE }}') { throw "Missing secret: UNITY_LICENSE" }
           if (-not '${{ secrets.UNITY_EMAIL }}')   { throw "Missing secret: UNITY_EMAIL" }
@@ -44,13 +44,13 @@ jobs:
 
       - name: Locate WebGL root (folder containing index.html)
         id: webglroot
-        shell: pwsh
+        shell: powershell
         run: |
-          $index = Get-ChildItem -Path "build" -Recurse -Filter "index.html" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $index = Get-ChildItem build -Recurse -Filter index.html | Select-Object -First 1
           if (-not $index) {
             Write-Host "ERROR: index.html not found under build/."
-            Write-Host "==== build tree (depth 3) ===="
-            Get-ChildItem -Path "build" -Recurse -Depth 3 -Force | Select-Object FullName | Format-Table -AutoSize
+            Write-Host "==== build tree ===="
+            Get-ChildItem build -Recurse -Force | Select-Object -First 200 | % FullName
             exit 1
           }
           $root = $index.Directory.FullName
@@ -58,7 +58,7 @@ jobs:
           "path=$root" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Prepare Pages staging directory
-        shell: pwsh
+        shell: powershell
         run: |
           $webglRoot = '${{ steps.webglroot.outputs.path }}'
           if (-not (Test-Path (Join-Path $webglRoot "index.html"))) {
