@@ -16,20 +16,70 @@ concurrency:
 
 jobs:
   build:
-    runs-on: [self-hosted, Windows]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Validate Unity secrets (no secret values printed)
-        shell: powershell
+      - name: Free disk space
         run: |
-          if (-not '${{ secrets.UNITY_LICENSE }}') { throw "Missing secret: UNITY_LICENSE" }
-          if (-not '${{ secrets.UNITY_EMAIL }}')   { throw "Missing secret: UNITY_EMAIL" }
-          if (-not '${{ secrets.UNITY_PASSWORD }}'){ throw "Missing secret: UNITY_PASSWORD" }
-          Write-Host "Unity secrets look present."
+          echo "=== Disk space before cleanup ==="
+          df -h /
+          
+          AVAILABLE_GB=$(df --output=avail / | tail -1 | awk '{print int($1/1024/1024)}')
+          echo "Available disk space: ${AVAILABLE_GB}GB"
+          
+          # Only clean if less than 30GB available
+          if [ "$AVAILABLE_GB" -lt 30 ]; then
+            echo "Cleaning up disk space..."
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+            sudo docker image prune -a -f || true
+            sudo apt-get clean
+          else
+            echo "Sufficient disk space available, skipping cleanup"
+          fi
+          
+          echo "=== Disk space after cleanup ==="
+          df -h /
+
+      - name: Migrate Docker data-root (if needed)
+        run: |
+          AVAILABLE_GB=$(df --output=avail / | tail -1 | awk '{print int($1/1024/1024)}')
+          
+          # Only migrate if less than 30GB available
+          if [ "$AVAILABLE_GB" -lt 30 ]; then
+            echo "Migrating Docker data-root to /mnt..."
+            sudo systemctl stop docker
+            sudo mkdir -p /mnt/docker-data
+            sudo mv /var/lib/docker/* /mnt/docker-data/ || true
+            
+            sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+          {
+            "data-root": "/mnt/docker-data"
+          }
+          EOF
+            
+            sudo systemctl start docker
+            docker info | grep "Docker Root Dir"
+          else
+            echo "Sufficient disk space available, skipping Docker migration"
+          fi
+
+      - name: Restore Library cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            Library
+            Library/Bee
+            Library/il2cpp_cache
+          key: Library-${{ hashFiles('Assets/**', 'ProjectSettings/**', 'Packages/manifest.json') }}
+          restore-keys: |
+            Library-
 
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
@@ -44,46 +94,47 @@ jobs:
 
       - name: Locate WebGL root (folder containing index.html)
         id: webglroot
-        shell: powershell
         run: |
-          $index = Get-ChildItem build -Recurse -Filter index.html | Select-Object -First 1
-          if (-not $index) {
-            Write-Host "ERROR: index.html not found under build/."
-            Write-Host "==== build tree ===="
-            Get-ChildItem build -Recurse -Force | Select-Object -First 200 | % FullName
+          INDEX_PATH=$(find build -name index.html -type f | head -1)
+          if [ -z "$INDEX_PATH" ]; then
+            echo "ERROR: index.html not found under build/."
+            echo "==== build tree ===="
+            find build -type f | head -200
             exit 1
-          }
-          $root = $index.Directory.FullName
-          Write-Host "WebGL root: $root"
-          "path=$root" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          fi
+          ROOT_PATH=$(dirname "$INDEX_PATH")
+          echo "WebGL root: $ROOT_PATH"
+          echo "path=$ROOT_PATH" >> $GITHUB_OUTPUT
 
       - name: Prepare Pages staging directory
-        shell: powershell
         run: |
-          $webglRoot = '${{ steps.webglroot.outputs.path }}'
-          if (-not (Test-Path (Join-Path $webglRoot "index.html"))) {
-            throw "ERROR: index.html not found in WebGL root: $webglRoot"
-          }
+          WEBGL_ROOT="${{ steps.webglroot.outputs.path }}"
+          if [ ! -f "$WEBGL_ROOT/index.html" ]; then
+            echo "ERROR: index.html not found in WebGL root: $WEBGL_ROOT"
+            exit 1
+          fi
 
           # clean staging
-          if (Test-Path "public") { Remove-Item -Recurse -Force "public" }
+          rm -rf public
 
-          New-Item -ItemType Directory -Force -Path "public\SCP" | Out-Null
+          # Create public/SCP directory
+          mkdir -p public/SCP
 
           # Copy contents of WebGL root into public/SCP (preserve Build/ structure)
-          Copy-Item -Recurse -Force -Path (Join-Path $webglRoot "*") -Destination "public\SCP"
+          cp -r "$WEBGL_ROOT"/* public/SCP/
 
           # Disable Jekyll
-          New-Item -ItemType File -Force -Path "public\.nojekyll" | Out-Null
+          touch public/.nojekyll
 
-          Write-Host "==== Staging directory structure (public\SCP) ===="
-          Get-ChildItem -Force "public\SCP" | Format-Table Name,Length,LastWriteTime -AutoSize
-          Write-Host "==== Build subdirectory ===="
-          if (Test-Path "public\SCP\Build") {
-            Get-ChildItem -Force "public\SCP\Build" | Format-Table Name,Length,LastWriteTime -AutoSize
-          } else {
-            throw "ERROR: public\SCP\Build not found after copy."
-          }
+          echo "==== Staging directory structure (public/SCP) ===="
+          ls -lah public/SCP
+          echo "==== Build subdirectory ===="
+          if [ -d "public/SCP/Build" ]; then
+            ls -lah public/SCP/Build
+          else
+            echo "ERROR: public/SCP/Build not found after copy."
+            exit 1
+          fi
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
