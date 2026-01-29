@@ -117,22 +117,22 @@ jobs:
           # clean staging
           rm -rf public
 
-          # Create public/SCP directory
-          mkdir -p public/SCP
+          # Create public directory
+          mkdir -p public
 
-          # Copy contents of WebGL root into public/SCP (preserve Build/ structure)
-          cp -r "$WEBGL_ROOT"/* public/SCP/
+          # Copy contents of WebGL root directly into public/ (preserve Build/ structure)
+          cp -R "$WEBGL_ROOT"/. public/
 
           # Disable Jekyll
           touch public/.nojekyll
 
-          echo "==== Staging directory structure (public/SCP) ===="
-          ls -lah public/SCP
+          echo "==== Staging directory structure (public) ===="
+          ls -lah public
           echo "==== Build subdirectory ===="
-          if [ -d "public/SCP/Build" ]; then
-            ls -lah public/SCP/Build
+          if [ -d "public/Build" ]; then
+            ls -lah public/Build
           else
-            echo "ERROR: public/SCP/Build not found after copy."
+            echo "ERROR: public/Build not found after copy."
             exit 1
           fi
 
