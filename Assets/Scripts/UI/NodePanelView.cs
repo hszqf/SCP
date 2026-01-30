@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,11 +32,13 @@ public class NodePanelView : MonoBehaviour
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text progressText;
+    [SerializeField] private TMP_Text eventCountText;
 
     [Header("Buttons")]
     [SerializeField] private Button investigateButton;
     [SerializeField] private Button containButton;
     [SerializeField] private Button manageButton; // 收容后管理（打开管理面板）
+    [SerializeField] private Button processEventButton; // 处理事件
     [SerializeField] private Button closeButton;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
 
@@ -85,12 +88,19 @@ public class NodePanelView : MonoBehaviour
     private string _invTaskId;
     private string _conTaskId;
 
+
+    // Track if contain button is disabled and why
+    private bool _containDisabledForNoAnomalies = false;
+    // Track current containables state for guard checks
+    // Track last statusText for hint reset
+    private string _lastStatusText = null;
+
     private const float EPS = 0.0001f;
 
     public void Init(Action onInvestigate, Action onContain, Action onClose)
     {
         // Cache UIPanelRoot once
-        if (_uiRoot == null) _uiRoot = FindObjectOfType<UIPanelRoot>();
+        if (_uiRoot == null) _uiRoot = FindFirstObjectByType<UIPanelRoot>();
         _onInvestigate = onInvestigate;
         _onContain = onContain;
         _onClose = onClose;
@@ -115,6 +125,18 @@ public class NodePanelView : MonoBehaviour
                 // Manage panel is global (not per-node). If missing, do nothing.
                 _uiRoot?.OpenManage(_nodeId);
             });
+        }
+
+        if (!processEventButton)
+        {
+            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
+            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
+        }
+
+        if (processEventButton)
+        {
+            processEventButton.onClick.RemoveAllListeners();
+            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
         }
 
         if (closeButton)
@@ -158,21 +180,70 @@ public class NodePanelView : MonoBehaviour
         var n = GameController.I.GetNode(_nodeId);
         if (n == null) return;
 
+        if (!eventCountText)
+        {
+            var evtT = FindDeepChild(transform, "EventCountText");
+            if (evtT != null) eventCountText = evtT.GetComponent<TMP_Text>();
+        }
+
+        if (!processEventButton)
+        {
+            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
+            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
+        }
+
+        if (processEventButton && processEventButton.onClick.GetPersistentEventCount() == 0)
+        {
+            processEventButton.onClick.RemoveAllListeners();
+            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
+        }
+
         if (titleText) titleText.text = n.Name;
+
 
         string s = $"{n.Status}";
         if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
+        if (n.HasPendingEvent) s += " <color=#FFA500>[ATTENTION]</color>";
+
+        // 记录原始状态文本
+        _lastStatusText = s;
+
+
+        // 统一口径：可收容 = 已发现 - 已收容
+        int containableCount = GetContainableCount(n);
+        bool hasContainables = containableCount > 0;
+
+        UpdateDispatchButtons(n, containableCount, hasContainables);
+
+        // Add hint if contain button is disabled due to no anomalies
+        if (_containDisabledForNoAnomalies)
+        {
+            s += " <color=#FFAA00>[请先调查发现异常]</color>";
+        }
+
         if (statusText) statusText.text = s;
 
-        UpdateDispatchButtons(n);
         UpdateManageButton(n);
+
+        int pendingEvents = n.HasPendingEvent ? n.PendingEvents.Count : 0;
+
+        if (eventCountText)
+        {
+            eventCountText.text = pendingEvents > 0 ? $"待处理事件：{pendingEvents}" : "待处理事件：0";
+        }
+
+        if (processEventButton)
+        {
+            processEventButton.gameObject.SetActive(pendingEvents > 0);
+            processEventButton.interactable = pendingEvents > 0;
+        }
 
         if (progressText)
         {
             int invActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate) ?? 0;
             int conActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain) ?? 0;
             int manActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage) ?? 0;
-            int containables = n.Containables?.Count ?? 0;
+            int containables = GetContainableCount(n);
 
             int busy = 0;
             if (n.Tasks != null)
@@ -186,7 +257,7 @@ public class NodePanelView : MonoBehaviour
 
             int managed = n.ManagedAnomalies != null ? n.ManagedAnomalies.Count : 0;
             int neg = GameController.I.State.NegEntropy;
-            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg}";
+            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg} | 事件 {pendingEvents}";
         }
 
         CacheTaskListUIIfNeeded();
@@ -286,7 +357,7 @@ public class NodePanelView : MonoBehaviour
         _invTaskId = invMain?.Id;
         _conTaskId = conMain?.Id;
 
-        int containablesCount = node.Containables?.Count ?? 0;
+        int containablesCount = GetContainableCount(node);
 
         // Investigate card
         if (_invStatus)
@@ -299,7 +370,7 @@ public class NodePanelView : MonoBehaviour
             {
                 bool hasSquad = invMain.AssignedAgentIds != null && invMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && invMain.Progress <= EPS) _invStatus.text = "状态：待开始";
-                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(invMain.Progress * 100)}%）";
+                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(invMain) * 100)}%）";
                 else _invStatus.text = "状态：未指派";
 
                 if (inv.Count > 1) _invStatus.text += $"（+{inv.Count - 1}）";
@@ -319,7 +390,7 @@ public class NodePanelView : MonoBehaviour
             {
                 bool hasSquad = conMain.AssignedAgentIds != null && conMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && conMain.Progress <= EPS) _conStatus.text = "状态：待开始";
-                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(conMain.Progress * 100)}%）";
+                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(conMain) * 100)}%）";
                 else _conStatus.text = "状态：未指派";
 
                 if (con.Count > 1) _conStatus.text += $"（+{con.Count - 1}）";
@@ -340,21 +411,14 @@ public class NodePanelView : MonoBehaviour
             {
                 int c = (conMain.AssignedAgentIds != null) ? conMain.AssignedAgentIds.Count : 0;
 
-                string targetName = "";
-                if (node.Containables != null && node.Containables.Count > 0)
-                {
-                    var target = node.Containables.FirstOrDefault(x => x != null && x.Id == conMain.TargetContainableId)
-                                 ?? node.Containables[0];
-                    targetName = target?.Name ?? "";
-                }
-
+                string targetName = ResolveContainableName(node, conMain.SourceAnomalyId);
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? $"人员：{c}人"
                     : $"目标：{targetName}\n人员：{c}人";
             }
             else if (containablesCount > 0)
             {
-                string targetName = node.Containables[0]?.Name ?? "";
+                string targetName = ResolveContainableName(node, null);
                 _conPeople.text = string.IsNullOrEmpty(targetName)
                     ? "目标：可收容\n人员：0人"
                     : $"目标：{targetName}\n人员：0人";
@@ -543,13 +607,16 @@ public class NodePanelView : MonoBehaviour
             var status = GetTmp(row, "Status");
             var people = GetTmp(row, "People");
 
-            string titleTextLocal = t.Type switch
-            {
-                TaskType.Investigate => "调查",
-                TaskType.Contain => "收容",
-                TaskType.Manage => "管理",
-                _ => t.Type.ToString()
-            };
+            string taskDefLabel = ResolveTaskDefLabel(t);
+            string titleTextLocal = !string.IsNullOrEmpty(taskDefLabel)
+                ? taskDefLabel
+                : t.Type switch
+                {
+                    TaskType.Investigate => "调查",
+                    TaskType.Contain => "收容",
+                    TaskType.Manage => "管理",
+                    _ => t.Type.ToString()
+                };
             if (t.Type == TaskType.Contain)
             {
                 string tn = ResolveContainableName(node, t.TargetContainableId);
@@ -669,15 +736,39 @@ public class NodePanelView : MonoBehaviour
         };
     }
 
+    private static int GetContainableCount(NodeState node)
+    {
+        if (node?.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return 0;
+
+        HashSet<string> contained = null;
+        if (node.ManagedAnomalies != null && node.ManagedAnomalies.Count > 0)
+        {
+            contained = new HashSet<string>(node.ManagedAnomalies
+                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
+                .Select(m => m.AnomalyId));
+        }
+
+        int count = 0;
+        foreach (var defId in node.KnownAnomalyDefIds)
+        {
+            if (string.IsNullOrEmpty(defId)) continue;
+            if (contained != null && contained.Contains(defId)) continue;
+            count += 1;
+        }
+        return count;
+    }
+
     private static string ResolveContainableName(NodeState node, string containableId)
     {
-        if (node == null || node.Containables == null || node.Containables.Count == 0) return "";
-        if (!string.IsNullOrEmpty(containableId))
-        {
-            var c = node.Containables.FirstOrDefault(x => x != null && x.Id == containableId);
-            if (c != null) return c.Name ?? "";
-        }
-        return node.Containables[0]?.Name ?? "";
+        if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return "";
+        var registry = DataRegistry.Instance;
+        string defId = containableId;
+        if (string.IsNullOrEmpty(defId))
+            defId = node.KnownAnomalyDefIds[0];
+        if (string.IsNullOrEmpty(defId)) return "";
+        if (registry.AnomaliesById.TryGetValue(defId, out var def) && def != null)
+            return def.name;
+        return defId;
     }
 
     private static string ResolveManagedAnomalyName(NodeState node, string managedAnomalyId)
@@ -689,6 +780,14 @@ public class NodePanelView : MonoBehaviour
             if (m != null) return m.Name ?? "";
         }
         return "";
+    }
+
+    private static string ResolveTaskDefLabel(NodeTask task)
+    {
+        if (task == null) return "";
+        var def = DataRegistry.Instance != null ? DataRegistry.Instance.GetTaskDefById(task.TaskDefId) : null;
+        if (def != null && !string.IsNullOrEmpty(def.name)) return def.name;
+        return task.TaskDefId ?? "";
     }
 
     private static string BuildTaskStatusText(NodeTask t, bool hasSquad)
@@ -704,7 +803,7 @@ public class NodePanelView : MonoBehaviour
 
         if (t.Progress <= EPS) return "状态：待开始";
 
-        return $"状态：进行中（{(int)(t.Progress * 100)}%）";
+        return $"状态：进行中（{(int)(GetTaskProgress01(t) * 100)}%）";
     }
 
     private static TaskActionMode GetActionMode(NodeTask t, bool hasSquad)
@@ -716,6 +815,14 @@ public class NodePanelView : MonoBehaviour
         if (t.Type == TaskType.Manage) return TaskActionMode.Cancel;
 
         return (t.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
+    }
+
+    private static float GetTaskProgress01(NodeTask task)
+    {
+        if (task == null) return 0f;
+        if (task.Type == TaskType.Manage) return 0f;
+        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        return Mathf.Clamp01(task.Progress / baseDays);
     }
 
     private string BuildActionLabel(TaskActionMode mode, string taskId)
@@ -734,7 +841,7 @@ public class NodePanelView : MonoBehaviour
     // Dispatch buttons
     // ----------------------
 
-    private void UpdateDispatchButtons(NodeState n)
+    private void UpdateDispatchButtons(NodeState n, int containableCount, bool hasContainables)
     {
         if (n == null) return;
 
@@ -742,13 +849,16 @@ public class NodePanelView : MonoBehaviour
         // - Investigate: can be initiated freely.
         // - Contain: requires discovered containables.
 
-        bool hasContainables = (n.Containables != null && n.Containables.Count > 0);
-
         bool canInvestigate = true; // 调查随时可发起
         bool canContain = n.Status != NodeStatus.Secured && hasContainables; // 收容必须有可收容物
 
+        _containDisabledForNoAnomalies = !hasContainables && n.Status != NodeStatus.Secured;
+
+
         if (investigateButton) investigateButton.interactable = canInvestigate;
-        if (containButton) containButton.interactable = canContain;
+        if (containButton) containButton.interactable = canContain && hasContainables;
+
+        Debug.Log($"[NodePanelContainGate] nodeId={_nodeId} containableCount={containableCount} hasContainables={hasContainables} canContain={canContain} btn={(containButton ? containButton.interactable : false)}");
     }
 
     private void UpdateManageButton(NodeState n)

@@ -11,7 +11,7 @@ public class AgentPickerItemView : MonoBehaviour
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text attrText;
     [SerializeField] private TMP_Text busyTagText;
-    
+
     // 不再依赖 SelectedMark GameObject，直接用颜色
     [SerializeField] private GameObject selectedIcon; // 可选：保留一个勾选图标
 
@@ -29,7 +29,8 @@ public class AgentPickerItemView : MonoBehaviour
         string attrLine,
         bool isBusyOtherNode,
         bool selected,
-        System.Action<string> onClick)
+        System.Action<string> onClick,
+        string busyText = null)
     {
         AgentId = agentId;
         _isBusy = isBusyOtherNode;
@@ -41,11 +42,11 @@ public class AgentPickerItemView : MonoBehaviour
         if (nameText) nameText.text = string.IsNullOrEmpty(displayName) ? agentId : displayName;
         if (attrText) attrText.text = attrLine;
 
-        // 忙碌状态
+        // 忙碌状态 - 显示完整的 busy text 或默认 "BUSY"
         if (busyTagText)
         {
             busyTagText.gameObject.SetActive(_isBusy);
-            busyTagText.text = _isBusy ? "BUSY" : "";
+            busyTagText.text = _isBusy ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText) : "";
         }
 
         // 按钮交互
@@ -57,6 +58,32 @@ public class AgentPickerItemView : MonoBehaviour
         }
 
         // 立即刷新视觉
+        UpdateVisuals(selected);
+    }
+
+    public void BindSimple(string displayName, string attrLine, string statusLine, bool selected = false)
+    {
+        AgentId = string.Empty;
+        _isBusy = !string.IsNullOrEmpty(statusLine) && statusLine != "Idle";
+
+        if (!button) button = GetComponent<Button>();
+        if (!background) background = GetComponent<Image>();
+
+        if (nameText) nameText.text = displayName;
+        if (attrText) attrText.text = attrLine;
+
+        if (busyTagText)
+        {
+            busyTagText.gameObject.SetActive(!string.IsNullOrEmpty(statusLine));
+            busyTagText.text = statusLine ?? string.Empty;
+        }
+
+        if (button)
+        {
+            button.onClick.RemoveAllListeners();
+            button.interactable = false;
+        }
+
         UpdateVisuals(selected);
     }
 

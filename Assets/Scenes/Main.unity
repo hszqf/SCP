@@ -255,7 +255,7 @@ MonoBehaviour:
   m_Dithering: 0
   m_ClearDepth: 1
   m_AllowXRRendering: 1
-  m_AllowHDROutput: 1
+  m_AllowHDROutput: 0
   m_UseScreenCoordOverride: 0
   m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
   m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
@@ -313,7 +313,7 @@ Camera:
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 0
-  m_HDR: 1
+  m_HDR: 0
   m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
@@ -622,6 +622,7 @@ MonoBehaviour:
   agentPickerPrefab: {fileID: 7515083810427959721, guid: 57bb04d57c340e94eaa39ef2d3112740, type: 3}
   confirmDialogPrefab: {fileID: 8639386908128668977, guid: 443d7c44dc6ecff419aecfe2e57a2c7d, type: 3}
   managePanelPrefab: {fileID: 5526819420777000065, guid: e32b9f1e805088e48afc0644c360b814, type: 3}
+  recruitPanelPrefab: {fileID: 210391625587086635, guid: cbf27805047e8f447a12551a935f1180, type: 3}
 --- !u!1 &1038949951
 GameObject:
   m_ObjectHideFlags: 0

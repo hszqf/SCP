@@ -196,7 +196,7 @@ public static class ConfirmDialogPrefabBuilder
         msgText.text = "Are you sure?";
         msgText.fontSize = 32;
         msgText.alignment = TMPro.TextAlignmentOptions.TopLeft;
-        msgText.enableWordWrapping = true;
+        msgText.textWrappingMode = TMPro.TextWrappingModes.Normal;
 
         // Buttons row
         var btnRow = new UnityEngine.GameObject("Buttons",

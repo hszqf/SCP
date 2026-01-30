@@ -9,9 +9,12 @@
 // <EXPORT_BLOCK>
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Core;
+using Data;
 using UnityEngine;
 
 public class GameController : MonoBehaviour
@@ -20,11 +23,13 @@ public class GameController : MonoBehaviour
 
     public GameState State { get; private set; } = new GameState();
     public event Action OnStateChanged;
+    public bool IsGameOver { get; private set; }
 
     private System.Random _rng;
 
     [Header("Debug Seed (same seed => same run)")]
     [SerializeField] private int seed = 12345;
+
 
     private void Awake()
     {
@@ -33,18 +38,153 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
+        Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
+
+        // Check platform and choose sync or async initialization
+        if (Application.platform == RuntimePlatform.WebGLPlayer)
+        {
+            // WebGL: Use async loading
+            StartCoroutine(InitializeAsync());
+        }
+        else
+        {
+            // Non-WebGL: Use sync loading (Editor, Standalone)
+            InitializeSync();
+        }
+    }
+
+    /// <summary>
+    /// Synchronous initialization for non-WebGL platforms.
+    /// Accesses DataRegistry.Instance which triggers immediate JSON loading from disk.
+    /// </summary>
+    private void InitializeSync()
+    {
+        Debug.Log("[GameController] Initializing with sync DataRegistry load (non-WebGL)");
+        var registry = DataRegistry.Instance;
+        InitializeGameState(registry);
+    }
+
+    /// <summary>
+    /// Asynchronous initialization for WebGL platform.
+    /// Loads game_data.json via network request, then initializes game state.
+    /// </summary>
+    private IEnumerator InitializeAsync()
+    {
+        Debug.Log("[GameController] Starting async DataRegistry load (WebGL)");
+
+        // Create registry instance (without calling Reload which would block)
+        var registry = DataRegistry.GetOrCreateForAsync();
+
+        string path = Path.Combine(Application.streamingAssetsPath, "game_data.json");
+        bool loadSuccess = false;
+        Exception loadError = null;
+
+        // Start async JSON load
+        yield return DataRegistry.LoadJsonTextAsync(
+            path,
+            onOk: (jsonText) =>
+            {
+                try
+                {
+                    registry.InitializeFromText(jsonText);
+                    loadSuccess = true;
+                    Debug.Log("[GameController] Async JSON load and initialization complete");
+                }
+                catch (Exception ex)
+                {
+                    loadError = ex;
+                    Debug.LogError($"[GameController] Failed to initialize registry from async-loaded JSON: {ex}");
+                }
+            },
+            onErr: (error) =>
+            {
+                loadError = error;
+                Debug.LogError($"[GameController] Async JSON load failed: {error}");
+            }
+        );
+
+        // Check if load succeeded
+        if (!loadSuccess)
+        {
+            Debug.LogError($"[GameController] Game initialization failed. Error: {loadError?.Message ?? "Unknown"}");
+            yield break;
+        }
+
+        // Initialize game state with loaded registry
+        InitializeGameState(registry);
+    }
+
+    /// <summary>
+    /// Common game state initialization (runs after registry is ready, whether sync or async).
+    /// </summary>
+    private void InitializeGameState(DataRegistry registry)
+    {
+        if (registry == null)
+        {
+            Debug.LogError("[GameController] Registry is null; cannot initialize game state");
+            return;
+        }
+
+        // ---- 初始全局状态（从 Balance 表读取）----
+        int startMoney = registry.GetBalanceIntWithWarn("StartMoney", 0);
+        float startWorldPanic = registry.GetBalanceFloatWithWarn("StartWorldPanic", 0f);
+        int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+        float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
+        Debug.Log($"[Balance] StartMoney={startMoney} StartWorldPanic={startWorldPanic} ClampMoneyMin={clampMoneyMin} ClampWorldPanicMin={clampWorldPanicMin}");
+        State.Money = Math.Max(clampMoneyMin, startMoney);
+        State.WorldPanic = Math.Max(clampWorldPanicMin, startWorldPanic);
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
         State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4 });
         State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6 });
         State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4 });
 
-        // ---- 初始节点（先写死）----
-        State.Nodes.Add(new NodeState { Id = "N1", Name = "节点1", X = 0.35f, Y = 0.42f });
-        State.Nodes.Add(new NodeState { Id = "N2", Name = "节点2", X = 0.62f, Y = 0.33f });
-        State.Nodes.Add(new NodeState { Id = "N3", Name = "节点3", X = 0.48f, Y = 0.58f });
+        // ---- 初始节点（从 DataRegistry 读取，坐标仍由代码提供）----
+        var nodeCoords = new Dictionary<string, (float x, float y)>
+        {
+            ["N1"] = (0.35f, 0.42f),
+            ["N2"] = (0.62f, 0.33f),
+            ["N3"] = (0.48f, 0.58f),
+        };
+
+        foreach (var nodeDef in registry.NodesById.Values.OrderBy(n => n.nodeId))
+        {
+            var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (x: 0.5f, y: 0.5f);
+            var nodeState = new NodeState
+            {
+                Id = nodeDef.nodeId,
+                Name = nodeDef.name,
+                X = coord.x,
+                Y = coord.y,
+                LocalPanic = Math.Max(0, nodeDef.startLocalPanic),
+                Population = Math.Max(0, nodeDef.startPopulation),
+                Tags = nodeDef.tags ?? new List<string>(),
+                ActiveAnomalyIds = nodeDef.startAnomalyIds ?? new List<string>(),
+            };
+            nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
+            if (nodeState.HasAnomaly)
+            {
+                foreach (var anomalyId in nodeState.ActiveAnomalyIds)
+                {
+                    if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
+                    {
+                        nodeState.AnomalyLevel = Math.Max(nodeState.AnomalyLevel, Math.Max(1, anomalyDef.baseThreat));
+                    }
+                }
+            }
+
+            State.Nodes.Add(nodeState);
+        }
 
         Notify();
+    }
+
+    private void OnDestroy()
+    {
+        if (I == this)
+        {
+            Sim.OnIgnorePenaltyApplied -= HandleIgnorePenaltyApplied;
+        }
     }
 
     public void Notify() => OnStateChanged?.Invoke();
@@ -57,15 +197,93 @@ public class GameController : MonoBehaviour
 
     public void EndDay()
     {
+        if (IsGameOver)
+        {
+            Debug.LogWarning("[GameOver] EndDay ignored because the game is already over.");
+            return;
+        }
+
         Sim.StepDay(State, _rng);
         Notify();
+        RefreshMapNodes();
     }
 
+    public void MarkGameOver(string reason)
+    {
+        if (IsGameOver) return;
+        IsGameOver = true;
+        Debug.Log($"[GameOver] {reason}");
+    }
+
+    public (bool success, string text) ResolveEvent(string nodeId, string eventId, string optionId)
+    {
+        var res = Sim.ResolveEvent(State, nodeId, eventId, optionId, _rng);
+        Notify();
+        RefreshMapNodes();
+        return res;
+    }
+
+    // Legacy wrapper: locate node by eventId across all nodes.
     public (bool success, string text) ResolveEvent(string eventId, string optionId)
     {
-        var res = Sim.ResolveEvent(State, eventId, optionId, _rng);
+        var node = State.Nodes.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventInstanceId == eventId));
+        if (node == null) return (false, "事件不存在");
+        return ResolveEvent(node.Id, eventId, optionId);
+    }
+
+    public bool TryHireAgent(int cost, out AgentState agent)
+    {
+        agent = null;
+        if (cost < 0) cost = 0;
+        if (State == null) return false;
+        if (State.Money < cost) return false;
+
+        int clampMoneyMin = DataRegistry.Instance.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+        int moneyAfter = Math.Max(clampMoneyMin, State.Money - cost);
+        State.Money = moneyAfter;
+
+        string agentId = GenerateNextAgentId();
+        agent = new AgentState
+        {
+            Id = agentId,
+            Name = $"Agent {agentId}",
+            Perception = 5,
+            Operation = 5,
+            Resistance = 5,
+            Power = 5,
+        };
+
+        State.Agents.Add(agent);
+        Debug.Log($"[Hire] cost={cost} moneyAfter={moneyAfter} agentId={agentId}");
         Notify();
-        return res;
+        RefreshMapNodes();
+        return true;
+    }
+
+    private string GenerateNextAgentId()
+    {
+        int max = 0;
+        if (State?.Agents != null)
+        {
+            foreach (var a in State.Agents)
+            {
+                if (a == null || string.IsNullOrEmpty(a.Id)) continue;
+                if (!a.Id.StartsWith("A", StringComparison.OrdinalIgnoreCase)) continue;
+                var raw = a.Id.Substring(1);
+                if (int.TryParse(raw, out var value))
+                    max = Math.Max(max, value);
+            }
+        }
+
+        int next = max + 1;
+        string candidate = $"A{next}";
+        while (State?.Agents?.Any(a => a != null && a.Id == candidate) == true)
+        {
+            next++;
+            candidate = $"A{next}";
+        }
+
+        return candidate;
     }
 
     // =====================
@@ -86,7 +304,10 @@ public class GameController : MonoBehaviour
             CreatedDay = State.Day,
             Progress = 0f,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Investigate);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateInvestigateTask(node:{nodeId})");
         return t;
     }
 
@@ -94,12 +315,14 @@ public class GameController : MonoBehaviour
     {
         var n = GetNode(nodeId);
         if (n == null) return null;
-        if (n.Containables == null || n.Containables.Count == 0) return null;
+        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return null;
 
         // Validate target; fallback to first
         string target = containableId;
-        if (string.IsNullOrEmpty(target) || !n.Containables.Any(c => c != null && c.Id == target))
-            target = n.Containables[0].Id;
+        if (string.IsNullOrEmpty(target))
+            target = n.KnownAnomalyDefIds[0];
+        else if (!n.KnownAnomalyDefIds.Contains(target))
+            return null;
 
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();
 
@@ -110,9 +333,12 @@ public class GameController : MonoBehaviour
             State = TaskState.Active,
             CreatedDay = State.Day,
             Progress = 0f,
-            TargetContainableId = target,
+            SourceAnomalyId = target,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Contain);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateContainTask(node:{nodeId}, target:{target})");
         return t;
     }
 
@@ -127,11 +353,29 @@ public class GameController : MonoBehaviour
         if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.Id == target))
             return null;
 
+        var managed = n.ManagedAnomalies.FirstOrDefault(m => m != null && m.Id == target);
+        if (managed == null)
+            return null;
+
+        string defId = managed.AnomalyId;
+        if (string.IsNullOrEmpty(defId))
+        {
+            Debug.LogWarning($"[ManageTask] managedAnomalyId={target} missing AnomalyId; ManageDaily impacts will be skipped.");
+        }
+
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();
 
         // If already has an active manage task for this anomaly, reuse (idempotent)
         var existing = n.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == target);
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            if (string.IsNullOrEmpty(existing.SourceAnomalyId) && !string.IsNullOrEmpty(defId))
+            {
+                existing.SourceAnomalyId = defId;
+                Debug.Log($"[ManageTask] taskId={existing.Id} restored SourceAnomalyId={defId} from managed anomaly {target}.");
+            }
+            return existing;
+        }
 
         var t = new NodeTask
         {
@@ -141,8 +385,12 @@ public class GameController : MonoBehaviour
             CreatedDay = State.Day,
             Progress = 0f,
             TargetManagedAnomalyId = target,
+            SourceAnomalyId = string.IsNullOrEmpty(defId) ? null : defId,
         };
+        WireTaskDefOnCreate(t);
         n.Tasks.Add(t);
+        LogTaskDefSummary(TaskType.Manage);
+        GameControllerTaskExt.LogBusySnapshot(this, $"CreateManageTask(node:{nodeId}, anomaly:{target})");
         return t;
     }
 
@@ -176,17 +424,11 @@ public class GameController : MonoBehaviour
         t.Progress = 0f;
         t.State = TaskState.Cancelled;
 
-        // Compatibility: if this is a Manage task, also clear legacy ManagerAgentIds on the target anomaly.
-        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
-        {
-            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
-            if (m != null && m.ManagerAgentIds != null) m.ManagerAgentIds.Clear();
-        }
-
         // Node status: only coarse
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
+        GameControllerTaskExt.LogBusySnapshot(this, $"CancelOrRetreatTask(task:{taskId})");
         Notify();
         return true;
     }
@@ -198,23 +440,52 @@ public class GameController : MonoBehaviour
 
         t.AssignedAgentIds = new List<string>(agentIds);
 
-        // Compatibility: if this is a Manage task, mirror to legacy ManagerAgentIds on the target anomaly.
-        if (t.Type == TaskType.Manage && n != null && n.ManagedAnomalies != null && !string.IsNullOrEmpty(t.TargetManagedAnomalyId))
-        {
-            var m = n.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == t.TargetManagedAnomalyId);
-            if (m != null)
-            {
-                if (m.ManagerAgentIds == null) m.ManagerAgentIds = new List<string>();
-                m.ManagerAgentIds.Clear();
-                m.ManagerAgentIds.AddRange(agentIds);
-            }
-        }
-
         // Node-level bookkeeping
         if (n != null && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
+
+        GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(",", agentIds)})");
         Notify();
+    }
+
+    private void LogTaskDefSummary(TaskType type)
+    {
+        var registry = DataRegistry.Instance;
+        int baseDays = registry.GetTaskBaseDaysWithWarn(type, 1);
+        var (minSlots, maxSlots) = registry.GetTaskAgentSlotRangeWithWarn(type, 1, int.MaxValue);
+        Debug.Log($"[TaskDef] taskType={type} baseDays={baseDays} slotsMin={minSlots} slotsMax={maxSlots}");
+    }
+
+    private void WireTaskDefOnCreate(NodeTask task)
+    {
+        if (task == null) return;
+        TaskDef def = null;
+        var registry = DataRegistry.Instance;
+        if (registry != null && registry.TryGetTaskDefForType(task.Type, out def))
+        {
+            task.TaskDefId = def.taskDefId;
+        }
+        LogTaskCreate(task, def);
+    }
+
+    private static void LogTaskCreate(NodeTask task, TaskDef def)
+    {
+        if (task == null) return;
+        string taskDefId = def?.taskDefId ?? task.TaskDefId ?? "";
+        string taskDefName = def?.name ?? "";
+        Debug.Log($"[TaskCreate] taskId={task.Id} type={task.Type} taskDefId={taskDefId} name={taskDefName}");
+    }
+
+    private void RefreshMapNodes()
+    {
+        MapNodeSpawner.I?.RefreshMapNodes();
+        UIPanelRoot.I?.RefreshNodePanel();
+    }
+
+    private void HandleIgnorePenaltyApplied()
+    {
+        RefreshMapNodes();
     }
 
     // =====================
@@ -233,10 +504,10 @@ public class GameController : MonoBehaviour
     {
         var n = GetNode(nodeId);
         if (n == null) return;
-        if (n.Containables == null || n.Containables.Count == 0) return;
+        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return;
 
-        // Legacy: default to first containable
-        var t = CreateContainTask(nodeId, n.Containables[0].Id);
+        // Use first known anomaly as default
+        var t = CreateContainTask(nodeId, n.KnownAnomalyDefIds[0]);
         if (t == null) return;
         AssignTask(t.Id, agentIds);
     }
@@ -255,7 +526,7 @@ public class GameController : MonoBehaviour
 /// - 预定占用：派遣=占用（progress==0 也占用）。busy 判定遍历所有节点所有 Active 任务。
 /// - progress==0：不允许在选人面板改派；必须先取消该任务。
 /// - progress>0：不允许更换；必须撤退该任务。
-/// - 收容前置：必须有可收容目标（Containables > 0）。
+
 ///
 /// 注意：为了兼容旧 UI（尚未支持任务列表），TryAssignInvestigate/TryAssignContain 只操作“当前任务”（每类取一条）。
 /// 等 NodePanelView 升级为任务列表后，再引入基于 taskId 的 UI 调度。
@@ -278,52 +549,12 @@ public static class GameControllerTaskExt
         if (gc == null || gc.State?.Nodes == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 
-        // 1) Busy by any ACTIVE task squad (any node)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.Tasks == null) continue;
-            foreach (var t in node.Tasks)
-            {
-                if (t == null) continue;
-                if (t.State != TaskState.Active) continue;
-                if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
+        var busy = DeriveBusyAgentIdsFromTasks(gc);
+        bool anyBusy = agentIds.Any(id => !string.IsNullOrEmpty(id) && busy.Contains(id));
+        if (anyBusy)
 
-                if (t.AssignedAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        // 2) Busy by anomaly management via ACTIVE Manage tasks (formalized)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.Tasks == null) continue;
-            foreach (var t in node.Tasks)
-            {
-                if (t == null) continue;
-                if (t.State != TaskState.Active) continue;
-                if (t.Type != TaskType.Manage) continue;
-                if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
-
-                if (t.AssignedAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        // 3) Compatibility: legacy ManagerAgentIds (should be phased out)
-        foreach (var node in gc.State.Nodes)
-        {
-            if (node?.ManagedAnomalies == null) continue;
-            foreach (var m in node.ManagedAnomalies)
-            {
-                if (m == null) continue;
-                if (m.ManagerAgentIds == null || m.ManagerAgentIds.Count == 0) continue;
-
-                if (m.ManagerAgentIds.Intersect(agentIds).Any())
-                    return true;
-            }
-        }
-
-        return false;
+            LogBusySnapshot(gc, $"AreAgentsBusy(check:{string.Join(",", agentIds)})");
+        return anyBusy;
     }
 
     // ---------- Legacy: task started? ----------
@@ -360,7 +591,11 @@ public static class GameControllerTaskExt
         if (any && n.Status != NodeStatus.Secured)
             n.Status = NodeStatus.Calm;
 
-        if (any) gc.Notify();
+        if (any)
+        {
+            GameControllerTaskExt.LogBusySnapshot(gc, $"ForceWithdraw(node:{nodeId})");
+            gc.Notify();
+        }
         return any;
     }
 
@@ -385,7 +620,7 @@ public static class GameControllerTaskExt
         // 收容前置：必须有调查产出的可收容目标
         if (type == TaskType.Contain)
         {
-            int c = (n.Containables != null) ? n.Containables.Count : 0;
+            int c = (n.KnownAnomalyDefIds != null) ? n.KnownAnomalyDefIds.Count : 0;
             if (c <= 0)
                 return AssignResult.Fail("未发现可收容目标：请先派遣调查完成后再进行收容");
         }
@@ -403,8 +638,8 @@ public static class GameControllerTaskExt
                 current = gc.CreateInvestigateTask(nodeId);
             else
             {
-                // default to first containable
-                string target = n.Containables[0].Id;
+                // default to first known anomaly
+                string target = (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Count > 0) ? n.KnownAnomalyDefIds[0] : null;
                 current = gc.CreateContainTask(nodeId, target);
             }
         }
@@ -414,11 +649,11 @@ public static class GameControllerTaskExt
         // Validate containment target still exists
         if (type == TaskType.Contain)
         {
-            if (n.Containables == null || n.Containables.Count == 0)
+            if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0)
                 return AssignResult.Fail("可收容目标已为空");
 
-            if (string.IsNullOrEmpty(current.TargetContainableId) || !n.Containables.Any(c => c != null && c.Id == current.TargetContainableId))
-                current.TargetContainableId = n.Containables[0].Id;
+            if (string.IsNullOrEmpty(current.SourceAnomalyId) || !n.KnownAnomalyDefIds.Contains(current.SourceAnomalyId))
+                current.SourceAnomalyId = n.KnownAnomalyDefIds[0];
         }
 
         // Enforce "no repick" per task
@@ -436,7 +671,40 @@ public static class GameControllerTaskExt
 
         // Assign squad
         current.AssignedAgentIds = new List<string>(agentIds);
+
+        LogBusySnapshot(gc, $"TryAssignLegacyCurrentTask(node:{nodeId}, type:{type}, agents:{string.Join(",", agentIds)})");
+
         return AssignResult.Ok();
+    }
+
+    // ---------- Busy derivation & debug ----------
+
+    public static HashSet<string> DeriveBusyAgentIdsFromTasks(GameController gc)
+    {
+        var result = new HashSet<string>();
+        if (gc?.State?.Nodes == null) return result;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.Tasks == null) continue;
+            foreach (var t in node.Tasks)
+            {
+                if (t == null || t.State != TaskState.Active) continue;
+                if (t.AssignedAgentIds == null) continue;
+                foreach (var id in t.AssignedAgentIds)
+                    if (!string.IsNullOrEmpty(id)) result.Add(id);
+            }
+        }
+
+        return result;
+    }
+
+    public static void LogBusySnapshot(GameController gc, string context)
+    {
+        if (gc == null) return;
+        var busy = DeriveBusyAgentIdsFromTasks(gc);
+        var list = string.Join(",", busy.OrderBy(x => x));
+        Debug.Log($"[BusySnapshot] {context} => count={busy.Count} ids=[{list}]");
     }
 }
 // </EXPORT_BLOCK>

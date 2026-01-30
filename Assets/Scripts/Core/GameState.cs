@@ -14,7 +14,7 @@ namespace Core
     // Keep for legacy UI and map display. In N-task model, task state is derived from NodeState.Tasks.
     public enum NodeStatus { Calm, Secured }
 
-    // Events still attach to a node; their kind affects which task type they modify.
+    // Legacy event kind (PendingEvent). New node events use EventInstance.
     public enum EventKind { Investigate, Contain }
 
     public enum TaskType { Investigate, Contain, Manage }
@@ -30,15 +30,15 @@ namespace Core
         public int Operation = 5;
         public int Resistance = 5;
         public int Power = 5;
+        public int HP = 10;
+        public int MaxHP = 10;
+        public int SAN = 10;
+        public int MaxSAN = 10;
+        public int Level = 1;
+        public int Exp = 0;
+        public int TalentPoints = 0;
     }
 
-    [Serializable]
-    public class ContainableItem
-    {
-        public string Id;
-        public string Name;
-        public int Level = 1;
-    }
 
     // 收容后进入“已收藏异常”，可被分配干员进行长期管理，按天产出负熵。
     [Serializable]
@@ -47,14 +47,11 @@ namespace Core
         public string Id;
         public string Name;
         public int Level = 1;
+        public string AnomalyId;
+        public string AnomalyClass;
 
         // 左侧“已收藏异常”列表使用（后续可做收藏/取消收藏筛选）
         public bool Favorited = true;
-
-        // 被分配的管理干员（占用）
-        // Legacy field: when “Manage” is formalized as NodeTask (TaskType.Manage), agent assignment should live in NodeTask.AssignedAgentIds.
-        // Kept temporarily for migration/compatibility; do not write new logic against this field.
-        public List<string> ManagerAgentIds = new List<string>();
 
         // 第一次开始管理的日期（用于统计/成长）
         public int StartDay;
@@ -69,6 +66,7 @@ namespace Core
         public string Id;
         public TaskType Type;
         public TaskState State = TaskState.Active;
+        public string TaskDefId;
 
         // 0..1
         public float Progress = 0f;
@@ -78,6 +76,12 @@ namespace Core
 
         // Only for containment tasks: which containable we are trying to contain.
         public string TargetContainableId;
+
+        // Investigate: which news clue we are targeting (empty => generic investigation).
+        public string TargetNewsId;
+
+        // Investigate/Contain: anomaly id associated with this task (optional).
+        public string SourceAnomalyId;
 
         // Only for management tasks: which managed anomaly we are managing.
         public string TargetManagedAnomalyId;
@@ -93,6 +97,7 @@ namespace Core
     {
         public string Id;
         public string Name;
+        public List<string> Tags = new();
 
         // 0..1 百分比坐标：左下(0,0) 右上(1,1)
         public float X;
@@ -103,15 +108,23 @@ namespace Core
 
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
+        public List<string> ActiveAnomalyIds = new();
+        // 已发现/已知异常（Investigate 完成后写入）；口径为 anomalyDefId（如 AN_002）
+        public List<string> KnownAnomalyDefIds = new();
 
-        // 调查产出：可收容目标列表（调查完成后写入）
-        public List<ContainableItem> Containables = new();
+
         // 收容产出：已收容目标列表（收容完成后写入）
         public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
 
 
         // ===== NEW: Unlimited tasks =====
         public List<NodeTask> Tasks = new();
+
+        // ===== Node-scoped state =====
+        public int LocalPanic = 0;
+        public int Population = 10;
+        public List<EventInstance> PendingEvents = new();
+        public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
 
         // ===== Legacy fields (temporary) =====
         // Kept so existing UI/code can compile during migration. Do not use for new features.
@@ -157,8 +170,11 @@ namespace Core
     public class GameState
     {
         public int Day = 1;
-        public int Money = 1000;
-        public int Panic = 0;
+        public int Money = 0;
+        public float WorldPanic = 0f;
+
+        // 预留字段：Intel（暂不结算）
+        public int Intel = 0;
 
         // 新货币：负熵（由“管理异常”系统每日产出）
         public int NegEntropy = 0;
@@ -172,6 +188,12 @@ namespace Core
 
         public List<PendingEvent> PendingEvents = new();
         public List<string> News = new();
+        public List<NewsInstance> NewsLog = new();
+
+        public Dictionary<string, int> EventFiredCounts = new();
+        public Dictionary<string, int> EventLastFiredDay = new();
+        public Dictionary<string, int> NewsFiredCounts = new();
+        public Dictionary<string, int> NewsLastFiredDay = new();
     }
 }
 // </EXPORT_BLOCK>

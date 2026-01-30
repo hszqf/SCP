@@ -2,9 +2,11 @@
 // Source: Assets/Scripts/UI/NodeButton.cs
 // N-task model compatible: summarizes active investigate/contain tasks from node.Tasks.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Core;
+using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,7 +27,14 @@ public class NodeButton : MonoBehaviour
 
     void OnClick()
     {
-        if (UIPanelRoot.I) UIPanelRoot.I.OpenNode(NodeId);
+        if (UIPanelRoot.I == null || GameController.I == null || string.IsNullOrEmpty(NodeId))
+            return;
+
+        var node = GameController.I.GetNode(NodeId);
+        if (node != null && node.PendingEvents != null && node.PendingEvents.Count > 0)
+            UIPanelRoot.I.OpenNodeEvent(NodeId);
+        else
+            UIPanelRoot.I.OpenNode(NodeId);
     }
 
     public void Set(string nodeId, string _unusedText)
@@ -72,7 +81,7 @@ public class NodeButton : MonoBehaviour
                     if (hasSquad && t.Progress <= EPS)
                         sb.Append("\n<color=#FFD700>调查：待开始</color>");
                     else
-                        sb.Append($"\n<color=#FFD700>调查中 {(int)(t.Progress * 100)}%</color>");
+                        sb.Append($"\n<color=#FFD700>调查中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (inv.Count > 1)
                         sb.Append($" <color=#FFD700>(+{inv.Count - 1})</color>");
@@ -88,15 +97,38 @@ public class NodeButton : MonoBehaviour
                     if (hasSquad && t.Progress <= EPS)
                         sb.Append("\n<color=#00FFFF>收容：待开始</color>");
                     else
-                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(t.Progress * 100)}%</color>");
+                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (con.Count > 1)
                         sb.Append($" <color=#00FFFF>(+{con.Count - 1})</color>");
                 }
 
-                int containables = (node.Containables != null) ? node.Containables.Count : 0;
-                if (con.Count == 0 && containables > 0)
-                    sb.Append($"\n<color=#00FFFF>可收容 {containables}</color>");
+                var known = node.KnownAnomalyDefIds ?? new List<string>();
+                var contained = node.ManagedAnomalies != null
+                    ? node.ManagedAnomalies.Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
+                        .Select(m => m.AnomalyId)
+                        .ToList()
+                    : new List<string>();
+
+                var inProgressDefIds = new HashSet<string>(tasks
+                    .Where(t => t != null && t.State == TaskState.Active &&
+                                (t.Type == TaskType.Contain || t.Type == TaskType.Manage) &&
+                                !string.IsNullOrEmpty(t.SourceAnomalyId))
+                    .Select(t => t.SourceAnomalyId));
+
+                int containableCount = known
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Except(contained.Where(id => !string.IsNullOrEmpty(id)))
+                    .Except(inProgressDefIds)
+                    .Count();
+
+                int managingCount = inProgressDefIds.Count;
+
+                if (con.Count == 0 && containableCount > 0)
+                    sb.Append($"\n<color=#00FFFF>可收容 {containableCount}</color>");
+
+                if (managingCount > 0)
+                    sb.Append($"\n<color=#00FFFF>管理中 {managingCount}</color>");
 
                 // 3) Squad count (sum of active task squads, distinct)
                 int busy = tasks
@@ -110,6 +142,19 @@ public class NodeButton : MonoBehaviour
             }
         }
 
+        int pendingEvents = node.HasPendingEvent ? node.PendingEvents.Count : 0;
+        if (pendingEvents > 0)
+        {
+            sb.Append($"\n<color=#FFA500>E:{pendingEvents}</color>");
+        }
+
         if (label) label.text = sb.ToString();
+    }
+
+    private static float GetTaskProgress01(NodeTask task)
+    {
+        if (task == null) return 0f;
+        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        return Mathf.Clamp01(task.Progress / baseDays);
     }
 }
