@@ -121,13 +121,13 @@ public class AgentPickerView : MonoBehaviour
 
             // 预定占用：即便是当前节点的预选成员，也保持 busy（锁定不可点）。
             bool isBusy = isBusyOtherNode(agent.Id);
-            
+
             // Get busy text using BuildAgentBusyText
             string busyText = (gc != null) ? Sim.BuildAgentBusyText(gc.State, agent.Id) : null;
 
             item.Bind(
                 agent.Id,
-                agent.Id,
+                BuildAgentDisplayName(agent),
                 $"Agent {agent.Id}",
                 isBusy,
                 _selected.Contains(agent.Id),
@@ -136,6 +136,13 @@ public class AgentPickerView : MonoBehaviour
             );
             _items.Add(item);
         }
+    }
+
+    private static string BuildAgentDisplayName(AgentState a)
+    {
+        if (a == null) return string.Empty;
+        string name = string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
+        return $"Lv{a.Level} {name}";
     }
 
     void OnItemClicked(string agentId)

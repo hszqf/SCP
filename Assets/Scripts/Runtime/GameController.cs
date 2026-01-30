@@ -174,6 +174,75 @@ public class GameController : MonoBehaviour
         return true;
     }
 
+    public RecruitCandidate GenerateRecruitCandidate()
+    {
+        if (State == null || _rng == null) return null;
+
+        int level = RollRecruitLevel(_rng);
+        int extraPoints = Math.Max(0, (level - 1) * 3 + _rng.Next(0, 3));
+
+        int[] stats = { 5, 5, 5, 5 };
+        for (int i = 0; i < extraPoints; i++)
+        {
+            int idx = _rng.Next(0, 4);
+            stats[idx] += 1;
+        }
+
+        var agent = new AgentState
+        {
+            Name = string.Empty,
+            Perception = stats[0],
+            Operation = stats[1],
+            Resistance = stats[2],
+            Power = stats[3],
+            Level = level,
+        };
+
+        int propSum = agent.Perception + agent.Operation + agent.Resistance + agent.Power;
+        int baseCost = 100;
+        int levelCost = (level - 1) * 120;
+        int statBonus = Math.Max(0, propSum - 20) * 10;
+        int cost = baseCost + levelCost + statBonus;
+
+        return new RecruitCandidate { agent = agent, cost = cost };
+    }
+
+    public bool TryHireAgent(RecruitCandidate candidate, out AgentState agent)
+    {
+        agent = null;
+        if (candidate == null || candidate.agent == null) return false;
+        if (State == null) return false;
+
+        int cost = Math.Max(0, candidate.cost);
+        if (State.Money < cost) return false;
+
+        int moneyBefore = State.Money;
+        int clampMoneyMin = DataRegistry.Instance.GetBalanceIntWithWarn("ClampMoneyMin", 0);
+        int moneyAfter = Math.Max(clampMoneyMin, State.Money - cost);
+        State.Money = moneyAfter;
+
+        string agentId = GenerateNextAgentId();
+        agent = candidate.agent;
+        agent.Id = agentId;
+        agent.Name = $"Agent {agentId}";
+        if (agent.Level <= 0) agent.Level = 1;
+
+        State.Agents.Add(agent);
+        Debug.Log($"[Recruit] day={State.Day} agent={agentId} lv={agent.Level} cost={cost} money={moneyBefore}->{moneyAfter}");
+        Notify();
+        RefreshMapNodes();
+        return true;
+    }
+
+    private static int RollRecruitLevel(System.Random rng)
+    {
+        double roll = rng.NextDouble();
+        if (roll < 0.70) return 1;
+        if (roll < 0.90) return 2;
+        if (roll < 0.98) return 3;
+        return 4;
+    }
+
     private string GenerateNextAgentId()
     {
         int max = 0;

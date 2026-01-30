@@ -26,6 +26,7 @@ public class RecruitPanel : MonoBehaviour
     [SerializeField] private AgentPickerItemView itemPrefab;
 
     private readonly List<GameObject> _agentItems = new();
+    private RecruitCandidate _candidate;
 
     private void Awake()
     {
@@ -57,13 +58,20 @@ public class RecruitPanel : MonoBehaviour
         if (!ValidateBindings()) return;
         if (GameController.I == null) return;
 
-        int hireCost = GetHireCost();
+        if (_candidate == null)
+        {
+            _candidate = GameController.I.GenerateRecruitCandidate();
+        }
+
+        int hireCost = _candidate?.cost ?? GetHireCost();
+        int candidateLevel = _candidate?.agent?.Level ?? 1;
+
         int money = GameController.I.State?.Money ?? 0;
         bool canAfford = money >= hireCost;
 
         if (titleText) titleText.text = "Personnel Management";
         if (moneyText) moneyText.text = $"Money: {money}";
-        if (costText) costText.text = $"HireCost: {hireCost}";
+        if (costText) costText.text = $"雇佣费用：{hireCost}（Lv{candidateLevel}）";
         if (statusText) statusText.text = canAfford ? "Ready" : "资金不足";
 
         if (confirmButton) confirmButton.interactable = canAfford;
@@ -128,7 +136,7 @@ public class RecruitPanel : MonoBehaviour
             // Create agent item UI from prefab
             var item = Instantiate(itemPrefab, agentListContent, false);
             item.name = $"AgentItem_{agent.Id}";
-            item.BindSimple(agent.Name, BuildAgentAttrLine(agent), statusText, false);
+            item.BindSimple(BuildAgentDisplayName(agent), BuildAgentAttrLine(agent), statusText, false);
             var itemGo = item.gameObject;
             var le = itemGo.GetComponent<LayoutElement>() ?? itemGo.AddComponent<LayoutElement>();
             le.minHeight = 70f;
@@ -157,12 +165,23 @@ public class RecruitPanel : MonoBehaviour
         return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
     }
 
+    private static string BuildAgentDisplayName(AgentState a)
+    {
+        if (a == null) return string.Empty;
+        string name = string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
+        return $"Lv{a.Level} {name}";
+    }
+
     private void OnConfirm()
     {
         if (GameController.I == null) return;
 
-        int hireCost = GetHireCost();
-        if (!GameController.I.TryHireAgent(hireCost, out var agent))
+        if (_candidate == null)
+        {
+            _candidate = GameController.I.GenerateRecruitCandidate();
+        }
+
+        if (!GameController.I.TryHireAgent(_candidate, out var agent))
         {
             if (statusText) statusText.text = "资金不足";
             Refresh();
@@ -170,6 +189,7 @@ public class RecruitPanel : MonoBehaviour
         }
 
         if (statusText) statusText.text = $"已招募 {agent.Name}";
+        _candidate = GameController.I.GenerateRecruitCandidate();
         Refresh();
     }
 

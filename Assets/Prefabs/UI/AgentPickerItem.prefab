@@ -232,8 +232,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: AGENT NAME
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -519,8 +519,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'PER: 5  OPS: 5  RES: 5'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -656,8 +656,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: '[BUSY][BUSY][BUSY][BUSY][BUSY][BUSY][BUSY][BUSY]'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

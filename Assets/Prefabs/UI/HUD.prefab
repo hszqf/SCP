@@ -666,8 +666,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: NEXT DAY
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -786,7 +786,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 704.8967, y: -40}
+  m_AnchoredPosition: {x: 336.9919, y: -40}
   m_SizeDelta: {x: 109.44, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &279022099686040791
@@ -1176,8 +1176,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Recruit
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1466,8 +1466,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: NEWS
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
+  m_sharedMaterial: {fileID: 7720910322121708613, guid: 032b5de0e07c5ae49a9767c124a80df4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1623,7 +1623,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1344.8083, y: -40}
+  m_AnchoredPosition: {x: 608.99884, y: -40}
   m_SizeDelta: {x: 165.87, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6662518884492884109
