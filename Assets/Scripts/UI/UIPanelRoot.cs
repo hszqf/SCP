@@ -47,6 +47,7 @@ public class UIPanelRoot : MonoBehaviour
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
     private string _pickerTaskId;
+    private bool _suppressAutoOpenEvent;
 
     public string CurrentNodeId => _currentNodeId;
     public string ManageNodeId => _manageNodeId;
@@ -463,10 +464,12 @@ public class UIPanelRoot : MonoBehaviour
         if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
         if (!_eventPanel) return;
 
+        _suppressAutoOpenEvent = true;
         var ev = node.PendingEvents[0];
         Debug.Log($"[EventUI] OpenNodeEvent node={nodeId} eventInstanceId={ev.EventInstanceId} pending={node.PendingEvents.Count}");
         _eventPanel.Show(ev, optionId =>
         {
+            _suppressAutoOpenEvent = true;
             var res = GameController.I.ResolveEvent(nodeId, ev.EventInstanceId, optionId);
             return res.text;
         }, onClose: null);

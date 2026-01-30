@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -77,9 +76,6 @@ namespace Data
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
-        public static DataRegistry GetOrCreateForAsync()
-            => _instance ??= new DataRegistry();
-
         private readonly HashSet<TaskType> _taskDefMissingWarned = new();
         private bool _warnedMissingEventRequiresNodeId;
         private bool _warnedMissingEventRequiresAnomalyId;
@@ -156,8 +152,14 @@ namespace Data
         {
             if (Application.platform == RuntimePlatform.WebGLPlayer)
             {
-                throw new InvalidOperationException(
-                    "[DataRegistry] WebGL platform must use async JSON loading. Use LoadJsonTextAsync() coroutine instead.");
+                using var request = UnityWebRequest.Get(path);
+                var op = request.SendWebRequest();
+                while (!op.isDone) { }
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    throw new InvalidOperationException($"[DataRegistry] Failed to load JSON from {path}: {request.error}");
+                }
+                return request.downloadHandler.text;
             }
 
             if (!File.Exists(path))
@@ -166,57 +168,6 @@ namespace Data
             }
 
             return File.ReadAllText(path);
-        }
-
-        /// <summary>
-        /// Async coroutine for loading JSON text from URL (WebGL support).
-        /// On success, calls onOk with the loaded JSON text.
-        /// On failure, calls onErr with an exception.
-        /// </summary>
-        public static IEnumerator LoadJsonTextAsync(string url, Action<string> onOk, Action<Exception> onErr)
-        {
-            Debug.Log($"[DataRegistry] Starting async JSON load from: {url}");
-            using var request = UnityWebRequest.Get(url);
-            yield return request.SendWebRequest();
-
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                var error = new InvalidOperationException(
-                    $"[DataRegistry] Failed to load JSON from {url}: {request.error}");
-                Debug.LogError($"[DataRegistry] {error.Message}");
-                onErr?.Invoke(error);
-                yield break;
-            }
-
-            var text = request.downloadHandler.text;
-            Debug.Log($"[DataRegistry] Successfully loaded JSON (length={text?.Length ?? 0})");
-            onOk?.Invoke(text);
-        }
-
-        /// <summary>
-        /// Initialize DataRegistry from pre-loaded JSON text.
-        /// Used when async loading completes and JSON is already in memory.
-        /// </summary>
-        public void InitializeFromText(string jsonText)
-        {
-            try
-            {
-                var settings = new JsonSerializerSettings
-                {
-                    MissingMemberHandling = MissingMemberHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Include,
-                };
-                Root = JsonConvert.DeserializeObject<GameDataRoot>(jsonText, settings) ?? new GameDataRoot();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[DataRegistry] Failed to deserialize JSON: {ex}");
-                throw;
-            }
-
-            BuildIndexes();
-            GameDataValidator.ValidateOrThrow(this);
-            LogSummary();
         }
 
         private void BuildIndexes()

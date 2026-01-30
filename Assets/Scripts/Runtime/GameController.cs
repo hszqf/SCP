@@ -9,9 +9,7 @@
 // <EXPORT_BLOCK>
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Core;
 using Data;
@@ -38,92 +36,8 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
-        Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
-
-        // Check platform and choose sync or async initialization
-        if (Application.platform == RuntimePlatform.WebGLPlayer)
-        {
-            // WebGL: Use async loading
-            StartCoroutine(InitializeAsync());
-        }
-        else
-        {
-            // Non-WebGL: Use sync loading (Editor, Standalone)
-            InitializeSync();
-        }
-    }
-
-    /// <summary>
-    /// Synchronous initialization for non-WebGL platforms.
-    /// Accesses DataRegistry.Instance which triggers immediate JSON loading from disk.
-    /// </summary>
-    private void InitializeSync()
-    {
-        Debug.Log("[GameController] Initializing with sync DataRegistry load (non-WebGL)");
         var registry = DataRegistry.Instance;
-        InitializeGameState(registry);
-    }
-
-    /// <summary>
-    /// Asynchronous initialization for WebGL platform.
-    /// Loads game_data.json via network request, then initializes game state.
-    /// </summary>
-    private IEnumerator InitializeAsync()
-    {
-        Debug.Log("[GameController] Starting async DataRegistry load (WebGL)");
-
-        // Create registry instance (without calling Reload which would block)
-        var registry = DataRegistry.GetOrCreateForAsync();
-
-        string path = Path.Combine(Application.streamingAssetsPath, "game_data.json");
-        bool loadSuccess = false;
-        Exception loadError = null;
-
-        // Start async JSON load
-        yield return DataRegistry.LoadJsonTextAsync(
-            path,
-            onOk: (jsonText) =>
-            {
-                try
-                {
-                    registry.InitializeFromText(jsonText);
-                    loadSuccess = true;
-                    Debug.Log("[GameController] Async JSON load and initialization complete");
-                }
-                catch (Exception ex)
-                {
-                    loadError = ex;
-                    Debug.LogError($"[GameController] Failed to initialize registry from async-loaded JSON: {ex}");
-                }
-            },
-            onErr: (error) =>
-            {
-                loadError = error;
-                Debug.LogError($"[GameController] Async JSON load failed: {error}");
-            }
-        );
-
-        // Check if load succeeded
-        if (!loadSuccess)
-        {
-            Debug.LogError($"[GameController] Game initialization failed. Error: {loadError?.Message ?? "Unknown"}");
-            yield break;
-        }
-
-        // Initialize game state with loaded registry
-        InitializeGameState(registry);
-    }
-
-    /// <summary>
-    /// Common game state initialization (runs after registry is ready, whether sync or async).
-    /// </summary>
-    private void InitializeGameState(DataRegistry registry)
-    {
-        if (registry == null)
-        {
-            Debug.LogError("[GameController] Registry is null; cannot initialize game state");
-            return;
-        }
+        Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
 
         // ---- 初始全局状态（从 Balance 表读取）----
         int startMoney = registry.GetBalanceIntWithWarn("StartMoney", 0);
@@ -147,7 +61,7 @@ public class GameController : MonoBehaviour
             ["N3"] = (0.48f, 0.58f),
         };
 
-        foreach (var nodeDef in registry.NodesById.Values.OrderBy(n => n.nodeId))
+        foreach (var nodeDef in DataRegistry.Instance.NodesById.Values.OrderBy(n => n.nodeId))
         {
             var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (x: 0.5f, y: 0.5f);
             var nodeState = new NodeState
@@ -166,7 +80,7 @@ public class GameController : MonoBehaviour
             {
                 foreach (var anomalyId in nodeState.ActiveAnomalyIds)
                 {
-                    if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
+                    if (DataRegistry.Instance.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
                     {
                         nodeState.AnomalyLevel = Math.Max(nodeState.AnomalyLevel, Math.Max(1, anomalyDef.baseThreat));
                     }
