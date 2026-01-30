@@ -1,4 +1,6 @@
 // <EXPORT_BLOCK>
+using System;
+using Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +25,97 @@ public class AgentPickerItemView : MonoBehaviour
     public string AgentId { get; private set; }
     private bool _isBusy;
 
+    private static int ResolveLevel(AgentState agent, string agentId)
+    {
+        if (agent != null && agent.Level > 0) return agent.Level;
+        if (!string.IsNullOrEmpty(agentId))
+        {
+            var gc = GameController.I;
+            var list = gc?.State?.Agents;
+            if (list != null)
+            {
+                foreach (var a in list)
+                {
+                    if (a == null) continue;
+                    if (a.Id == agentId && a.Level > 0) return a.Level;
+                }
+            }
+        }
+
+        return 1;
+    }
+
+    private static string FormatName(AgentState agent, string displayName, string agentId)
+    {
+        string baseName = string.IsNullOrEmpty(displayName) ? agentId : displayName;
+        int level = Mathf.Max(1, ResolveLevel(agent, agentId));
+        return $"{baseName}  Lv{level}";
+    }
+
+    private void BindCore(
+        AgentState agent,
+        string displayName,
+        string agentId,
+        string attrLine,
+        bool isBusyOtherNode,
+        bool selected,
+        System.Action<string> onClick,
+        string busyText)
+    {
+        AgentId = agentId;
+        _isBusy = isBusyOtherNode;
+
+        if (!button) button = GetComponent<Button>();
+        if (!background) background = GetComponent<Image>();
+
+        if (nameText) nameText.text = FormatName(agent, displayName, agentId);
+        if (attrText) attrText.text = attrLine;
+
+        if (busyTagText)
+        {
+            string statusLine = string.IsNullOrEmpty(busyText) ? (_isBusy ? "BUSY" : "") : busyText;
+            bool showStatus = !string.IsNullOrEmpty(statusLine);
+            busyTagText.gameObject.SetActive(showStatus);
+            busyTagText.text = showStatus ? statusLine : "";
+        }
+
+        if (button)
+        {
+            button.onClick.RemoveAllListeners();
+            button.interactable = !_isBusy;
+            button.onClick.AddListener(() => onClick?.Invoke(AgentId));
+        }
+
+        UpdateVisuals(selected);
+    }
+
+    public void Bind(
+        AgentState agent,
+        string displayName,
+        string attrLine,
+        bool isBusyOtherNode,
+        bool selected,
+        System.Action<string> onClick,
+        string busyText = null)
+    {
+        string agentId = agent != null ? agent.Id : string.Empty;
+        BindCore(agent, displayName, agentId, attrLine, isBusyOtherNode, selected, onClick, busyText);
+    }
+
+    // Backward-compatible overload (legacy signature)
+    public void Bind(
+        AgentState agent,
+        string attrLine,
+        bool isBusyOtherNode,
+        bool selected,
+        System.Action<string> onClick,
+        string busyText = null)
+    {
+        string displayName = agent == null ? "" : (string.IsNullOrEmpty(agent.Name) ? agent.Id : agent.Name);
+        Bind(agent, displayName, attrLine, isBusyOtherNode, selected, onClick, busyText);
+    }
+
+    // Backward-compatible overload (legacy callers)
     public void Bind(
         string agentId,
         string displayName,
@@ -32,44 +125,20 @@ public class AgentPickerItemView : MonoBehaviour
         System.Action<string> onClick,
         string busyText = null)
     {
-        AgentId = agentId;
-        _isBusy = isBusyOtherNode;
-
-        if (!button) button = GetComponent<Button>();
-        if (!background) background = GetComponent<Image>();
-
-        // 文本设置
-        if (nameText) nameText.text = string.IsNullOrEmpty(displayName) ? agentId : displayName;
-        if (attrText) attrText.text = attrLine;
-
-        // 忙碌状态 - 显示完整的 busy text 或默认 "BUSY"
-        if (busyTagText)
-        {
-            busyTagText.gameObject.SetActive(_isBusy);
-            busyTagText.text = _isBusy ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText) : "";
-        }
-
-        // 按钮交互
-        if (button)
-        {
-            button.onClick.RemoveAllListeners();
-            button.interactable = !_isBusy;
-            button.onClick.AddListener(() => onClick?.Invoke(agentId));
-        }
-
-        // 立即刷新视觉
-        UpdateVisuals(selected);
+        BindCore(null, displayName, agentId, attrLine, isBusyOtherNode, selected, onClick, busyText);
     }
 
     public void BindSimple(string displayName, string attrLine, string statusLine, bool selected = false)
     {
         AgentId = string.Empty;
-        _isBusy = !string.IsNullOrEmpty(statusLine) && statusLine != "Idle";
+        string statusText = statusLine ?? string.Empty;
+        bool isIdle = statusText.IndexOf("IDLE", StringComparison.OrdinalIgnoreCase) >= 0;
+        _isBusy = !string.IsNullOrEmpty(statusText) && !isIdle;
 
         if (!button) button = GetComponent<Button>();
         if (!background) background = GetComponent<Image>();
 
-        if (nameText) nameText.text = displayName;
+        if (nameText) nameText.text = displayName ?? string.Empty;
         if (attrText) attrText.text = attrLine;
 
         if (busyTagText)

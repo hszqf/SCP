@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -130,18 +131,23 @@ namespace Data
             {
                 string path = Path.Combine(Application.streamingAssetsPath, GameDataFileName);
                 var json = LoadJsonText(path);
-                var settings = new JsonSerializerSettings
-                {
-                    MissingMemberHandling = MissingMemberHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Include,
-                };
-                Root = JsonConvert.DeserializeObject<GameDataRoot>(json, settings) ?? new GameDataRoot();
+                LoadFromJson(json);
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[DataRegistry] Failed to load JSON: {ex}");
                 throw;
             }
+        }
+
+        private void LoadFromJson(string json)
+        {
+            var settings = new JsonSerializerSettings
+            {
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                NullValueHandling = NullValueHandling.Include,
+            };
+            Root = JsonConvert.DeserializeObject<GameDataRoot>(json, settings) ?? new GameDataRoot();
 
             BuildIndexes();
             GameDataValidator.ValidateOrThrow(this);
@@ -151,16 +157,7 @@ namespace Data
         private static string LoadJsonText(string path)
         {
             if (Application.platform == RuntimePlatform.WebGLPlayer)
-            {
-                using var request = UnityWebRequest.Get(path);
-                var op = request.SendWebRequest();
-                while (!op.isDone) { }
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    throw new InvalidOperationException($"[DataRegistry] Failed to load JSON from {path}: {request.error}");
-                }
-                return request.downloadHandler.text;
-            }
+                throw new InvalidOperationException("[DataRegistry] WebGL cannot load JSON synchronously. Use LoadJsonTextCoroutine / LoadJsonTextAsync.");
 
             if (!File.Exists(path))
             {
@@ -168,6 +165,30 @@ namespace Data
             }
 
             return File.ReadAllText(path);
+        }
+
+        public static IEnumerator LoadJsonTextCoroutine(string url, Action<string> onOk, Action<Exception> onErr)
+        {
+            Debug.Log($"[DataRegistry] WebGL loading json: {url}");
+            using var request = UnityWebRequest.Get(url);
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                onErr?.Invoke(new InvalidOperationException(
+                    $"[DataRegistry] Failed to load JSON from {url}: {request.error}"));
+                yield break;
+            }
+
+            onOk?.Invoke(request.downloadHandler.text);
+        }
+
+        public static DataRegistry InitFromJson(string json)
+        {
+            var registry = new DataRegistry();
+            registry.LoadFromJson(json);
+            _instance = registry;
+            return registry;
         }
 
         private void BuildIndexes()

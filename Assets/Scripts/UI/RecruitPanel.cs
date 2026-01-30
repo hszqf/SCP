@@ -131,12 +131,16 @@ public class RecruitPanel : MonoBehaviour
 
             // Get busy status using BuildAgentBusyText
             string busyText = Sim.BuildAgentBusyText(gc.State, agent.Id);
-            string statusText = string.IsNullOrEmpty(busyText) ? "Idle" : busyText;
+            bool isBusy = !string.IsNullOrEmpty(busyText);
+            string statusText = isBusy
+                ? $"<color=#FF6666>{busyText}</color>"
+                : "<color=#66FF66>IDLE</color>";
 
             // Create agent item UI from prefab
             var item = Instantiate(itemPrefab, agentListContent, false);
             item.name = $"AgentItem_{agent.Id}";
-            item.BindSimple(BuildAgentDisplayName(agent), BuildAgentAttrLine(agent), statusText, false);
+            string displayName = BuildAgentDisplayName(agent);
+            item.Bind(agent, displayName, BuildAgentAttrLine(agent), isBusy, false, null, statusText);
             var itemGo = item.gameObject;
             var le = itemGo.GetComponent<LayoutElement>() ?? itemGo.AddComponent<LayoutElement>();
             le.minHeight = 70f;
@@ -168,8 +172,7 @@ public class RecruitPanel : MonoBehaviour
     private static string BuildAgentDisplayName(AgentState a)
     {
         if (a == null) return string.Empty;
-        string name = string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
-        return $"Lv{a.Level} {name}";
+        return string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
     }
 
     private void OnConfirm()
@@ -191,6 +194,8 @@ public class RecruitPanel : MonoBehaviour
         if (statusText) statusText.text = $"已招募 {agent.Name}";
         _candidate = GameController.I.GenerateRecruitCandidate();
         Refresh();
+        Canvas.ForceUpdateCanvases();
+        if (agentListScrollRect) agentListScrollRect.verticalNormalizedPosition = 0f;
     }
 
     private void EnsureRuntimeUI()

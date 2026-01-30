@@ -9,6 +9,7 @@
 // <EXPORT_BLOCK>
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
@@ -24,6 +25,7 @@ public class GameController : MonoBehaviour
     public bool IsGameOver { get; private set; }
 
     private System.Random _rng;
+    private bool _initialized;
 
     [Header("Debug Seed (same seed => same run)")]
     [SerializeField] private int seed = 12345;
@@ -36,6 +38,43 @@ public class GameController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         _rng = new System.Random(seed);
+    }
+
+    private IEnumerator Start()
+    {
+        if (_initialized) yield break;
+
+        if (Application.platform == RuntimePlatform.WebGLPlayer)
+        {
+            var url = $"{Application.streamingAssetsPath}/game_data.json";
+            string json = null;
+            Exception error = null;
+
+            yield return DataRegistry.LoadJsonTextCoroutine(
+                url,
+                text => json = text,
+                ex => error = ex
+            );
+
+            if (error != null)
+            {
+                Debug.LogException(error);
+                yield break;
+            }
+
+            DataRegistry.InitFromJson(json);
+            InitGame();
+            yield break;
+        }
+
+        InitGame();
+    }
+
+    private void InitGame()
+    {
+        if (_initialized) return;
+        _initialized = true;
+
         var registry = DataRegistry.Instance;
         Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
 
@@ -225,7 +264,10 @@ public class GameController : MonoBehaviour
         agent = candidate.agent;
         agent.Id = agentId;
         agent.Name = $"Agent {agentId}";
-        if (agent.Level <= 0) agent.Level = 1;
+        int offerLevel = candidate.agent.Level;
+        agent.Level = Math.Max(1, offerLevel);
+        agent.Exp = 0;
+        agent.TalentPoints = 0;
 
         State.Agents.Add(agent);
         Debug.Log($"[Recruit] day={State.Day} agent={agentId} lv={agent.Level} cost={cost} money={moneyBefore}->{moneyAfter}");

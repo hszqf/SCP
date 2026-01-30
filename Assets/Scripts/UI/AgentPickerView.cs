@@ -125,10 +125,11 @@ public class AgentPickerView : MonoBehaviour
             // Get busy text using BuildAgentBusyText
             string busyText = (gc != null) ? Sim.BuildAgentBusyText(gc.State, agent.Id) : null;
 
+            string displayName = string.IsNullOrEmpty(agent.Name) ? agent.Id : agent.Name;
             item.Bind(
-                agent.Id,
-                BuildAgentDisplayName(agent),
-                $"Agent {agent.Id}",
+                agent,
+                displayName,
+                BuildAgentAttrLine(agent),
                 isBusy,
                 _selected.Contains(agent.Id),
                 OnItemClicked,
@@ -138,11 +139,10 @@ public class AgentPickerView : MonoBehaviour
         }
     }
 
-    private static string BuildAgentDisplayName(AgentState a)
+    private static string BuildAgentAttrLine(AgentState a)
     {
-        if (a == null) return string.Empty;
-        string name = string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
-        return $"Lv{a.Level} {name}";
+        if (a == null) return "";
+        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
     }
 
     void OnItemClicked(string agentId)
