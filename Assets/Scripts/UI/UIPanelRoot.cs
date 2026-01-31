@@ -61,6 +61,11 @@ public class UIPanelRoot : MonoBehaviour
         I = this;
     }
 
+    private void OnDestroy()
+    {
+        if (I == this) I = null;
+    }
+
     private void Start()
     {
         InitHUD();
@@ -152,7 +157,8 @@ public class UIPanelRoot : MonoBehaviour
         {
             _confirmDialog.ShowInfo(title, message);
             _confirmDialog.transform.SetAsLastSibling();
-            PushModal(_confirmDialog.gameObject, "show confirm");
+            PushModal(_confirmDialog.gameObject, "show_confirm");
+            RefreshModalStack("show_confirm", _confirmDialog.gameObject);
         }
         else
         {
@@ -173,7 +179,8 @@ public class UIPanelRoot : MonoBehaviour
         {
             _confirmDialog.ShowConfirm(title, message, onConfirm, onCancel, confirmText, cancelText);
             _confirmDialog.transform.SetAsLastSibling();
-            PushModal(_confirmDialog.gameObject, "show confirm");
+            PushModal(_confirmDialog.gameObject, "show_confirm");
+            RefreshModalStack("show_confirm", _confirmDialog.gameObject);
         }
         else
         {
@@ -206,6 +213,8 @@ public class UIPanelRoot : MonoBehaviour
         _manageNodeId = _currentNodeId;
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
+        PushModal(_managePanel, "open manage");
+        RefreshModalStack("open manage", _managePanel);
         _managePanelView.ShowGeneric(
             header: $"Investigate | {_currentNodeId}",
             hint: "选择新闻线索（可选）并派遣干员",
@@ -280,6 +289,8 @@ public class UIPanelRoot : MonoBehaviour
         _manageNodeId = _currentNodeId;
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
+        PushModal(_managePanel, "open manage");
+        RefreshModalStack("open manage", _managePanel);
         _managePanelView.ShowGeneric(
             header: $"Contain | {_currentNodeId}",
             hint: hint,
@@ -433,6 +444,7 @@ public class UIPanelRoot : MonoBehaviour
             if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
             _managePanel.transform.SetAsLastSibling();
             PushModal(_managePanel, "open manage");
+            RefreshModalStack("open manage", _managePanel);
         }
     }
 
@@ -474,7 +486,8 @@ public class UIPanelRoot : MonoBehaviour
             var view = _newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>();
             if (view != null) view.Render();
             _newspaperPanelInstance.transform.SetAsLastSibling();
-            PushModal(_newspaperPanelInstance, "open newspaper");
+            PushModal(_newspaperPanelInstance, "open_newspaper");
+            RefreshModalStack("open_newspaper", _newspaperPanelInstance);
         }
     }
 
@@ -505,8 +518,10 @@ public class UIPanelRoot : MonoBehaviour
         if (_recruitPanel)
         {
             _recruitPanel.Show();
+            _recruitPanel.gameObject.SetActive(true);
             _recruitPanel.transform.SetAsLastSibling();
-            PushModal(_recruitPanel.gameObject, "open recruit");
+            PushModal(_recruitPanel.gameObject, "open_recruit");
+            RefreshModalStack("open_recruit", _recruitPanel.gameObject);
         }
     }
 
@@ -531,7 +546,10 @@ public class UIPanelRoot : MonoBehaviour
             var res = GameController.I.ResolveEvent(nodeId, ev.EventInstanceId, optionId);
             return res.text;
         }, onClose: null);
+        _eventPanel.gameObject.SetActive(true);
+        _eventPanel.transform.SetAsLastSibling();
         PushModal(_eventPanel.gameObject, "open event");
+        RefreshModalStack("open event", _eventPanel.gameObject);
     }
 
     void TryAutoOpenEvent()
@@ -606,15 +624,12 @@ public class UIPanelRoot : MonoBehaviour
 
     public void CloseModal(GameObject panel, string reason = null)
     {
-        var safeReason = string.IsNullOrEmpty(reason) ? "CloseModal" : reason;
+        var safeReason = string.IsNullOrEmpty(reason) ? "close" : reason;
         PopModal(panel, safeReason);
 
-        if (panel == null) return;
-
-        var closable = panel.GetComponent<IModalClosable>();
-        if (closable != null)
+        if (panel == null)
         {
-            closable.CloseFromRoot();
+            RefreshModalStack("close");
             return;
         }
 
@@ -622,21 +637,33 @@ public class UIPanelRoot : MonoBehaviour
         if (confirm != null)
         {
             confirm.Hide();
-            return;
+        }
+        else
+        {
+            var closable = panel.GetComponent<IModalClosable>();
+            if (closable != null)
+            {
+                closable.CloseFromRoot();
+            }
+            else
+            {
+                panel.SetActive(false);
+            }
         }
 
-        panel.SetActive(false);
+        RefreshModalStack("close", panel);
     }
 
     public void CloseTopModal(string reason = null)
     {
+        RefreshModalStack("close_top_pre");
         if (_modalStack == null) _modalStack = new List<GameObject>();
         _modalStack.RemoveAll(p => p == null);
 
         if (_modalStack.Count == 0) return;
 
         var top = _modalStack[_modalStack.Count - 1];
-        CloseModal(top, string.IsNullOrEmpty(reason) ? "CloseTopModal" : reason);
+        CloseModal(top, string.IsNullOrEmpty(reason) ? "close_top" : reason);
     }
 
     private void PushModal(GameObject panel, string reason)

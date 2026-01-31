@@ -15,6 +15,7 @@ public class EventPanel : MonoBehaviour, IModalClosable
     [SerializeField] private Button optionButtonTemplate;
     [SerializeField] private TMP_Text resultText;
     [SerializeField] private Button closeButton;
+    [SerializeField] private Button dimmerButton;
 
     private EventInstance _eventInstance;
     private EventDef _eventDef;
@@ -26,6 +27,7 @@ public class EventPanel : MonoBehaviour, IModalClosable
     private void OnEnable()
     {
         Debug.Log("[EventUI] EventPanel.OnEnable");
+        BindDimmer();
     }
 
     public void Show(EventInstance ev, Func<string, string> onChoose, Action onClose = null)
@@ -146,8 +148,33 @@ public class EventPanel : MonoBehaviour, IModalClosable
         closeButton.onClick.RemoveAllListeners();
         closeButton.onClick.AddListener(() =>
         {
-            UIPanelRoot.I?.CloseModal(gameObject, "close btn");
+            UIPanelRoot.I?.CloseModal(gameObject, "close_btn");
         });
+    }
+
+    private void BindDimmer()
+    {
+        if (dimmerButton != null)
+        {
+            dimmerButton.onClick.RemoveAllListeners();
+            dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "dimmer"));
+
+            var img = dimmerButton.GetComponent<Image>();
+            if (img != null) img.raycastTarget = true;
+
+            var cg = dimmerButton.GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.blocksRaycasts = true;
+                cg.interactable = true;
+            }
+
+            Debug.Log("[UIBind] EventPanel dimmer=ok");
+        }
+        else
+        {
+            Debug.LogWarning("[UIBind] EventPanel dimmer=missing");
+        }
     }
 
     private bool ValidateRefsOrThrow()

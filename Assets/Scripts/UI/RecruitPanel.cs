@@ -19,6 +19,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     [SerializeField] private TMP_Text confirmLabel;
     [SerializeField] private Button cancelButton;
     [SerializeField] private TMP_Text cancelLabel;
+    [SerializeField] private Button dimmerButton;
 
     [Header("Agent List")]
     [SerializeField] private RectTransform agentListContent;
@@ -31,6 +32,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     private void Awake()
     {
         BindButtons();
+        LogBindings();
         if (!ValidateBindings()) return;
         gameObject.SetActive(false);
     }
@@ -100,8 +102,21 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         if (cancelButton)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
+            cancelButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close_btn"));
         }
+
+        if (dimmerButton)
+        {
+            dimmerButton.onClick.RemoveAllListeners();
+            dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
+        }
+    }
+
+    private void LogBindings()
+    {
+        string closeState = cancelButton ? "ok" : "missing";
+        string dimmerState = dimmerButton ? "ok" : "missing";
+        Debug.Log($"[UIBind] RecruitPanel close={closeState} dimmer={dimmerState}");
     }
 
     private int GetHireCost()

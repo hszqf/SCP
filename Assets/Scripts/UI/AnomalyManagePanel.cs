@@ -46,6 +46,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     [Header("Actions")]
     [SerializeField] private Button confirmButton;
     [SerializeField] private Button closeButton;
+    [SerializeField] private Button dimmerButton;
     [SerializeField] private TMP_Text headerText; // optional
     [SerializeField] private TMP_Text hintText;   // optional
 
@@ -66,7 +67,19 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
+            closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close_btn"));
+        }
+
+        if (dimmerButton)
+        {
+            dimmerButton.onClick.RemoveAllListeners();
+            dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "dimmer"));
+
+            var dimmerImage = dimmerButton.GetComponent<Image>();
+            if (dimmerImage) dimmerImage.raycastTarget = true;
+
+            var dimmerCg = dimmerButton.GetComponent<CanvasGroup>();
+            if (dimmerCg) dimmerCg.blocksRaycasts = true;
         }
 
         if (confirmButton)
@@ -74,6 +87,15 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             confirmButton.onClick.RemoveAllListeners();
             confirmButton.onClick.AddListener(Confirm);
         }
+
+        LogBindings();
+    }
+
+    private void LogBindings()
+    {
+        string closeState = closeButton ? "ok" : "missing";
+        string dimmerState = dimmerButton ? "ok" : "missing";
+        Debug.Log($"[UIBind] AnomalyManagePanel close={closeState} dimmer={dimmerState}");
     }
 
     void OnEnable()
