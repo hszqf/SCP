@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class NewsPanel : MonoBehaviour
+public class NewsPanel : MonoBehaviour, IModalClosable
 {
     [Header("Refs")]
     [SerializeField] private Button closeButton;
@@ -15,15 +15,15 @@ public class NewsPanel : MonoBehaviour
 
     void Awake()
     {
-        if (closeButton) 
+        if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(Hide);
+            closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
         }
         if (backgroundButton)
         {
             backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(Hide);
+            backgroundButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
         }
 
         if (scrollRect == null) scrollRect = GetComponentInChildren<ScrollRect>(true);
@@ -38,6 +38,11 @@ public class NewsPanel : MonoBehaviour
     public void Hide()
     {
         gameObject.SetActive(false);
+    }
+
+    public void CloseFromRoot()
+    {
+        Hide();
     }
 
     void Refresh()

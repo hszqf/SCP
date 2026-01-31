@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class EventPanel : MonoBehaviour
+public class EventPanel : MonoBehaviour, IModalClosable
 {
     [Header("Refs")]
     [SerializeField] private TMP_Text titleText;
@@ -77,6 +77,12 @@ public class EventPanel : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    public void CloseFromRoot()
+    {
+        Hide();
+        _onClose?.Invoke();
+    }
+
     private void ClearSpawnedOptions()
     {
         if (!optionsRoot) return;
@@ -140,8 +146,7 @@ public class EventPanel : MonoBehaviour
         closeButton.onClick.RemoveAllListeners();
         closeButton.onClick.AddListener(() =>
         {
-            Hide();
-            _onClose?.Invoke();
+            UIPanelRoot.I?.CloseModal(gameObject, "close btn");
         });
     }
 

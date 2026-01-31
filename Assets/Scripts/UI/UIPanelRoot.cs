@@ -46,6 +46,9 @@ public class UIPanelRoot : MonoBehaviour
     private AnomalyManagePanel _managePanelView;
     private RecruitPanel _recruitPanel;
 
+    private List<GameObject> _modalStack = new List<GameObject>();
+    private bool _confirmDialogOnClosedHooked;
+
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
     private string _pickerTaskId;
@@ -102,6 +105,7 @@ public class UIPanelRoot : MonoBehaviour
 
         EnsureNodePanel();
         _nodePanel.Show(nodeId);
+        if (_nodePanel) PushModal(_nodePanel.gameObject, "open node");
     }
 
     public void CloseNode()
@@ -138,19 +142,42 @@ public class UIPanelRoot : MonoBehaviour
         if (_confirmDialog) return;
         if (!confirmDialogPrefab) return;
         _confirmDialog = Instantiate(confirmDialogPrefab, transform);
+        HookConfirmDialogOnClosed();
     }
 
-    void ShowInfo(string title, string message)
+    public void ShowInfo(string title, string message)
     {
         EnsureConfirmDialog();
         if (_confirmDialog)
         {
             _confirmDialog.ShowInfo(title, message);
             _confirmDialog.transform.SetAsLastSibling();
+            PushModal(_confirmDialog.gameObject, "show confirm");
         }
         else
         {
             Debug.LogWarning($"[UIPanelRoot] ConfirmDialog prefab not set. Info: {title} / {message}");
+        }
+    }
+
+    public void ShowConfirm(
+        string title,
+        string message,
+        Action onConfirm,
+        Action onCancel = null,
+        string confirmText = "确认",
+        string cancelText = "取消")
+    {
+        EnsureConfirmDialog();
+        if (_confirmDialog)
+        {
+            _confirmDialog.ShowConfirm(title, message, onConfirm, onCancel, confirmText, cancelText);
+            _confirmDialog.transform.SetAsLastSibling();
+            PushModal(_confirmDialog.gameObject, "show confirm");
+        }
+        else
+        {
+            Debug.LogWarning($"[UIPanelRoot] ConfirmDialog prefab not set. Confirm: {title} / {message}");
         }
     }
 
@@ -405,12 +432,13 @@ public class UIPanelRoot : MonoBehaviour
             _managePanel.SetActive(true);
             if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
             _managePanel.transform.SetAsLastSibling();
+            PushModal(_managePanel, "open manage");
         }
     }
 
     public void CloseManage()
     {
-        if (_managePanel) _managePanel.SetActive(false);
+        if (_managePanel) CloseModal(_managePanel, "close manage");
     }
 
     // ================== OTHERS ==================
@@ -446,12 +474,13 @@ public class UIPanelRoot : MonoBehaviour
             var view = _newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>();
             if (view != null) view.Render();
             _newspaperPanelInstance.transform.SetAsLastSibling();
+            PushModal(_newspaperPanelInstance, "open newspaper");
         }
     }
 
     public void HideNewspaperPanel()
     {
-        if (_newspaperPanelInstance) _newspaperPanelInstance.SetActive(false);
+        if (_newspaperPanelInstance) CloseModal(_newspaperPanelInstance, "close newspaper");
     }
 
     // ================== RECRUIT ==================
@@ -477,12 +506,13 @@ public class UIPanelRoot : MonoBehaviour
         {
             _recruitPanel.Show();
             _recruitPanel.transform.SetAsLastSibling();
+            PushModal(_recruitPanel.gameObject, "open recruit");
         }
     }
 
     public void CloseRecruit()
     {
-        if (_recruitPanel) _recruitPanel.Hide();
+        if (_recruitPanel) CloseModal(_recruitPanel.gameObject, "close recruit");
     }
 
     public void OpenNodeEvent(string nodeId)
@@ -501,6 +531,7 @@ public class UIPanelRoot : MonoBehaviour
             var res = GameController.I.ResolveEvent(nodeId, ev.EventInstanceId, optionId);
             return res.text;
         }, onClose: null);
+        PushModal(_eventPanel.gameObject, "open event");
     }
 
     void TryAutoOpenEvent()
@@ -527,7 +558,7 @@ public class UIPanelRoot : MonoBehaviour
 
     public void CloseEvent()
     {
-        if (_eventPanel) _eventPanel.gameObject.SetActive(false);
+        if (_eventPanel) CloseModal(_eventPanel.gameObject, "close event");
     }
 
     // ================== COMPATIBILITY ==================
@@ -542,13 +573,13 @@ public class UIPanelRoot : MonoBehaviour
     public void CloseAll()
     {
         ForceCancelPickerIfNeeded(true);
-        CloseNode();
-        CloseEvent();
-        CloseManage();
-        CloseRecruit();
-        if (_newsPanel) _newsPanel.Hide();
-
-        if (_confirmDialog) _confirmDialog.Hide();
+        if (_nodePanel) CloseModal(_nodePanel.gameObject, "close all");
+        if (_eventPanel) CloseModal(_eventPanel.gameObject, "close all");
+        if (_managePanel) CloseModal(_managePanel, "close all");
+        if (_recruitPanel) CloseModal(_recruitPanel.gameObject, "close all");
+        if (_newspaperPanelInstance) CloseModal(_newspaperPanelInstance, "close all");
+        if (_newsPanel) CloseModal(_newsPanel.gameObject, "close all");
+        if (_confirmDialog) CloseModal(_confirmDialog.gameObject, "close all");
     }
 
     // ================== HELPERS ==================
@@ -568,6 +599,106 @@ public class UIPanelRoot : MonoBehaviour
         {
             GameControllerTaskExt.LogBusySnapshot(GameController.I, "UIPanelRoot.ForceCancelPickerIfNeeded(hidePicker)");
             _agentPicker.Hide();
+        }
+    }
+
+    // ================== MODAL STACK ==================
+
+    public void CloseModal(GameObject panel, string reason = null)
+    {
+        var safeReason = string.IsNullOrEmpty(reason) ? "CloseModal" : reason;
+        PopModal(panel, safeReason);
+
+        if (panel == null) return;
+
+        var closable = panel.GetComponent<IModalClosable>();
+        if (closable != null)
+        {
+            closable.CloseFromRoot();
+            return;
+        }
+
+        var confirm = panel.GetComponent<ConfirmDialog>();
+        if (confirm != null)
+        {
+            confirm.Hide();
+            return;
+        }
+
+        panel.SetActive(false);
+    }
+
+    public void CloseTopModal(string reason = null)
+    {
+        if (_modalStack == null) _modalStack = new List<GameObject>();
+        _modalStack.RemoveAll(p => p == null);
+
+        if (_modalStack.Count == 0) return;
+
+        var top = _modalStack[_modalStack.Count - 1];
+        CloseModal(top, string.IsNullOrEmpty(reason) ? "CloseTopModal" : reason);
+    }
+
+    private void PushModal(GameObject panel, string reason)
+    {
+        if (_modalStack == null) _modalStack = new List<GameObject>();
+
+        if (panel != null)
+        {
+            _modalStack.Remove(panel);
+            _modalStack.Add(panel);
+        }
+
+        LogModalStack("Push", panel, reason);
+    }
+
+    private void PopModal(GameObject panel, string reason)
+    {
+        if (_modalStack == null) _modalStack = new List<GameObject>();
+
+        if (panel != null)
+        {
+            _modalStack.Remove(panel);
+        }
+
+        LogModalStack("Pop", panel, reason);
+    }
+
+    private void RefreshModalStack(string reason, GameObject relatedPanel = null, bool sortBySiblingIndex = false)
+    {
+        if (_modalStack == null) _modalStack = new List<GameObject>();
+
+        _modalStack.RemoveAll(p => p == null);
+
+        if (sortBySiblingIndex)
+        {
+            _modalStack.Sort((a, b) => a.transform.GetSiblingIndex().CompareTo(b.transform.GetSiblingIndex()));
+        }
+
+        LogModalStack("Refresh", relatedPanel, reason);
+    }
+
+    private void LogModalStack(string action, GameObject panel, string reason)
+    {
+        var panelName = panel != null ? panel.name : "ALL";
+        var safeReason = string.IsNullOrEmpty(reason) ? "(no-reason)" : reason;
+        Debug.Log($"[ModalStack] action={action} panel={panelName} count={_modalStack?.Count ?? 0} reason={safeReason}");
+    }
+
+    private void HookConfirmDialogOnClosed()
+    {
+        if (_confirmDialog == null || _confirmDialogOnClosedHooked) return;
+
+        _confirmDialog.OnClosed += HandleConfirmDialogClosed;
+        _confirmDialogOnClosedHooked = true;
+    }
+
+    private void HandleConfirmDialogClosed()
+    {
+        if (_confirmDialog == null) return;
+        if (_modalStack != null && _modalStack.Contains(_confirmDialog.gameObject))
+        {
+            PopModal(_confirmDialog.gameObject, "ConfirmDialog.OnClosed");
         }
     }
 

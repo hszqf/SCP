@@ -11,7 +11,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AgentPickerView : MonoBehaviour
+public class AgentPickerView : MonoBehaviour, IModalClosable
 {
     [Header("Refs")]
     [SerializeField] private AgentPickerItemView itemPrefab;
@@ -46,13 +46,13 @@ public class AgentPickerView : MonoBehaviour
         if (cancelButton)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(OnCancelClicked);
+            cancelButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
         }
         // 蒙版点击逻辑
         if (backgroundButton)
         {
             backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(OnCancelClicked);
+            backgroundButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
         }
     }
 
@@ -104,6 +104,11 @@ public class AgentPickerView : MonoBehaviour
     {
         gameObject.SetActive(false);
         GameControllerTaskExt.LogBusySnapshot(GameController.I, "AgentPickerView.Hide");
+    }
+
+    public void CloseFromRoot()
+    {
+        OnCancelClicked();
     }
 
     void RefreshList(IEnumerable<AgentState> agents, Func<string, bool> isBusyOtherNode)

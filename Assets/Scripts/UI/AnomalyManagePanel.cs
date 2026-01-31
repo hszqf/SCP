@@ -19,7 +19,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AnomalyManagePanel : MonoBehaviour
+public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 {
     public class TargetEntry
     {
@@ -66,7 +66,7 @@ public class AnomalyManagePanel : MonoBehaviour
         if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(Hide);
+            closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
         }
 
         if (confirmButton)
@@ -105,6 +105,11 @@ public class AnomalyManagePanel : MonoBehaviour
     {
         gameObject.SetActive(false);
         GameControllerTaskExt.LogBusySnapshot(GameController.I, "AnomalyManagePanel.Hide");
+    }
+
+    public void CloseFromRoot()
+    {
+        Hide();
     }
 
     public void ShowForNode(string nodeId)
@@ -266,7 +271,7 @@ public class AnomalyManagePanel : MonoBehaviour
     private static string BuildAnomalyLabel(ManagedAnomalyState a, int mgr)
     {
         if (a == null) return "";
-        return $"Lv{a.Level} {a.Name}  (管理:{mgr})";
+        return $"{a.Name}  (管理:{mgr})";
     }
 
     private void SetListItemSelectedVisual(GameObject go, bool selected)
@@ -311,6 +316,14 @@ public class AnomalyManagePanel : MonoBehaviour
             if (_agentItems[i]) Destroy(_agentItems[i].gameObject);
         _agentItems.Clear();
 
+        if (agentListContent)
+        {
+            foreach (Transform child in agentListContent)
+            {
+                if (child) Destroy(child.gameObject);
+            }
+        }
+
         if (!agentListContent || !agentPickerItemPrefab)
             return;
 
@@ -335,17 +348,13 @@ public class AnomalyManagePanel : MonoBehaviour
         {
             if (ag == null) continue;
 
-            // 先全部不选，避免池化残留
-            bool selected = false;
+            bool selected = _selectedAgentIds.Contains(ag.Id);
 
             // Busy check (global): any active task (including Manage) OR legacy management occupancy.
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
-            
-            // Get busy text using BuildAgentBusyText
-            string busyText = Core.Sim.BuildAgentBusyText(gc.State, ag.Id);
 
             // Allow clicking to deselect even if currently busy (soft lock)
-            bool isBusyOther = (!selected) && busyTask;
+            bool isBusyOther = busyTask && !selected;
 
             var go = Instantiate(agentPickerItemPrefab, agentListContent);
             go.name = "Agent_" + ag.Id;
@@ -353,19 +362,15 @@ public class AnomalyManagePanel : MonoBehaviour
             var item = go.GetComponent<AgentPickerItemView>();
             if (item == null) item = go.AddComponent<AgentPickerItemView>();
 
-            // 先全部不选 - pass busyText to display
+            // 先全部不选
+            string displayName = string.IsNullOrEmpty(ag.Name) ? ag.Id : ag.Name;
             item.Bind(
-                ag.Id,
-                ag.Name,
+                ag,
+                displayName,
                 BuildAgentAttrLine(ag),
                 isBusyOther,
-                false,
-                OnAgentClicked,
-                busyText);
-
-            // 再按预选集置 true
-            if (_selectedAgentIds.Contains(ag.Id))
-                item.SetSelected(true);
+                selected,
+                OnAgentClicked);
 
             _agentItems.Add(item);
         }
@@ -379,6 +384,7 @@ public class AnomalyManagePanel : MonoBehaviour
         if (a == null) return "";
         return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
     }
+
 
     private void OnAgentClicked(string agentId)
     {

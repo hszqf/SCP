@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ConfirmDialog : MonoBehaviour
+public class ConfirmDialog : MonoBehaviour, IModalClosable
 {
     [Header("Wiring")]
     [SerializeField] private Button backgroundButton;   // 点背景=取消（可选）
@@ -87,6 +87,11 @@ public class ConfirmDialog : MonoBehaviour
         _onConfirm = null;
         _onCancel = null;
         OnClosed?.Invoke();
+    }
+
+    public void CloseFromRoot()
+    {
+        Hide();
     }
 
     private void Confirm()

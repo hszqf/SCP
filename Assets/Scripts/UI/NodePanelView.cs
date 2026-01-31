@@ -26,7 +26,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class NodePanelView : MonoBehaviour
+public class NodePanelView : MonoBehaviour, IModalClosable
 {
     [Header("UI Components")]
     [SerializeField] private TMP_Text titleText;
@@ -142,14 +142,14 @@ public class NodePanelView : MonoBehaviour
         if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(() => _onClose?.Invoke());
+            closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
         }
 
         // 蒙版点击 = 关闭
         if (backgroundButton)
         {
             backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(() => _onClose?.Invoke());
+            backgroundButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
         }
 
         CacheTaskStatusUIIfNeeded();
@@ -170,6 +170,12 @@ public class NodePanelView : MonoBehaviour
     public void Hide()
     {
         gameObject.SetActive(false);
+    }
+
+    public void CloseFromRoot()
+    {
+        if (_onClose != null) _onClose.Invoke();
+        else Hide();
     }
 
     public void Refresh()

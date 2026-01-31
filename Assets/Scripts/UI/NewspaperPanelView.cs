@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace UI
 {
-    public class NewspaperPanelView : MonoBehaviour
+    public class NewspaperPanelView : MonoBehaviour, IModalClosable
     {
         [SerializeField] private Button closeButton;
         [SerializeField] private Button dimmerButton;
@@ -21,6 +21,11 @@ namespace UI
         public void Hide()
         {
             gameObject.SetActive(false);
+        }
+
+        public void CloseFromRoot()
+        {
+            Hide();
         }
 
         public void Render()
@@ -88,15 +93,15 @@ namespace UI
             }
             else
             {
-                closeButton.onClick.RemoveListener(Hide);
-                closeButton.onClick.AddListener(Hide);
+                closeButton.onClick.RemoveAllListeners();
+                closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
                 Debug.Log("[Newspaper] bind close ok");
             }
 
             if (dimmerButton != null)
             {
-                dimmerButton.onClick.RemoveListener(Hide);
-                dimmerButton.onClick.AddListener(Hide);
+                dimmerButton.onClick.RemoveAllListeners();
+                dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
             }
 
             _wired = true;

@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class RecruitPanel : MonoBehaviour
+public class RecruitPanel : MonoBehaviour, IModalClosable
 {
     [Header("Texts")]
     [SerializeField] private TMP_Text titleText;
@@ -53,6 +53,11 @@ public class RecruitPanel : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    public void CloseFromRoot()
+    {
+        Hide();
+    }
+
     public void Refresh()
     {
         if (!ValidateBindings()) return;
@@ -95,7 +100,7 @@ public class RecruitPanel : MonoBehaviour
         if (cancelButton)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(Hide);
+            cancelButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
         }
     }
 
