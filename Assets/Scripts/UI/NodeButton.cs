@@ -122,7 +122,18 @@ public class NodeButton : MonoBehaviour
                     .Except(inProgressDefIds)
                     .Count();
 
-                int managingCount = inProgressDefIds.Count;
+                var manageDefIds = new HashSet<string>(tasks
+                    .Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage &&
+                                t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0 &&
+                                !string.IsNullOrEmpty(t.SourceAnomalyId))
+                    .Select(t => t.SourceAnomalyId));
+
+                int manageNoSource = tasks
+                    .Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage &&
+                                t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0 &&
+                                string.IsNullOrEmpty(t.SourceAnomalyId));
+
+                int managingCount = manageDefIds.Count + manageNoSource;
 
                 if (con.Count == 0 && containableCount > 0)
                     sb.Append($"\n<color=#00FFFF>可收容 {containableCount}</color>");
