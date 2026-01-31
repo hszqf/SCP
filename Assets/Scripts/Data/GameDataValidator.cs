@@ -80,8 +80,12 @@ namespace Data
                 if (news == null) continue;
                 int row = i + 1;
                 var source = GetRowString(news, "source");
-                if (!string.IsNullOrEmpty(source) && !string.Equals(source, "RandomDaily", StringComparison.OrdinalIgnoreCase))
-                    errors.Add(FormatCellError("NewsDefs", row, "source", source, "RandomDaily"));
+                if (!string.IsNullOrEmpty(source) &&
+                    !string.Equals(source, "RandomDaily", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(source, "Bootstrap", StringComparison.OrdinalIgnoreCase))
+                {
+                    errors.Add(FormatCellError("NewsDefs", row, "source", source, "RandomDaily|Bootstrap"));
+                }
             }
 
             var opRows = GetTableRows(registry, "EffectOps");

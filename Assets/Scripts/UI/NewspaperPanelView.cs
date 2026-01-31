@@ -1,0 +1,190 @@
+using System.Collections.Generic;
+using Data;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace UI
+{
+    public class NewspaperPanelView : MonoBehaviour
+    {
+        [SerializeField] private Button closeButton;
+        [SerializeField] private Button dimmerButton;
+
+        private bool _wired;
+
+        public void Show()
+        {
+            gameObject.SetActive(true);
+        }
+
+        public void Hide()
+        {
+            gameObject.SetActive(false);
+        }
+
+        public void Render()
+        {
+            var state = GameController.I?.State;
+            var data = DataRegistry.Instance;
+            if (state == null || data == null) return;
+
+            Core.NewsGenerator.EnsureBootstrapNews(state, data);
+            Debug.Log($"[Newspaper] render day={state.Day} items={(state.NewsLog?.Count ?? 0)}");
+
+            var titleTmp = FindTMP("Window/Header/TitleTMP");
+            if (titleTmp != null) titleTmp.text = "基金会晨报";
+
+            var dayTmp = FindTMP("Window/Header/DayTMP");
+            if (dayTmp != null) dayTmp.text = $"Day{state.Day}";
+
+            var pool = new List<Core.NewsInstance>();
+            if (state.NewsLog != null)
+            {
+                for (int i = 0; i < state.NewsLog.Count; i++)
+                {
+                    if (state.NewsLog[i] != null) pool.Add(state.NewsLog[i]);
+                }
+            }
+
+            var global = FindByKeyword(pool, "GLOBAL");
+            var node = FindByKeyword(pool, "NODE");
+            var rumor = FindByKeyword(pool, "RUMOR");
+
+            var coreSet = new List<Core.NewsInstance> { global, node, rumor };
+            var extra = new List<Core.NewsInstance>();
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i] == null) continue;
+                if (coreSet.Contains(pool[i])) continue;
+                extra.Add(pool[i]);
+            }
+
+            ApplyPage("Window/PaperPages/Paper1", global, coreSet, extra, data);
+            ApplyPage("Window/PaperPages/Paper2", node, coreSet, extra, data);
+            ApplyPage("Window/PaperPages/Paper3", rumor, coreSet, extra, data);
+        }
+
+        private void Awake()
+        {
+            WireButtons();
+        }
+
+        private void OnEnable()
+        {
+            WireButtons();
+        }
+
+        private void WireButtons()
+        {
+            if (_wired)
+            {
+                return;
+            }
+
+            if (closeButton == null)
+            {
+                Debug.LogWarning("[Newspaper] closeButton missing (assign in prefab)");
+            }
+            else
+            {
+                closeButton.onClick.RemoveListener(Hide);
+                closeButton.onClick.AddListener(Hide);
+                Debug.Log("[Newspaper] bind close ok");
+            }
+
+            if (dimmerButton != null)
+            {
+                dimmerButton.onClick.RemoveListener(Hide);
+                dimmerButton.onClick.AddListener(Hide);
+            }
+
+            _wired = true;
+        }
+
+        private void ApplyPage(string pagePath, Core.NewsInstance preferredHeadline, List<Core.NewsInstance> coreSet, List<Core.NewsInstance> extra, DataRegistry data)
+        {
+            var used = new HashSet<Core.NewsInstance>();
+
+            var headline = preferredHeadline ?? PickNext(coreSet, used) ?? PickNext(extra, used);
+            if (headline != null) used.Add(headline);
+
+            var blockA = PickNext(coreSet, used) ?? PickNext(extra, used);
+            if (blockA != null) used.Add(blockA);
+
+            var blockB = PickNext(coreSet, used) ?? PickNext(extra, used);
+            if (blockB != null) used.Add(blockB);
+
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineTitleTMP"), GetTitle(headline, data));
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineDeckTMP"), GetDesc(headline, data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockATitleTMP"), GetTitle(blockA, data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockABodyTMP"), GetDesc(blockA, data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBTitleTMP"), GetTitle(blockB, data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBBodyTMP"), GetDesc(blockB, data));
+        }
+
+        private TMP_Text FindTMP(string path)
+        {
+            var target = transform.Find(path);
+            return target ? target.GetComponent<TMP_Text>() : null;
+        }
+
+        private void SetText(TMP_Text tmp, string text)
+        {
+            if (tmp != null) tmp.text = string.IsNullOrEmpty(text) ? "暂无" : text;
+        }
+
+        private Core.NewsInstance FindByKeyword(List<Core.NewsInstance> pool, string keyword)
+        {
+            if (pool == null || string.IsNullOrEmpty(keyword)) return null;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                var id = pool[i]?.NewsDefId;
+                if (string.IsNullOrEmpty(id)) continue;
+                if (id.ToUpperInvariant().Contains(keyword)) return pool[i];
+            }
+
+            return null;
+        }
+
+        private Core.NewsInstance PickNext(List<Core.NewsInstance> pool, HashSet<Core.NewsInstance> used)
+        {
+            if (pool == null) return null;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                var item = pool[i];
+                if (item == null) continue;
+                if (used.Contains(item)) continue;
+                return item;
+            }
+
+            return null;
+        }
+
+        private string GetTitle(Core.NewsInstance news, DataRegistry data)
+        {
+            if (news == null) return null;
+            var def = data.GetNewsDefById(news.NewsDefId);
+            if (def == null)
+            {
+                Debug.LogWarning($"[Newspaper] def missing id={news.NewsDefId}");
+                return news.NewsDefId;
+            }
+
+            return def.title;
+        }
+
+        private string GetDesc(Core.NewsInstance news, DataRegistry data)
+        {
+            if (news == null) return null;
+            var def = data.GetNewsDefById(news.NewsDefId);
+            if (def == null)
+            {
+                Debug.LogWarning($"[Newspaper] def missing id={news.NewsDefId}");
+                return null;
+            }
+
+            return def.desc;
+        }
+    }
+}

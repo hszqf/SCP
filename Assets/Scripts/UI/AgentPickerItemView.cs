@@ -9,7 +9,7 @@ public class AgentPickerItemView : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Button button;
-    [SerializeField] private Image background;
+    private Image background;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text attrText;
     [SerializeField] private TMP_Text busyTagText;
@@ -18,7 +18,7 @@ public class AgentPickerItemView : MonoBehaviour
     [SerializeField] private GameObject selectedIcon; // 可选：保留一个勾选图标
 
     [Header("Style Colors")]
-    private Color colNormal = new Color(1f, 1f, 1f, 0.05f); // 极淡灰
+    private Color colNormal = new Color(0.18f, 0.18f, 0.18f, 0.05f); // 极淡灰
     private Color colSelected = new Color(0f, 0.68f, 0.71f, 0.8f); // 战术青 (高亮)
     private Color colBusy = new Color(0.3f, 0.1f, 0.1f, 0.4f); // 暗红
 

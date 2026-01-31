@@ -106,6 +106,7 @@ namespace Data
         public Dictionary<string, List<EventOptionDef>> OptionsByEventId { get; private set; } = new();
         public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
         public Dictionary<string, NewsDef> NewsDefsById { get; private set; } = new();
+        public List<NewsDef> NewsDefs { get; private set; } = new();
         public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
@@ -311,11 +312,12 @@ namespace Data
             }
 
             NewsDefsById = new Dictionary<string, NewsDef>();
+            NewsDefs = new List<NewsDef>();
             foreach (var row in Tables.GetRows("NewsDefs"))
             {
                 var newsDefId = GetRowString(row, "newsDefId");
                 if (string.IsNullOrEmpty(newsDefId)) continue;
-                NewsDefsById[newsDefId] = new NewsDef
+                var def = new NewsDef
                 {
                     newsDefId = newsDefId,
                     source = GetNewsStringWithDefault(row, "source", "RandomDaily", ref _warnedMissingNewsSource, "RandomDaily"),
@@ -330,6 +332,8 @@ namespace Data
                     title = GetRowString(row, "title"),
                     desc = GetRowString(row, "desc"),
                 };
+                NewsDefsById[newsDefId] = def;
+                NewsDefs.Add(def);
             }
 
             if (NewsDefsById.Count > 0)

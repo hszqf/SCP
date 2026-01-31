@@ -129,6 +129,8 @@ public class GameController : MonoBehaviour
             State.Nodes.Add(nodeState);
         }
 
+        NewsGenerator.EnsureBootstrapNews(State, registry);
+
         Notify();
     }
 

@@ -28,6 +28,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private NodePanelView nodePanelPrefab;
     [SerializeField] private EventPanel eventPanelPrefab;
     [SerializeField] private NewsPanel newsPanelPrefab;
+    [SerializeField] private GameObject NewspaperPanelPrefab;
     [SerializeField] private AgentPickerView agentPickerPrefab;
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
     [SerializeField] private GameObject managePanelPrefab; // 管理面板 Prefab（你新建的管理界面）
@@ -38,6 +39,7 @@ public class UIPanelRoot : MonoBehaviour
     private NodePanelView _nodePanel;
     private EventPanel _eventPanel;
     private NewsPanel _newsPanel;
+    private GameObject _newspaperPanelInstance;
     private AgentPickerView _agentPicker;
     private ConfirmDialog _confirmDialog;
     private GameObject _managePanel;
@@ -415,12 +417,41 @@ public class UIPanelRoot : MonoBehaviour
 
     public void OpenNews()
     {
-        if (!_newsPanel && newsPanelPrefab) _newsPanel = Instantiate(newsPanelPrefab, transform);
-        if (_newsPanel)
+        OpenNewspaperPanel();
+    }
+
+    void EnsureNewspaperPanel()
+    {
+        if (_newspaperPanelInstance) return;
+        if (!NewspaperPanelPrefab)
         {
-            _newsPanel.Show();
-            _newsPanel.transform.SetAsLastSibling();
+            Debug.LogError("[UIPanelRoot] NewspaperPanelPrefab 未配置！");
+            return;
         }
+
+        _newspaperPanelInstance = Instantiate(NewspaperPanelPrefab, transform);
+        if (_newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>() == null)
+        {
+            _newspaperPanelInstance.AddComponent<UI.NewspaperPanelView>();
+        }
+        _newspaperPanelInstance.SetActive(false);
+    }
+
+    public void OpenNewspaperPanel()
+    {
+        EnsureNewspaperPanel();
+        if (_newspaperPanelInstance)
+        {
+            _newspaperPanelInstance.SetActive(true);
+            var view = _newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>();
+            if (view != null) view.Render();
+            _newspaperPanelInstance.transform.SetAsLastSibling();
+        }
+    }
+
+    public void HideNewspaperPanel()
+    {
+        if (_newspaperPanelInstance) _newspaperPanelInstance.SetActive(false);
     }
 
     // ================== RECRUIT ==================

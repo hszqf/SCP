@@ -1159,18 +1159,46 @@
       ],
       "rows": [
         {
-          "newsDefId": "TEST",
-          "source": "RandomDaily",
+          "newsDefId": "NEWS_BOOTSTRAP_GLOBAL",
+          "source": "Bootstrap",
           "requiresNodeId": "ANY",
           "requiresAnomalyId": "ANY",
           "weight": 1,
           "p": 1.0,
-          "minDay": 0,
-          "maxDay": 0,
+          "minDay": 1,
+          "maxDay": 1,
           "CD": 0,
-          "limitNum": 0,
-          "title": "TEST",
-          "desc": "TEST"
+          "limitNum": 1,
+          "title": "O5通告：站点网络进入一级响应",
+          "desc": "过去48小时异常目击上升。各站点提升警戒，优先处理“可快速验证”的线索，避免无谓暴露。"
+        },
+        {
+          "newsDefId": "NEWS_BOOTSTRAP_NODE",
+          "source": "Bootstrap",
+          "requiresNodeId": "START",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 1,
+          "maxDay": 1,
+          "CD": 0,
+          "limitNum": 1,
+          "title": "站点简报：N1辖区出现不明活动",
+          "desc": "本地渠道报告多起“异常传闻”与人员失踪。建议先派遣小队调查，确认是否存在可收容目标。"
+        },
+        {
+          "newsDefId": "NEWS_BOOTSTRAP_RUMOR",
+          "source": "Bootstrap",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 1,
+          "maxDay": 1,
+          "CD": 0,
+          "limitNum": 1,
+          "title": "都市传闻：黑暗中有人“点名”你的名字",
+          "desc": "多名目击者称在夜间听到低语与重复的编号。真实性未知，但具备异常特征——可作为低成本调查线索。"
         }
       ]
     },
