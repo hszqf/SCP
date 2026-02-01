@@ -695,7 +695,7 @@ public class UIPanelRoot : MonoBehaviour
     {
         if (_modalStack == null) _modalStack = new List<GameObject>();
 
-        _modalStack.RemoveAll(p => p == null);
+        _modalStack.RemoveAll(p => p == null || !p.activeInHierarchy);
 
         if (sortBySiblingIndex)
         {
@@ -710,11 +710,14 @@ public class UIPanelRoot : MonoBehaviour
     {
         if (_modalStack == null) return;
 
+        _modalStack.RemoveAll(p => p == null || !p.activeInHierarchy);
+
         ModalDimmerHandle topHandle = null;
         for (int i = _modalStack.Count - 1; i >= 0; i--)
         {
             var panel = _modalStack[i];
             if (panel == null) continue;
+            if (!panel.activeInHierarchy) continue;
 
             var handle = panel.GetComponent<ModalDimmerHandle>();
             if (handle != null)
@@ -732,6 +735,11 @@ public class UIPanelRoot : MonoBehaviour
 
             handle.SetDimmerActive(handle == topHandle);
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var topName = topHandle != null ? topHandle.gameObject.name : "(none)";
+        Debug.Log($"[DimmerStack] top={topName} count={_modalStack.Count} reason={reason}");
+#endif
     }
 
     private void LogModalStack(string action, GameObject panel, string reason)

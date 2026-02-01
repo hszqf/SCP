@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8343837909765253721}
   - component: {fileID: 4121954257630186424}
   - component: {fileID: 6621529959149151261}
+  - component: {fileID: 914166541489675356}
   m_Layer: 5
   m_Name: EventPanel
   m_TagString: Untagged
@@ -142,6 +143,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &914166541489675356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2170685820653163519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0e09982d7c80e24da3cf15dcdcfad60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModalDimmerHandle
+  dimmerRoot: {fileID: 5296908063654527212}
 --- !u!1 &4279738588266543692
 GameObject:
   m_ObjectHideFlags: 0

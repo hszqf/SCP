@@ -6,9 +6,14 @@ public class ModalDimmerHandle : MonoBehaviour
 
     public void SetDimmerActive(bool active)
     {
-        if (dimmerRoot != null)
+        if (dimmerRoot == null) return;
+
+        dimmerRoot.SetActive(active);
+
+        var cg = dimmerRoot.GetComponent<CanvasGroup>();
+        if (cg != null)
         {
-            dimmerRoot.SetActive(active);
+            cg.blocksRaycasts = active;
         }
     }
 }

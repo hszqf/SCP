@@ -2450,6 +2450,7 @@ GameObject:
   - component: {fileID: 4739754535759368769}
   - component: {fileID: 735003281731836352}
   - component: {fileID: 5064428021835867684}
+  - component: {fileID: 7072565031061037004}
   m_Layer: 0
   m_Name: NodePanel
   m_TagString: Untagged
@@ -2509,6 +2510,19 @@ MonoBehaviour:
   closeButton: {fileID: 6254486537592608366}
   dimmerButton: {fileID: 650873318141691482}
   backgroundButton: {fileID: 0}
+--- !u!114 &7072565031061037004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4385531388792951762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0e09982d7c80e24da3cf15dcdcfad60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModalDimmerHandle
+  dimmerRoot: {fileID: 3056696362400633105}
 --- !u!1 &4443940582871889711
 GameObject:
   m_ObjectHideFlags: 0
