@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class ConfirmDialog : MonoBehaviour, IModalClosable
 {
     [Header("Wiring")]
-    [SerializeField] private Button backgroundButton;   // 点背景=取消（可选）
+    [SerializeField] private Button dimmerButton;   // 点背景=取消（可选）
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text messageText;
 
@@ -24,10 +24,10 @@ public class ConfirmDialog : MonoBehaviour, IModalClosable
     private void Awake()
     {
         // 防止重复绑定（Domain Reload / 重新进 Play）
-        if (backgroundButton)
+        if (dimmerButton)
         {
-            backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(Cancel);
+            dimmerButton.onClick.RemoveAllListeners();
+            dimmerButton.onClick.AddListener(Cancel);
         }
 
         if (confirmButton)
@@ -91,7 +91,7 @@ public class ConfirmDialog : MonoBehaviour, IModalClosable
 
     public void CloseFromRoot()
     {
-        Hide();
+        Cancel();
     }
 
     private void Confirm()
