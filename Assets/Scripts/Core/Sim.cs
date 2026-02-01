@@ -76,6 +76,12 @@ namespace Core
             var registry = DataRegistry.Instance;
 
             s.Day += 1;
+            if (s.RecruitPool != null)
+            {
+                s.RecruitPool.day = -1;
+                s.RecruitPool.refreshUsedToday = 0;
+                s.RecruitPool.candidates?.Clear();
+            }
             s.News.Add($"Day {s.Day}: 日结算开始");
 
             // 0) 异常生成（节点维度）

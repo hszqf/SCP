@@ -245,7 +245,7 @@ public class GameController : MonoBehaviour
         int statBonus = Math.Max(0, propSum - 20) * 10;
         int cost = baseCost + levelCost + statBonus;
 
-        return new RecruitCandidate { agent = agent, cost = cost };
+        return new RecruitCandidate { cid = Guid.NewGuid().ToString("N"), agent = agent, cost = cost };
     }
 
     public bool TryHireAgent(RecruitCandidate candidate, out AgentState agent)

@@ -33,6 +33,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
     [SerializeField] private GameObject managePanelPrefab; // 管理面板 Prefab（你新建的管理界面）
     [SerializeField] private RecruitPanel recruitPanelPrefab;
+    [SerializeField] private RosterPanel rosterPanelPrefab;
 
     // --- 运行时实例 (自动生成) ---
     private HUD _hud;
@@ -45,6 +46,7 @@ public class UIPanelRoot : MonoBehaviour
     private GameObject _managePanel;
     private AnomalyManagePanel _managePanelView;
     private RecruitPanel _recruitPanel;
+    private RosterPanel _rosterPanel;
 
     private List<GameObject> _modalStack = new List<GameObject>();
     private bool _confirmDialogOnClosedHooked;
@@ -496,6 +498,40 @@ public class UIPanelRoot : MonoBehaviour
         if (_newspaperPanelInstance) CloseModal(_newspaperPanelInstance, "close newspaper");
     }
 
+    // ================== ROSTER ==================
+
+    void EnsureRosterPanel()
+    {
+        if (_rosterPanel) return;
+        if (!rosterPanelPrefab)
+        {
+            Debug.LogError("[UIPanelRoot] rosterPanelPrefab 未配置，无法打开 RosterPanel。");
+            return;
+        }
+
+        _rosterPanel = Instantiate(rosterPanelPrefab, transform);
+
+        if (_rosterPanel) _rosterPanel.gameObject.SetActive(false);
+    }
+
+    public void OpenRosterPanel()
+    {
+        EnsureRosterPanel();
+        if (_rosterPanel)
+        {
+            _rosterPanel.Show();
+            _rosterPanel.gameObject.SetActive(true);
+            _rosterPanel.transform.SetAsLastSibling();
+            PushModal(_rosterPanel.gameObject, "open_roster");
+            RefreshModalStack("open_roster", _rosterPanel.gameObject);
+        }
+    }
+
+    public void HideRosterPanel()
+    {
+        if (_rosterPanel) CloseModal(_rosterPanel.gameObject, "close roster");
+    }
+
     // ================== RECRUIT ==================
 
     void EnsureRecruitPanel()
@@ -523,6 +559,11 @@ public class UIPanelRoot : MonoBehaviour
             PushModal(_recruitPanel.gameObject, "open_recruit");
             RefreshModalStack("open_recruit", _recruitPanel.gameObject);
         }
+    }
+
+    public void OpenRecruitPanel()
+    {
+        OpenRecruit();
     }
 
     public void CloseRecruit()

@@ -118,7 +118,7 @@ public class HUD : MonoBehaviour
     void OnRecruitClicked()
     {
         if (UIPanelRoot.I == null) return;
-        UIPanelRoot.I.OpenRecruit();
+        UIPanelRoot.I.OpenRosterPanel();
     }
 
     void Refresh()

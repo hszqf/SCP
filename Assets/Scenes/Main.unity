@@ -624,6 +624,7 @@ MonoBehaviour:
   confirmDialogPrefab: {fileID: 8639386908128668977, guid: 443d7c44dc6ecff419aecfe2e57a2c7d, type: 3}
   managePanelPrefab: {fileID: 5526819420777000065, guid: e32b9f1e805088e48afc0644c360b814, type: 3}
   recruitPanelPrefab: {fileID: 210391625587086635, guid: cbf27805047e8f447a12551a935f1180, type: 3}
+  rosterPanelPrefab: {fileID: 210391625587086635, guid: cd29739121f743f40a91d717949da373, type: 3}
 --- !u!1 &1038949951
 GameObject:
   m_ObjectHideFlags: 0

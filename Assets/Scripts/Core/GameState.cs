@@ -42,8 +42,20 @@ namespace Core
     [Serializable]
     public class RecruitCandidate
     {
+        public string cid;
         public AgentState agent;
         public int cost;
+        public bool isHired;
+        public string hiredAgentId;
+        public string hiredName;
+    }
+
+    [Serializable]
+    public class RecruitPoolState
+    {
+        public int day = -1;
+        public int refreshUsedToday = 0;
+        public List<RecruitCandidate> candidates = new();
     }
 
 
@@ -201,6 +213,8 @@ namespace Core
         public Dictionary<string, int> EventLastFiredDay = new();
         public Dictionary<string, int> NewsFiredCounts = new();
         public Dictionary<string, int> NewsLastFiredDay = new();
+
+        public RecruitPoolState RecruitPool = new RecruitPoolState();
     }
 }
 // </EXPORT_BLOCK>

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Core;
-using Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,11 +11,10 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text moneyText;
     [SerializeField] private TMP_Text costText;
-    [SerializeField] private TMP_Text statusText;
 
     [Header("Buttons")]
-    [SerializeField] private Button confirmButton;
-    [SerializeField] private TMP_Text confirmLabel;
+    [SerializeField] private Button refreshButton;
+    [SerializeField] private TMP_Text refreshLabel;
     [SerializeField] private Button cancelButton;
     [SerializeField] private TMP_Text cancelLabel;
     [SerializeField] private Button dimmerButton;
@@ -27,7 +25,9 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     [SerializeField] private AgentPickerItemView itemPrefab;
 
     private readonly List<GameObject> _agentItems = new();
-    private RecruitCandidate _candidate;
+    private const int RecruitPoolSize = 3;
+    private const int FreeRefreshPerDay = 1;
+    private const int RefreshBaseCost = 500;
 
     private void Awake()
     {
@@ -65,38 +65,39 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         if (!ValidateBindings()) return;
         if (GameController.I == null) return;
 
-        if (_candidate == null)
-        {
-            _candidate = GameController.I.GenerateRecruitCandidate();
-        }
-
-        int hireCost = _candidate?.cost ?? GetHireCost();
-        int candidateLevel = _candidate?.agent?.Level ?? 1;
+        EnsureRecruitPool(false);
 
         int money = GameController.I.State?.Money ?? 0;
-        bool canAfford = money >= hireCost;
+        int candidateCount = GameController.I.State?.RecruitPool?.candidates?.Count ?? 0;
+        var pool = GameController.I.State?.RecruitPool;
+        int refreshUsedToday = pool?.refreshUsedToday ?? 0;
+        int remainingFree = Mathf.Max(0, FreeRefreshPerDay - refreshUsedToday);
+        int paidIndex = Mathf.Max(0, refreshUsedToday - FreeRefreshPerDay);
+        int nextPaidCost = RefreshBaseCost * (paidIndex + 1);
 
         if (titleText) titleText.text = "Personnel Management";
         if (moneyText) moneyText.text = $"Money: {money}";
-        if (costText) costText.text = $"雇佣费用：{hireCost}（Lv{candidateLevel}）";
-        if (statusText) statusText.text = canAfford ? "Ready" : "资金不足";
-
-        if (confirmButton) confirmButton.interactable = canAfford;
-        if (confirmLabel) confirmLabel.text = "Hire";
+        if (costText) costText.text = $"候选池：{candidateCount}/{RecruitPoolSize}";
+        if (refreshLabel)
+        {
+            refreshLabel.text = remainingFree > 0
+                ? $"免费刷新（{remainingFree}/{FreeRefreshPerDay}）"
+                : $"刷新 ¥{nextPaidCost}";
+        }
         if (cancelLabel) cancelLabel.text = "Close";
 
         // Rebuild agent list to show current status
         EnsureListLayout();
-        RebuildAgentList();
+        RebuildCandidateList();
         EnsureListLayout();
     }
 
     private void BindButtons()
     {
-        if (confirmButton)
+        if (refreshButton)
         {
-            confirmButton.onClick.RemoveAllListeners();
-            confirmButton.onClick.AddListener(OnConfirm);
+            refreshButton.onClick.RemoveAllListeners();
+            refreshButton.onClick.AddListener(OnRefreshClicked);
         }
 
         if (cancelButton)
@@ -119,12 +120,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         Debug.Log($"[UIBind] RecruitPanel close={closeState} dimmer={dimmerState}");
     }
 
-    private int GetHireCost()
-    {
-        return DataRegistry.Instance.GetBalanceIntWithWarn("HireCost", 100);
-    }
-
-    private void RebuildAgentList()
+    private void RebuildCandidateList()
     {
         if (!ValidateBindings()) return;
         EnsureListLayout();
@@ -142,25 +138,27 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         }
 
         var gc = GameController.I;
-        if (gc == null || gc.State?.Agents == null) return;
+        var pool = gc?.State?.RecruitPool;
+        if (gc == null || pool?.candidates == null) return;
 
-        // Create an item for each agent
-        foreach (var agent in gc.State.Agents)
+        // Create an item for each candidate (max 3)
+        int count = 0;
+        foreach (var candidate in pool.candidates)
         {
-            if (agent == null) continue;
+            if (candidate?.agent == null) continue;
+            if (count >= RecruitPoolSize) break;
 
-            // Get busy status using BuildAgentBusyText
-            string busyText = Sim.BuildAgentBusyText(gc.State, agent.Id);
-            bool isBusy = !string.IsNullOrEmpty(busyText);
-            string statusText = isBusy
-                ? $"<color=#FF6666>{busyText}</color>"
-                : "<color=#66FF66>IDLE</color>";
+            bool isHired = candidate.isHired;
+            string statusLine = isHired
+                ? "<color=#AAAAAA>已雇佣</color>"
+                : "<color=#66FF66>HIRE</color>";
 
-            // Create agent item UI from prefab
+            // Create candidate item UI from prefab
             var item = Instantiate(itemPrefab, agentListContent, false);
-            item.name = $"AgentItem_{agent.Id}";
-            string displayName = BuildAgentDisplayName(agent);
-            item.Bind(agent, displayName, BuildAgentAttrLine(agent), isBusy, false, null, statusText);
+            item.name = $"CandidateItem_{candidate.cid}";
+            string displayName = BuildCandidateDisplayName(candidate);
+            string attrLine = BuildCandidateAttrLine(candidate);
+            item.Bind(candidate.agent, displayName, attrLine, isHired, false, _ => OnHireCandidate(candidate), statusLine);
             var itemGo = item.gameObject;
             var le = itemGo.GetComponent<LayoutElement>() ?? itemGo.AddComponent<LayoutElement>();
             le.minHeight = 70f;
@@ -177,51 +175,125 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
                 rt.sizeDelta = Vector2.zero;
             }
             _agentItems.Add(item.gameObject);
+            count++;
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(agentListContent);
         Canvas.ForceUpdateCanvases();
     }
 
-    private static string BuildAgentAttrLine(AgentState a)
+    private static string BuildCandidateAttrLine(RecruitCandidate c)
     {
+        var a = c?.agent;
         if (a == null) return "";
-        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power} | ${c.cost}";
     }
 
-    private static string BuildAgentDisplayName(AgentState a)
+    private static string BuildCandidateDisplayName(RecruitCandidate c)
     {
+        var a = c?.agent;
         if (a == null) return string.Empty;
-        return string.IsNullOrEmpty(a.Name) ? a.Id : a.Name;
+        return "Candidate";
     }
 
-    private void OnConfirm()
+    private void OnHireCandidate(RecruitCandidate candidate)
     {
         if (GameController.I == null) return;
 
-        if (_candidate == null)
-        {
-            _candidate = GameController.I.GenerateRecruitCandidate();
-        }
+        if (candidate == null) return;
+        if (candidate.isHired) return;
 
-        if (!GameController.I.TryHireAgent(_candidate, out var agent))
+        if (!GameController.I.TryHireAgent(candidate, out var agent))
         {
-            if (statusText) statusText.text = "资金不足";
             Refresh();
             return;
         }
-
-        if (statusText) statusText.text = $"已招募 {agent.Name}";
-        _candidate = GameController.I.GenerateRecruitCandidate();
+        candidate.isHired = true;
+        candidate.hiredAgentId = agent?.Id;
+        candidate.hiredName = agent?.Name;
+        UIEvents.RaiseAgentsChanged();
         Refresh();
         Canvas.ForceUpdateCanvases();
         if (agentListScrollRect) agentListScrollRect.verticalNormalizedPosition = 0f;
     }
 
-    private void EnsureRuntimeUI()
+    private void OnRefreshClicked()
     {
-        if (titleText && moneyText && costText && confirmButton && cancelButton) return;
-        Debug.LogError("RecruitPanel: UI references missing. Assign via Inspector; runtime UI creation is disabled.");
+        var gc = GameController.I;
+        if (gc == null || gc.State == null) return;
+
+        EnsureRecruitPool(false);
+        var pool = gc.State.RecruitPool;
+        if (pool == null) return;
+
+        int refreshUsedToday = pool.refreshUsedToday;
+        int remainingFree = Mathf.Max(0, FreeRefreshPerDay - refreshUsedToday);
+        int paidIndex = Mathf.Max(0, refreshUsedToday - FreeRefreshPerDay);
+        int nextPaidCost = RefreshBaseCost * (paidIndex + 1);
+        int cost = remainingFree > 0 ? 0 : nextPaidCost;
+
+        if (cost > 0 && gc.State.Money < cost)
+        {
+            UIPanelRoot.I?.ShowInfo("资金不足", "资金不足，无法刷新候选池。");
+            return;
+        }
+
+        if (cost > 0)
+        {
+            gc.State.Money -= cost;
+        }
+
+        pool.refreshUsedToday += 1;
+        pool.candidates = BuildRecruitCandidates(gc, RecruitPoolSize);
+        Refresh();
+    }
+
+    private void EnsureRecruitPool(bool forceRefresh)
+    {
+        var gc = GameController.I;
+        if (gc == null || gc.State == null) return;
+
+        if (gc.State.RecruitPool == null)
+        {
+            gc.State.RecruitPool = new RecruitPoolState();
+        }
+
+        var pool = gc.State.RecruitPool;
+        bool dayChanged = pool.day != gc.State.Day;
+        bool empty = pool.candidates == null || pool.candidates.Count == 0;
+
+        if (dayChanged)
+        {
+            pool.day = gc.State.Day;
+            pool.refreshUsedToday = 0;
+        }
+
+        if (forceRefresh || dayChanged || empty)
+        {
+            pool.candidates = BuildRecruitCandidates(gc, RecruitPoolSize);
+        }
+    }
+
+    private static List<RecruitCandidate> BuildRecruitCandidates(GameController gc, int count)
+    {
+        var list = new List<RecruitCandidate>();
+        if (gc == null) return list;
+
+        for (int i = 0; i < count; i++)
+        {
+            var c = gc.GenerateRecruitCandidate();
+            if (c == null) continue;
+            if (string.IsNullOrEmpty(c.cid))
+            {
+                c.cid = $"RC_{gc.State.Day}_{i}_{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+            }
+            c.isHired = false;
+            c.hiredAgentId = null;
+            c.hiredName = null;
+            list.Add(c);
+        }
+
+        return list;
     }
 
     private bool ValidateBindings()
