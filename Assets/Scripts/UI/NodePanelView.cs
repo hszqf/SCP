@@ -30,7 +30,6 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 {
     [Header("UI Components")]
     [SerializeField] private TMP_Text titleText;
-    [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text progressText;
     [SerializeField] private TMP_Text eventCountText;
 
@@ -95,8 +94,6 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     // Track if contain button is disabled and why
     private bool _containDisabledForNoAnomalies = false;
     // Track current containables state for guard checks
-    // Track last statusText for hint reset
-    private string _lastStatusText = null;
 
     private const float EPS = 0.0001f;
 
@@ -238,28 +235,11 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 
         if (titleText) titleText.text = n.Name;
 
-
-        string s = $"{n.Status}";
-        if (n.HasAnomaly) s += " <color=red>[ANOMALY]</color>";
-        if (n.HasPendingEvent) s += " <color=#FFA500>[ATTENTION]</color>";
-
-        // 记录原始状态文本
-        _lastStatusText = s;
-
-
         // 统一口径：可收容 = 已发现 - 已收容
         int containableCount = GetContainableCount(n);
         bool hasContainables = containableCount > 0;
 
         UpdateDispatchButtons(n, containableCount, hasContainables);
-
-        // Add hint if contain button is disabled due to no anomalies
-        if (_containDisabledForNoAnomalies)
-        {
-            s += " <color=#FFAA00>[请先调查发现异常]</color>";
-        }
-
-        if (statusText) statusText.text = s;
 
         UpdateManageButton(n);
 
@@ -278,24 +258,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 
         if (progressText)
         {
-            int invActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate) ?? 0;
-            int conActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain) ?? 0;
-            int manActive = n.Tasks?.Count(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage) ?? 0;
-            int containables = GetContainableCount(n);
-
-            int busy = 0;
-            if (n.Tasks != null)
-            {
-                busy = n.Tasks
-                    .Where(t => t != null && t.State == TaskState.Active && t.AssignedAgentIds != null)
-                    .SelectMany(t => t.AssignedAgentIds)
-                    .Distinct()
-                    .Count();
-            }
-
-            int managed = n.ManagedAnomalies != null ? n.ManagedAnomalies.Count : 0;
-            int neg = GameController.I.State.NegEntropy;
-            progressText.text = $"Tasks: 调查 {invActive}, 收容 {conActive}, 管理 {manActive} | 可收容 {containables} | Busy {busy} | 已收藏 {managed} | 负熵 {neg} | 事件 {pendingEvents}";
+            progressText.text = BuildAnomalyStatusText(n);
         }
 
         CacheTaskListUIIfNeeded();
@@ -809,6 +772,49 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return defId;
     }
 
+    private static string BuildAnomalyStatusText(NodeState node)
+    {
+        if (node == null) return "异常：无";
+
+        var registry = DataRegistry.Instance;
+        var active = node.ActiveAnomalyIds ?? new List<string>();
+        var known = node.KnownAnomalyDefIds ?? new List<string>();
+
+        var contained = new HashSet<string>();
+        if (node.ManagedAnomalies != null)
+        {
+            foreach (var m in node.ManagedAnomalies)
+            {
+                if (m == null || string.IsNullOrEmpty(m.AnomalyId)) continue;
+                contained.Add(m.AnomalyId);
+            }
+        }
+
+        var ids = new HashSet<string>();
+        foreach (var id in active) if (!string.IsNullOrEmpty(id)) ids.Add(id);
+        foreach (var id in known) if (!string.IsNullOrEmpty(id)) ids.Add(id);
+        foreach (var id in contained) if (!string.IsNullOrEmpty(id)) ids.Add(id);
+
+        if (ids.Count == 0) return "异常：无";
+
+        var parts = new List<string>();
+        foreach (var id in ids)
+        {
+            string name = id;
+            if (registry != null && registry.AnomaliesById.TryGetValue(id, out var def) && def != null && !string.IsNullOrEmpty(def.name))
+                name = def.name;
+
+            bool isContained = contained.Contains(id);
+            bool isDiscovered = known.Contains(id);
+
+            string discover = isDiscovered ? "已发现" : "未发现";
+            string contain = isContained ? "已收容" : "未收容";
+            parts.Add($"{name}({discover}/{contain})");
+        }
+
+        return "异常：" + string.Join("，", parts);
+    }
+
     private static string ResolveManagedAnomalyName(NodeState node, string managedAnomalyId)
     {
         if (node == null || node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return "";
@@ -859,8 +865,19 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     {
         if (task == null) return 0f;
         if (task.Type == TaskType.Manage) return 0f;
-        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        int baseDays = GetTaskBaseDays(task);
         return Mathf.Clamp01(task.Progress / baseDays);
+    }
+
+    private static int GetTaskBaseDays(NodeTask task)
+    {
+        if (task == null) return 1;
+        var registry = DataRegistry.Instance;
+        if (task.Type == TaskType.Investigate && task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId) && task.InvestigateNoResultBaseDays > 0)
+            return task.InvestigateNoResultBaseDays;
+        string anomalyId = task.SourceAnomalyId;
+        if (string.IsNullOrEmpty(anomalyId) || registry == null) return 1;
+        return Mathf.Max(1, registry.GetAnomalyBaseDaysWithWarn(anomalyId, 1));
     }
 
     private string BuildActionLabel(TaskActionMode mode, string taskId)
@@ -888,9 +905,9 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         // - Contain: requires discovered containables.
 
         bool canInvestigate = true; // 调查随时可发起
-        bool canContain = n.Status != NodeStatus.Secured && hasContainables; // 收容必须有可收容物
+        bool canContain = hasContainables; // 收容必须有可收容物（已发现且未收容）
 
-        _containDisabledForNoAnomalies = !hasContainables && n.Status != NodeStatus.Secured;
+        _containDisabledForNoAnomalies = !hasContainables;
 
 
         if (investigateButton) investigateButton.interactable = canInvestigate;

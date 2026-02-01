@@ -375,8 +375,10 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             // Busy check (global): any active task (including Manage) OR legacy management occupancy.
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
 
+            bool unusable = ag.IsDead || ag.IsInsane;
+
             // Allow clicking to deselect even if currently busy (soft lock)
-            bool isBusyOther = busyTask && !selected;
+            bool isBusyOther = (busyTask || unusable) && !selected;
 
             string busyText = Sim.BuildAgentBusyText(gc.State, ag.Id);
             string statusText = isBusyOther
@@ -423,6 +425,11 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private void OnAgentClicked(string agentId)
     {
         if (string.IsNullOrEmpty(agentId)) return;
+
+        var gc = GameController.I;
+        var agent = gc?.State?.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
+        if (agent != null && (agent.IsDead || agent.IsInsane))
+            return;
 
         if (_selectedAgentIds.Contains(agentId))
         {

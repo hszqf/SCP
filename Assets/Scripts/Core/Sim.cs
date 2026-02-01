@@ -34,7 +34,6 @@ namespace Core
                 int oldLv = a.Level;
                 a.Exp -= ExpToNext(a.Level);
                 a.Level += 1;
-                a.TalentPoints += 1;
                 int grow = rng.Next(0, 4);
                 string growStr = "";
                 switch (grow)
@@ -56,7 +55,7 @@ namespace Core
                         growStr = "Power+1";
                         break;
                 }
-                Debug.Log($"[AgentLevel] agent={a.Id} lv={oldLv}->{a.Level} exp={a.Exp} tp={a.TalentPoints} grow={growStr}");
+                Debug.Log($"[AgentLevel] agent={a.Id} lv={oldLv}->{a.Level} exp={a.Exp} grow={growStr}");
                 leveled = true;
             }
             return leveled;
@@ -67,8 +66,6 @@ namespace Core
 
         public static event Action OnIgnorePenaltyApplied;
 
-        private static readonly HashSet<TaskType> WarnedMissingYieldFields = new();
-        private static readonly HashSet<TaskType> WarnedUnknownYieldKey = new();
 
         public static void StepDay(GameState s, Random rng)
         {
@@ -83,23 +80,8 @@ namespace Core
             }
             s.News.Add($"Day {s.Day}: 日结算开始");
 
-            // 0) 异常生成（节点维度）
-            foreach (var n in s.Nodes)
-            {
-                if (n == null) continue;
-                if (n.Status == NodeStatus.Calm && !n.HasAnomaly)
-                {
-                    if (rng.NextDouble() < 0.15)
-                    {
-                        var anomalyId = PickRandomAnomalyId(registry, rng);
-                        if (!string.IsNullOrEmpty(anomalyId))
-                        {
-                            EnsureActiveAnomaly(n, anomalyId, registry);
-                            s.News.Add($"- {n.Name} 出现异常迹象：{anomalyId}");
-                        }
-                    }
-                }
-            }
+            // 0) 异常生成（按 AnomaliesGen 表调度）
+            GenerateScheduledAnomalies(s, rng, registry, s.Day);
 
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Nodes)
@@ -120,7 +102,19 @@ namespace Core
                     var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
 
-                    float baseDelta = CalcDailyProgressDelta(t, squad, rng, registry);
+                    if (t.Type == TaskType.Investigate && !t.InvestigateTargetLocked)
+                    {
+                        if (!string.IsNullOrEmpty(t.SourceAnomalyId))
+                        {
+                            t.InvestigateNoResultBaseDays = 0;
+                            t.InvestigateTargetLocked = true;
+                        }
+                        else
+                        {
+                            TryLockGenericInvestigateTarget(s, n, t, squad, registry, rng);
+                        }
+                    }
+
                     string anomalyId = GetTaskAnomalyId(n, t);
                     var team = ComputeTeamAvgProps(squad);
                     AnomalyDef anomalyDef = null;
@@ -138,8 +132,12 @@ namespace Core
                     };
 
                     float sMatch = ComputeMatchS_NoWeight(team, req);
-                    float mult = MapSToMult(sMatch);
-                    float effDelta = baseDelta * mult;
+                    float progressScale = MapSToMult(sMatch);
+                    if (t.Type == TaskType.Investigate && !string.IsNullOrEmpty(t.TargetNewsId) && !string.IsNullOrEmpty(t.SourceAnomalyId))
+                    {
+                        progressScale *= 1.5f;
+                    }
+                    float effDelta = progressScale;
 
                     // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
                     // They should never auto-complete.
@@ -149,7 +147,7 @@ namespace Core
                         t.Progress = Math.Max(t.Progress, 0f);
                         t.Progress = Clamp01(t.Progress + effDelta);
                         if (t.Progress >= 1f) t.Progress = 0.99f;
-                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} mult={mult:0.###} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/1 (baseDays=1)");
+                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} progress={t.Progress:0.00}/1 (baseDays=1)");
 
                         var defId = t.SourceAnomalyId;
                         if (string.IsNullOrEmpty(defId))
@@ -165,10 +163,10 @@ namespace Core
                         }
                         var impact = ComputeImpact(s, TaskType.Manage, manageDef, t.AssignedAgentIds);
                         var manageReq = NormalizeIntArray4(manageDef?.manReq);
-                        float magSan = (manageDef?.sanDmg ?? 0) * impact.sanMul * impact.S * impact.sanRand;
+                        float magSan = (manageDef?.mansanDmg ?? 0) * impact.sanMul;
                         Debug.Log(
-                            $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.hpDmg ?? 0},{manageDef?.sanDmg ?? 0}) " +
-                            $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
+                            $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.manhpDmg ?? 0},{manageDef?.mansanDmg ?? 0}) " +
+                            $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) " +
                             $"req={FormatIntArray(manageReq)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
                         foreach (var agentId in t.AssignedAgentIds)
                         {
@@ -178,10 +176,16 @@ namespace Core
                         continue;
                     }
 
-                    int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(t.Type, 1));
+                    int baseDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
+                    if (t.Type == TaskType.Investigate && t.InvestigateTargetLocked && string.IsNullOrEmpty(t.SourceAnomalyId) && t.InvestigateNoResultBaseDays > 0)
+                    {
+                        baseDays = t.InvestigateNoResultBaseDays;
+                    }
                     float before = t.Progress;
                     t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, baseDays);
-                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} mult={mult:0.###} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+
+                    ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
 
                     if (t.Progress >= baseDays)
                     {
@@ -193,8 +197,8 @@ namespace Core
             // 1.5) 收容后管理（负熵产出）
             StepManageTasks(s, rng, registry);
 
-            // 1.75) 任务日结算产出（TaskDefs.yieldKey / yieldPerDay）
-            StepTaskDailyYield(s, registry);
+            // 1.75) Idle agents recover HP/SAN (10% max per day)
+            ApplyIdleAgentRecovery(s);
 
             // 2) 不处理的后果（按 IgnoreApplyMode 执行）
             ApplyIgnorePenaltyOnDayEnd(s, registry);
@@ -218,7 +222,6 @@ namespace Core
             int moneyBefore = s.Money;
             int income = 0;
             int maintenance = 0;
-            int safeNodeCount = 0;
             float worldPanicAdd = 0f;
 
             foreach (var node in s.Nodes)
@@ -227,9 +230,8 @@ namespace Core
 
                 income += Mathf.FloorToInt(node.Population * popToMoneyRate);
 
-                // Safe node definition (current): no uncontained anomalies on this node.
-                bool hasUncontained = node.Status != NodeStatus.Secured && node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
-                if (!hasUncontained) safeNodeCount++;
+                // Uncontained anomalies on this node.
+                bool hasUncontained = node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
 
                 if (hasUncontained)
                 {
@@ -266,16 +268,13 @@ namespace Core
 
             Debug.Log($"[Economy] day={s.Day} income={income} wage={wage} maint={maintenance} option={optionCost} moneyBefore={moneyBefore} moneyAfter={moneyAfter}");
 
-            float dailyDecay = registry.GetBalanceFloatWithWarn("DailyWorldPanicDecay", 0f);
-            float decayPerSafeNode = registry.GetBalanceFloatWithWarn("WorldPanicDecayPerSafeNodePerDay", 0f);
-            float worldPanicDecay = dailyDecay + safeNodeCount * decayPerSafeNode;
             float worldPanicBefore = s.WorldPanic;
-            float worldPanicAfter = worldPanicBefore + worldPanicAdd - worldPanicDecay;
+            float worldPanicAfter = worldPanicBefore + worldPanicAdd;
             if (worldPanicAfter < clampWorldPanicMin) worldPanicAfter = clampWorldPanicMin;
             s.WorldPanic = worldPanicAfter;
 
             float failThreshold = registry.GetBalanceFloatWithWarn("WorldPanicFailThreshold", 0f);
-            Debug.Log($"[WorldPanic] day={s.Day} add={worldPanicAdd:0.##} decay={worldPanicDecay:0.##} safe={safeNodeCount} before={worldPanicBefore:0.##} after={worldPanicAfter:0.##} threshold={failThreshold:0.##}");
+            Debug.Log($"[WorldPanic] day={s.Day} add={worldPanicAdd:0.##} before={worldPanicBefore:0.##} after={worldPanicAfter:0.##} threshold={failThreshold:0.##}");
 
             if (s.WorldPanic >= failThreshold && GameController.I != null)
             {
@@ -955,7 +954,17 @@ namespace Core
 
         static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng, DataRegistry registry)
         {
-            int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(task.Type, 1));
+            string baseAnomalyId = GetTaskAnomalyId(node, task);
+            AnomalyDef baseAnomalyDef = null;
+            if (!string.IsNullOrEmpty(baseAnomalyId))
+            {
+                registry.AnomaliesById.TryGetValue(baseAnomalyId, out baseAnomalyDef);
+            }
+            int baseDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(baseAnomalyDef));
+            if (task.Type == TaskType.Investigate && task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId) && task.InvestigateNoResultBaseDays > 0)
+            {
+                baseDays = task.InvestigateNoResultBaseDays;
+            }
             task.Progress = baseDays;
             task.State = TaskState.Completed;
             task.CompletedDay = s.Day;
@@ -969,80 +978,31 @@ namespace Core
             if (task.Type == TaskType.Investigate)
             {
                 // 只记录已知 anomalyDefId，不再产出 ContainableItem
-                string anomalyId = GetOrCreateAnomalyForNode(node, registry, rng);
-                var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
+                bool hasTarget = !string.IsNullOrEmpty(task.SourceAnomalyId);
+                string anomalyId = hasTarget ? task.SourceAnomalyId : null;
+                var anomaly = hasTarget && registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
                 int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
 
                 // 调查完成不会自动收容
                 node.Status = NodeStatus.Calm;
                 node.HasAnomaly = true;
 
-                s.News.Add($"- {node.Name} 调查完成：发现异常 {anomalyId}");
-
-                if (!string.IsNullOrEmpty(task.TargetNewsId) && s.NewsLog != null)
+                if (hasTarget)
                 {
-                    var news = s.NewsLog.FirstOrDefault(n => n != null && n.Id == task.TargetNewsId);
-                    if (news != null)
-                    {
-                        news.IsResolved = true;
-                        news.ResolvedDay = s.Day;
-                        Debug.Log($"[NewsResolve] day={s.Day} newsId={news.Id} nodeId={news.NodeId} anomalyId={news.SourceAnomalyId} resolved=1");
-                    }
+                    s.News.Add($"- {node.Name} 调查完成：发现异常 {anomalyId}");
+                    bool added = AddKnown(node, task.SourceAnomalyId);
+                    Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={task.SourceAnomalyId} via=InvestigateTarget added={(added ? 1 : 0)}");
+                }
+                else
+                {
+                    s.News.Add($"- {node.Name} 调查完成：未发现异常");
                 }
 
-                // ===== Anomaly Discovery Logic =====
-                const float discoverP = 0.35f;
-                string discovered = null;
-
-                // A) via News (guaranteed)
-                if (!string.IsNullOrEmpty(task.TargetNewsId))
-                {
-                    var news = s.NewsLog?.FirstOrDefault(x => x != null && x.Id == task.TargetNewsId);
-                    if (news != null && !string.IsNullOrEmpty(news.SourceAnomalyId))
-                    {
-                        discovered = news.SourceAnomalyId;
-                        bool added = AddKnown(node, discovered);
-                        Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={discovered} via=News newsId={news.Id} added={(added ? 1 : 0)}");
-                    }
-                }
-
-                // B) random investigate
-                if (string.IsNullOrEmpty(discovered))
-                {
-                    var pool = node.ActiveAnomalyIds?.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
-                    if (pool != null && pool.Count > 0)
-                    {
-                        double roll = rng.NextDouble();
-                        if (roll <= discoverP)
-                        {
-                            string pick = pool[rng.Next(pool.Count)];
-                            bool added = AddKnown(node, pick);
-                            Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={pick} via=RandomInvestigate roll={roll:0.00} p={discoverP:0.00} added={(added ? 1 : 0)}");
-                        }
-                        else
-                        {
-                            Debug.Log($"[AnomalyDiscoverCheck] day={s.Day} nodeId={node.Id} via=RandomInvestigate roll={roll:0.00} p={discoverP:0.00} discovered=0");
-                        }
-                    }
-                }
-
-                // ===== HP/SAN Impact for Investigate =====
+                // ===== EXP Reward for Investigate =====
                 var defId = !string.IsNullOrEmpty(task.SourceAnomalyId) ? task.SourceAnomalyId : anomalyId;
                 var def = !string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var defModel) ? defModel : null;
                 if (assignedAgents.Count > 0)
                 {
-                    var impact = ComputeImpact(s, TaskType.Investigate, def, assignedAgents);
-                    var req = NormalizeIntArray4(def?.invReq);
-                    Debug.Log(
-                        $"[ImpactCalc] day={s.Day} type=Investigate node={node.Id} anomaly={defId ?? "unknown"} base=({def?.hpDmg ?? 0},{def?.sanDmg ?? 0}) " +
-                        $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
-                        $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} final=({impact.hpDelta},{impact.sanDelta})");
-                    foreach (var agentId in assignedAgents)
-                    {
-                        string reason = $"InvestigateComplete:node={node.Id},anomaly={defId ?? "unknown"}";
-                        ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
-                    }
-
                     int totalExp = def?.invExp ?? 0;
                     int perAgentExp = (int)Math.Ceiling(totalExp / (double)assignedAgents.Count);
                     if (totalExp > 0 && perAgentExp > 0)
@@ -1053,9 +1013,8 @@ namespace Core
                             if (a == null) continue;
                             int expBefore = a.Exp;
                             int lvBefore = a.Level;
-                            int tpBefore = a.TalentPoints;
                             AddExpAndTryLevelUp(a, perAgentExp, rng);
-                            Debug.Log($"[AgentExp] day={s.Day} type=Investigate node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                            Debug.Log($"[AgentExp] day={s.Day} type=Investigate node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level}");
                         }
                     }
                 }
@@ -1098,23 +1057,11 @@ namespace Core
                     node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
                 }
 
-                // ===== HP/SAN Impact for Contain =====
+                // ===== EXP Reward for Contain =====
                 var defId = task.SourceAnomalyId;
                 var def = !string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var defModel) ? defModel : null;
                 if (assignedAgents.Count > 0)
                 {
-                    var impact = ComputeImpact(s, TaskType.Contain, def, assignedAgents);
-                    var req = NormalizeIntArray4(def?.conReq);
-                    Debug.Log(
-                        $"[ImpactCalc] day={s.Day} type=Contain node={node.Id} anomaly={defId ?? "unknown"} base=({def?.hpDmg ?? 0},{def?.sanDmg ?? 0}) " +
-                        $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
-                        $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} final=({impact.hpDelta},{impact.sanDelta})");
-                    foreach (var agentId in assignedAgents)
-                    {
-                        string reason = $"ContainComplete:node={node.Id},anomaly={defId ?? "unknown"}";
-                        ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
-                    }
-
                     int totalExp = def?.conExp ?? 0;
                     int perAgentExp = (int)Math.Ceiling(totalExp / (double)assignedAgents.Count);
                     if (totalExp > 0 && perAgentExp > 0)
@@ -1125,9 +1072,8 @@ namespace Core
                             if (a == null) continue;
                             int expBefore = a.Exp;
                             int lvBefore = a.Level;
-                            int tpBefore = a.TalentPoints;
                             AddExpAndTryLevelUp(a, perAgentExp, rng);
-                            Debug.Log($"[AgentExp] day={s.Day} type=Contain node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                            Debug.Log($"[AgentExp] day={s.Day} type=Contain node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level}");
                         }
                     }
                 }
@@ -1136,7 +1082,7 @@ namespace Core
             node.HasAnomaly = true;
         }
 
-        private static (int hpDelta, int sanDelta, float D, float S, int[] team, float hpMul, float sanMul, float hpRand, float sanRand) ComputeImpact(GameState state, TaskType type, AnomalyDef def, List<string> agentIds)
+        private static (int hpDelta, int sanDelta, float D, float S, int[] team, float hpMul, float sanMul) ComputeImpact(GameState state, TaskType type, AnomalyDef def, List<string> agentIds)
         {
             var team = new int[4];
             if (state?.Agents != null && agentIds != null && agentIds.Count > 0)
@@ -1181,42 +1127,63 @@ namespace Core
             float D = weightSum > 0f ? weighted / weightSum : 0f;
             float S = Mathf.Clamp(D, 0f, 1.5f);
 
-            float hpMul = type switch
-            {
-                TaskType.Investigate => 0.2f,
-                TaskType.Manage => 0f,
-                _ => 1.0f,
-            };
-            float sanMul = type switch
-            {
-                TaskType.Contain => 0.7f,
-                TaskType.Manage => 0.5f,
-                _ => 1.0f,
-            };
-            float hpRand = 1f;
-            float sanRand = 1f;
+            float hpMul = ComputeAbilityDamageMod(team, req);
+            float sanMul = hpMul;
             int hpDelta = 0;
             int sanDelta = 0;
-            if (def != null && S > 0f)
+            if (def != null)
             {
-                hpRand = UnityEngine.Random.Range(0.8f, 1.2f);
-                sanRand = UnityEngine.Random.Range(0.8f, 1.2f);
-                float hpMag = def.hpDmg * hpMul * S * hpRand;
-                float sanMag = def.sanDmg * sanMul * S * sanRand;
-                hpDelta = -Mathf.RoundToInt(hpMag);
+                int baseHp = type switch
+                {
+                    TaskType.Investigate => def.invhpDmg,
+                    TaskType.Contain => def.conhpDmg,
+                    TaskType.Manage => def.manhpDmg,
+                    _ => 0,
+                };
+                int baseSan = type switch
+                {
+                    TaskType.Investigate => def.invsanDmg,
+                    TaskType.Contain => def.consanDmg,
+                    TaskType.Manage => def.mansanDmg,
+                    _ => 0,
+                };
 
-                if (type == TaskType.Manage && sanMag > 0f)
+                if (baseHp > 0)
                 {
-                    int sanLoss = Mathf.CeilToInt(sanMag);
-                    sanDelta = -sanLoss;
+                    int hpLoss = Mathf.CeilToInt(baseHp * hpMul);
+                    if (hpLoss < 1) hpLoss = 1;
+                    hpDelta = -hpLoss;
                 }
-                else
+
+                if (baseSan > 0)
                 {
-                    sanDelta = -Mathf.RoundToInt(sanMag);
+                    int sanLoss = Mathf.CeilToInt(baseSan * sanMul);
+                    if (sanLoss < 1) sanLoss = 1;
+                    sanDelta = -sanLoss;
                 }
             }
 
-            return (hpDelta, sanDelta, D, S, team, hpMul, sanMul, hpRand, sanRand);
+            return (hpDelta, sanDelta, D, S, team, hpMul, sanMul);
+        }
+
+        private static float ComputeAbilityDamageMod(int[] team, int[] req)
+        {
+            if (team == null || req == null) return 1f;
+
+            float sum = 0f;
+            int count = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (req[i] <= 0) continue;
+                int diff = team[i] - req[i];
+                float mod = diff >= 0 ? 1f - 0.1f * diff : 1f + 0.1f * (-diff);
+                if (mod < 0.1f) mod = 0.1f;
+                sum += mod;
+                count += 1;
+            }
+
+            if (count <= 0) return 1f;
+            return sum / count;
         }
 
         private static int[] NormalizeIntArray4(int[] input)
@@ -1250,29 +1217,6 @@ namespace Core
             return s.Agents.Where(a => a != null && assignedIds.Contains(a.Id)).ToList();
         }
 
-        static float CalcDailyProgressDelta(NodeTask t, List<AgentState> squad, Random rng, DataRegistry registry)
-        {
-            // Base daily progress.
-            // - Investigate/Contain: normal completion loop.
-            // - Manage: progress is only a "started" flag; keep delta small to avoid hitting 1.
-
-            float baseDelta = (t.Type == TaskType.Manage) ? 0.02f : registry.GetTaskProgressPerDay(t.Type, 0.10f);
-
-            int totalStat = 0;
-            foreach (var a in squad)
-            {
-                if (t.Type == TaskType.Investigate) totalStat += a.Perception;
-                else if (t.Type == TaskType.Contain) totalStat += a.Operation;
-                else totalStat += (a.Resistance + a.Perception) / 2; // Manage
-            }
-
-            float statBonus = totalStat * ((t.Type == TaskType.Manage) ? 0.002f : 0.01f);
-            float noise = (float)(rng.NextDouble() * 0.02 - 0.01);
-
-            float min = (t.Type == TaskType.Manage) ? 0.005f : 0.05f;
-            return Math.Max(min, baseDelta + statBonus + noise);
-        }
-
         private static float[] ComputeTeamAvgProps(List<AgentState> members)
         {
             if (members == null || members.Count == 0)
@@ -1300,8 +1244,59 @@ namespace Core
                 return new[] { 0f, 0f, 0f, 0f };
             }
 
-            float sizeBonus = count > 1 ? 1f + 0.15f * Mathf.Log(count) : 1f;
-            return new[] { (p / count) * sizeBonus, (r / count) * sizeBonus, (o / count) * sizeBonus, (pow / count) * sizeBonus };
+            return new[] { p, r, o, pow };
+        }
+
+        private static void TryLockGenericInvestigateTarget(GameState s, NodeState node, NodeTask task, List<AgentState> squad, DataRegistry registry, Random rng)
+        {
+            if (task == null || node == null || squad == null || registry == null || rng == null) return;
+
+            int teamPerception = 0;
+            foreach (var agent in squad)
+            {
+                if (agent == null) continue;
+                teamPerception += agent.Perception;
+            }
+
+            var candidates = new List<(string id, float p)>();
+            var active = node.ActiveAnomalyIds?.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+            if (active != null)
+            {
+                foreach (var anomalyId in active)
+                {
+                    if (!registry.AnomaliesById.TryGetValue(anomalyId, out var def) || def == null) continue;
+                    int req = (def.invReq != null && def.invReq.Length > 0) ? def.invReq[0] : 0;
+                    float p = CalcInvestigateDetectProb(teamPerception, req);
+                    candidates.Add((anomalyId, p));
+                }
+            }
+
+            candidates = candidates.OrderByDescending(c => c.p).ToList();
+            foreach (var candidate in candidates)
+            {
+                if (candidate.p <= 0f) continue;
+                double roll = rng.NextDouble();
+                if (roll <= candidate.p)
+                {
+                    task.SourceAnomalyId = candidate.id;
+                    task.InvestigateNoResultBaseDays = 0;
+                    task.InvestigateTargetLocked = true;
+                    Debug.Log($"[InvestigateTarget] day={s.Day} taskId={task.Id} node={node.Id} anomaly={candidate.id} teamP={teamPerception} reqP={(registry.AnomaliesById.TryGetValue(candidate.id, out var def) ? (def.invReq != null && def.invReq.Length > 0 ? def.invReq[0] : 0) : 0)} p={candidate.p:0.##} roll={roll:0.##} result=lock");
+                    return;
+                }
+            }
+
+            task.InvestigateNoResultBaseDays = rng.Next(2, 6);
+            task.InvestigateTargetLocked = true;
+            Debug.Log($"[InvestigateTarget] day={s.Day} taskId={task.Id} node={node.Id} teamP={teamPerception} result=none baseDays={task.InvestigateNoResultBaseDays}");
+        }
+
+        private static float CalcInvestigateDetectProb(int teamPerception, int reqPerception)
+        {
+            if (reqPerception <= 0) return 1f;
+            float ratio = teamPerception / (float)reqPerception;
+            float p = 0.5f * ratio;
+            return Mathf.Clamp01(p);
         }
 
         private static float ComputeMatchS_NoWeight(float[] team, int[] req)
@@ -1336,6 +1331,12 @@ namespace Core
             return 1.6f;
         }
 
+        private static int GetTaskBaseDaysFromAnomaly(AnomalyDef anomalyDef)
+        {
+            int baseDays = anomalyDef?.baseDays ?? 0;
+            return baseDays > 0 ? baseDays : 1;
+        }
+
         static string GetTaskAnomalyId(NodeState node, NodeTask task)
         {
             if (node == null || task == null) return null;
@@ -1350,6 +1351,14 @@ namespace Core
             if (task.Type == TaskType.Contain)
             {
                 // 直接返回 task.SourceAnomalyId
+                if (!string.IsNullOrEmpty(task.SourceAnomalyId))
+                    return task.SourceAnomalyId;
+            }
+
+            if (task.Type == TaskType.Investigate)
+            {
+                if (task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId))
+                    return null;
                 if (!string.IsNullOrEmpty(task.SourceAnomalyId))
                     return task.SourceAnomalyId;
             }
@@ -1379,6 +1388,53 @@ namespace Core
             agent.SAN = Math.Max(0, Math.Min(agent.MaxSAN, agent.SAN + sanDelta));
 
             Debug.Log($"[AgentImpact] day={s.Day} agent={agent.Id} hp={hpDelta:+0;-#} ({hpBefore}->{agent.HP}) san={sanDelta:+0;-#} ({sanBefore}->{agent.SAN}) reason={reason}");
+
+            bool diedNow = false;
+            bool insaneNow = false;
+            if (agent.HP <= 0 && !agent.IsDead)
+            {
+                agent.IsDead = true;
+                agent.IsInsane = false;
+                diedNow = true;
+            }
+            if (!agent.IsDead && agent.SAN <= 0 && !agent.IsInsane)
+            {
+                agent.IsInsane = true;
+                insaneNow = true;
+            }
+
+            if (diedNow || insaneNow)
+            {
+                HandleAgentUnusable(s, agent.Id, diedNow ? "Dead" : "Insane", reason);
+            }
+        }
+
+        private static void HandleAgentUnusable(GameState s, string agentId, string state, string reason)
+        {
+            if (s == null || string.IsNullOrEmpty(agentId)) return;
+
+            foreach (var node in s.Nodes)
+            {
+                if (node?.Tasks == null) continue;
+                foreach (var task in node.Tasks)
+                {
+                    if (task == null || task.State != TaskState.Active) continue;
+                    if (task.AssignedAgentIds == null) continue;
+
+                    if (task.AssignedAgentIds.Contains(agentId))
+                    {
+                        task.AssignedAgentIds.Remove(agentId);
+                        Debug.Log($"[TaskAgentRemoved] day={s.Day} taskId={task.Id} agent={agentId} state={state} reason={reason}");
+                    }
+
+                    if (task.AssignedAgentIds.Count == 0)
+                    {
+                        task.State = TaskState.Cancelled;
+                        task.Progress = 0f;
+                        Debug.Log($"[TaskFailed] day={s.Day} taskId={task.Id} reason=NoUsableAgents");
+                    }
+                }
+            }
         }
 
         // =====================
@@ -1443,9 +1499,8 @@ namespace Core
                                     if (a == null) continue;
                                     int expBefore = a.Exp;
                                     int lvBefore = a.Level;
-                                    int tpBefore = a.TalentPoints;
                                     AddExpAndTryLevelUp(a, perAgentExp, rng);
-                                    Debug.Log($"[AgentExp] day={s.Day} type=Manage node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
+                                    Debug.Log($"[AgentExp] day={s.Day} type=Manage node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level}");
                                 }
                             }
                         }
@@ -1468,89 +1523,26 @@ namespace Core
                 s.NegEntropy += totalAllNodes;
         }
 
-        static void StepTaskDailyYield(GameState s, DataRegistry registry)
+        private static void ApplyDailyTaskImpact(GameState s, NodeState node, NodeTask task, AnomalyDef anomalyDef, string anomalyId)
         {
-            if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
+            if (s == null || node == null || task == null || anomalyDef == null) return;
+            if (task.Type != TaskType.Investigate && task.Type != TaskType.Contain) return;
+            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) return;
 
-            int moneyDeltaSum = 0;
-            float worldPanicDeltaSum = 0f;
-            int intelDeltaSum = 0;
-            int yieldedTasks = 0;
+            var impact = ComputeImpact(s, task.Type, anomalyDef, task.AssignedAgentIds);
+            var dailyReq = task.Type == TaskType.Investigate
+                ? NormalizeIntArray4(anomalyDef?.invReq)
+                : NormalizeIntArray4(anomalyDef?.conReq);
+            float magSan = (task.Type == TaskType.Investigate ? (anomalyDef?.invsanDmg ?? 0) : (anomalyDef?.consanDmg ?? 0)) * impact.sanMul;
+            Debug.Log(
+                $"[ImpactCalc] day={s.Day} type={task.Type} ctx=Daily node={node.Id} anomaly={anomalyId ?? "unknown"} base=({(task.Type == TaskType.Investigate ? (anomalyDef?.invhpDmg ?? 0) : (anomalyDef?.conhpDmg ?? 0))},{(task.Type == TaskType.Investigate ? (anomalyDef?.invsanDmg ?? 0) : (anomalyDef?.consanDmg ?? 0))}) " +
+                $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) " +
+                $"req={FormatIntArray(dailyReq)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
 
-            foreach (var node in s.Nodes)
+            foreach (var agentId in task.AssignedAgentIds)
             {
-                if (node == null || node.Tasks == null || node.Tasks.Count == 0) continue;
-
-
-                foreach (var task in node.Tasks)
-                {
-                    if (task == null) continue;
-                    if (task.State != TaskState.Active) continue;
-
-                    // 获取任务定义
-                    if (!registry.TryGetTaskDef(task.Type, out var def) || def == null)
-                        continue;
-                    float yieldPerDay = def.yieldPerDay;
-
-                    if (!def.hasYieldKey || !def.hasYieldPerDay)
-                    {
-                        if (WarnedMissingYieldFields.Add(task.Type))
-                        {
-                            Debug.LogWarning($"[TaskYield] Missing yieldKey/yieldPerDay for taskType={task.Type}. Skipping daily yield.");
-                        }
-                        continue;
-                    }
-
-                    switch (def.yieldKey)
-                    {
-                        case "Money":
-                            {
-                                int delta = Mathf.RoundToInt(yieldPerDay);
-                                if (delta == 0) continue;
-                                int before = s.Money;
-                                s.Money = before + delta;
-                                int after = s.Money;
-                                moneyDeltaSum += delta;
-                                yieldedTasks++;
-                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Money delta={delta} before={before} after={after}");
-                                break;
-                            }
-                        case "WorldPanic":
-                            {
-                                float delta = yieldPerDay;
-                                float before = s.WorldPanic;
-                                s.WorldPanic = before + delta;
-                                float after = s.WorldPanic;
-                                worldPanicDeltaSum += delta;
-                                yieldedTasks++;
-                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=WorldPanic delta={delta:0.##} before={before:0.##} after={after:0.##}");
-                                break;
-                            }
-                        case "Intel":
-                            {
-                                int delta = Mathf.RoundToInt(yieldPerDay);
-                                if (delta == 0) continue;
-                                int before = s.Intel;
-                                s.Intel = before + delta;
-                                int after = s.Intel;
-                                intelDeltaSum += delta;
-                                yieldedTasks++;
-                                Debug.Log($"[TaskYield] day={s.Day} taskId={task.Id} type={task.Type} key=Intel delta={delta} before={before} after={after}");
-                                break;
-                            }
-                        default:
-                            if (WarnedUnknownYieldKey.Add(task.Type))
-                            {
-                                Debug.LogWarning($"[TaskYield] Unknown yieldKey={def.yieldKey} for taskType={task.Type}. Skipping daily yield.");
-                            }
-                            break;
-                    }
-                }
-
-                if (yieldedTasks > 0)
-                {
-                    Debug.Log($"[TaskYieldSummary] day={s.Day} moneyDelta={moneyDeltaSum} worldPanicDelta={worldPanicDeltaSum:0.##} intelDelta={intelDeltaSum} tasks={yieldedTasks}");
-                }
+                string reason = $"{task.Type}Daily:node={node.Id},anomaly={anomalyId ?? "unknown"},dayTick={s.Day}";
+                ApplyAgentImpact(s, agentId, impact.hpDelta, impact.sanDelta, reason);
             }
         }
 
@@ -1558,6 +1550,39 @@ namespace Core
         {
             if (def == null) return 0;
             return Math.Max(0, def.manNegentropyPerDay);
+        }
+
+        private static void ApplyIdleAgentRecovery(GameState s)
+        {
+            if (s?.Agents == null || s.Nodes == null) return;
+
+            var busy = new HashSet<string>();
+            foreach (var node in s.Nodes)
+            {
+                if (node?.Tasks == null) continue;
+                foreach (var task in node.Tasks)
+                {
+                    if (task == null || task.State != TaskState.Active) continue;
+                    if (task.AssignedAgentIds == null) continue;
+                    foreach (var agentId in task.AssignedAgentIds)
+                    {
+                        if (!string.IsNullOrEmpty(agentId)) busy.Add(agentId);
+                    }
+                }
+            }
+
+            foreach (var agent in s.Agents)
+            {
+                if (agent == null) continue;
+                if (agent.IsDead || agent.IsInsane) continue;
+                if (busy.Contains(agent.Id)) continue;
+
+                int hpHeal = Mathf.CeilToInt(agent.MaxHP * 0.1f);
+                int sanHeal = Mathf.CeilToInt(agent.MaxSAN * 0.1f);
+                if (hpHeal <= 0 && sanHeal <= 0) continue;
+
+                ApplyAgentImpact(s, agent.Id, hpHeal, sanHeal, "IdleRecovery");
+            }
         }
 
         static void EnsureManagedAnomalyRecorded(NodeState node, string anomalyId, AnomalyDef anomaly)
@@ -1639,6 +1664,49 @@ namespace Core
             return all[idx];
         }
 
+        public static int GenerateScheduledAnomalies(GameState s, Random rng, DataRegistry registry, int day)
+        {
+            if (s == null || rng == null || registry == null) return 0;
+
+            int genNum = registry.GetAnomaliesGenNumForDay(day);
+            if (genNum <= 0) return 0;
+
+            var nodes = s.Nodes?.Where(n => n != null).ToList();
+            if (nodes == null || nodes.Count == 0) return 0;
+
+            int spawned = 0;
+            int maxAttempts = Math.Max(10, genNum * 4);
+            int attempts = 0;
+
+            while (spawned < genNum && attempts < maxAttempts)
+            {
+                attempts++;
+                var anomalyId = PickRandomAnomalyId(registry, rng);
+                if (string.IsNullOrEmpty(anomalyId)) break;
+
+                var node = nodes[rng.Next(nodes.Count)];
+                if (node == null) continue;
+
+                if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Contains(anomalyId))
+                    continue;
+
+                EnsureActiveAnomaly(node, anomalyId, registry);
+                s.News.Add($"- {node.Name} 出现异常迹象：{anomalyId}");
+                spawned++;
+            }
+
+            if (spawned < genNum)
+            {
+                Debug.LogWarning($"[AnomalyGen] day={day} requested={genNum} spawned={spawned} attempts={attempts}");
+            }
+            else
+            {
+                Debug.Log($"[AnomalyGen] day={day} spawned={spawned}");
+            }
+
+            return spawned;
+        }
+
         // =====================
         // Anomaly discovery helper
         // =====================
@@ -1666,6 +1734,13 @@ namespace Core
                 return string.Empty;
 
             var registry = DataRegistry.Instance;
+
+            var agent = state.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
+            if (agent != null)
+            {
+                if (agent.IsDead) return "死亡";
+                if (agent.IsInsane) return "疯狂";
+            }
 
             // Traverse all nodes and tasks to find where this agent is assigned
             foreach (var node in state.Nodes)

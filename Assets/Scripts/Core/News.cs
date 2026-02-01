@@ -17,8 +17,6 @@ namespace Core
         }
         public string CauseType;
         public int AgeDays;
-        public bool IsResolved;
-        public int ResolvedDay;
     }
 
     public static class NewsInstanceFactory
@@ -33,8 +31,6 @@ namespace Core
                 SourceAnomalyId = sourceAnomalyId,
                 CauseType = causeType,
                 AgeDays = 0,
-                IsResolved = false,
-                ResolvedDay = 0,
             };
         }
     }

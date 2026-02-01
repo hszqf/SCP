@@ -79,9 +79,9 @@ public class NodeButton : MonoBehaviour
 
                     bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
                     if (hasSquad && t.Progress <= EPS)
-                        sb.Append("\n<color=#FFD700>调查：待开始</color>");
+                        sb.Append("\n<color=#00FF66>调查：待开始</color>");
                     else
-                        sb.Append($"\n<color=#FFD700>调查中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
+                        sb.Append($"\n<color=#00FF66>调查中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (inv.Count > 1)
                         sb.Append($" <color=#FFD700>(+{inv.Count - 1})</color>");
@@ -95,9 +95,9 @@ public class NodeButton : MonoBehaviour
 
                     bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
                     if (hasSquad && t.Progress <= EPS)
-                        sb.Append("\n<color=#00FFFF>收容：待开始</color>");
+                        sb.Append("\n<color=#00FF66>收容：待开始</color>");
                     else
-                        sb.Append($"\n<color=#00FFFF>收容中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
+                        sb.Append($"\n<color=#00FF66>收容中 {(int)(GetTaskProgress01(t) * 100)}%</color>");
 
                     if (con.Count > 1)
                         sb.Append($" <color=#00FFFF>(+{con.Count - 1})</color>");
@@ -165,7 +165,18 @@ public class NodeButton : MonoBehaviour
     private static float GetTaskProgress01(NodeTask task)
     {
         if (task == null) return 0f;
-        int baseDays = Mathf.Max(1, DataRegistry.Instance.GetTaskBaseDaysWithWarn(task.Type, 1));
+        int baseDays = GetTaskBaseDays(task);
         return Mathf.Clamp01(task.Progress / baseDays);
+    }
+
+    private static int GetTaskBaseDays(NodeTask task)
+    {
+        if (task == null) return 1;
+        var registry = DataRegistry.Instance;
+        if (task.Type == TaskType.Investigate && task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId) && task.InvestigateNoResultBaseDays > 0)
+            return task.InvestigateNoResultBaseDays;
+        string anomalyId = task.SourceAnomalyId;
+        if (string.IsNullOrEmpty(anomalyId) || registry == null) return 1;
+        return Mathf.Max(1, registry.GetAnomalyBaseDaysWithWarn(anomalyId, 1));
     }
 }

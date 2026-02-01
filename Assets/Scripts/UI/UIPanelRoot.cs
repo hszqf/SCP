@@ -231,6 +231,12 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
+                if (!GameControllerTaskExt.AreAgentsUsable(gc, agentIds, out var usableReason))
+                {
+                    ShowInfo("派遣失败", usableReason);
+                    return;
+                }
+
                 if (GameControllerTaskExt.AreAgentsBusy(gc, agentIds, null))
                 {
                     ShowInfo("派遣失败", "部分干员正在其他任务执行中");
@@ -320,6 +326,12 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
+                if (!GameControllerTaskExt.AreAgentsUsable(gc, agentIds, out var usableReason))
+                {
+                    ShowInfo("派遣失败", usableReason);
+                    return;
+                }
+
                 if (GameControllerTaskExt.AreAgentsBusy(gc, agentIds, null))
                 {
                     ShowInfo("派遣失败", "部分干员正在其他任务执行中");
@@ -369,8 +381,6 @@ public class UIPanelRoot : MonoBehaviour
         {
             if (news == null) continue;
             if (!string.Equals(news.NodeId, node.Id, StringComparison.OrdinalIgnoreCase)) continue;
-            if (news.IsResolved) continue;
-
             var def = registry.GetNewsDefById(news.NewsDefId);
             string title = def?.title ?? news.NewsDefId ?? "";
             string subtitle = !string.IsNullOrEmpty(news.SourceAnomalyId)

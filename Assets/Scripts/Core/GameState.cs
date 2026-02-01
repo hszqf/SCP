@@ -30,13 +30,15 @@ namespace Core
         public int Operation = 5;
         public int Resistance = 5;
         public int Power = 5;
-        public int HP = 10;
-        public int MaxHP = 10;
-        public int SAN = 10;
-        public int MaxSAN = 10;
+        public int HP = 20;
+        public int MaxHP = 20;
+        public int SAN = 20;
+        public int MaxSAN = 20;
         public int Level = 1;
         public int Exp = 0;
-        public int TalentPoints = 0;
+
+        public bool IsDead = false;
+        public bool IsInsane = false;
     }
 
     [Serializable]
@@ -102,6 +104,12 @@ namespace Core
         // Investigate/Contain: anomaly id associated with this task (optional).
         public string SourceAnomalyId;
 
+        // Investigate: whether we have already attempted to lock a target anomaly.
+        public bool InvestigateTargetLocked;
+
+        // Investigate: baseDays for a no-result investigation (random 2..5). 0 means not applicable.
+        public int InvestigateNoResultBaseDays;
+
         // Only for management tasks: which managed anomaly we are managing.
         public string TargetManagedAnomalyId;
 
@@ -116,7 +124,6 @@ namespace Core
     {
         public string Id;
         public string Name;
-        public List<string> Tags = new();
 
         // 0..1 百分比坐标：左下(0,0) 右上(1,1)
         public float X;

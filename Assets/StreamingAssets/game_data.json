@@ -154,127 +154,62 @@
           "type": "string"
         },
         {
-          "name": "tags",
-          "type": "string[]"
-        },
-        {
-          "name": "startLocalPanic",
-          "type": "int"
-        },
-        {
           "name": "startPopulation",
           "type": "int"
         },
         {
-          "name": "startAnomalyIds",
-          "type": "string[]"
+          "name": "unlocked",
+          "type": "int"
         }
       ],
       "rows": [
         {
           "nodeId": "N1",
           "name": "节点1",
-          "tags": [
-            "urban",
-            "lab"
-          ],
-          "startLocalPanic": 0,
           "startPopulation": 10000,
-          "startAnomalyIds": [
-            "AN_001"
-          ]
+          "unlocked": 1
         },
         {
           "nodeId": "N2",
           "name": "节点2",
-          "tags": [
-            "rural"
-          ],
-          "startLocalPanic": 0,
           "startPopulation": 20000,
-          "startAnomalyIds": []
+          "unlocked": 1
         },
         {
           "nodeId": "N3",
           "name": "节点3",
-          "tags": [
-            "urban"
-          ],
-          "startLocalPanic": 0,
           "startPopulation": 5000,
-          "startAnomalyIds": [
-            "AN_002"
-          ]
+          "unlocked": 1
         },
         {
           "nodeId": "N4",
           "name": "节点4",
-          "tags": [
-            "coastal",
-            "port"
-          ],
-          "startLocalPanic": 1,
           "startPopulation": 100000,
-          "startAnomalyIds": [
-            "AN_007",
-            "AN_011"
-          ]
+          "unlocked": 0
         },
         {
           "nodeId": "N5",
           "name": "节点5",
-          "tags": [
-            "mountain",
-            "temple"
-          ],
-          "startLocalPanic": 0,
           "startPopulation": 2000,
-          "startAnomalyIds": [
-            "AN_013",
-            "AN_019"
-          ]
+          "unlocked": 0
         },
         {
           "nodeId": "N6",
           "name": "节点6",
-          "tags": [
-            "industrial",
-            "mine"
-          ],
-          "startLocalPanic": 2,
           "startPopulation": 3000,
-          "startAnomalyIds": [
-            "AN_018",
-            "AN_020"
-          ]
+          "unlocked": 0
         },
         {
           "nodeId": "N7",
           "name": "节点7",
-          "tags": [
-            "academic",
-            "lab"
-          ],
-          "startLocalPanic": 0,
           "startPopulation": 500,
-          "startAnomalyIds": [
-            "AN_004",
-            "AN_010"
-          ]
+          "unlocked": 0
         },
         {
           "nodeId": "N8",
           "name": "节点8",
-          "tags": [
-            "rural",
-            "forest"
-          ],
-          "startLocalPanic": 1,
           "startPopulation": 100,
-          "startAnomalyIds": [
-            "AN_008",
-            "AN_014"
-          ]
+          "unlocked": 0
         }
       ]
     },
@@ -298,6 +233,10 @@
           "type": "float"
         },
         {
+          "name": "baseDays",
+          "type": "int"
+        },
+        {
           "name": "maintenanceCostPerDay",
           "type": "int"
         },
@@ -314,11 +253,27 @@
           "type": "int[]"
         },
         {
-          "name": "hpDmg",
+          "name": "invhpDmg",
           "type": "int"
         },
         {
-          "name": "sanDmg",
+          "name": "invsanDmg",
+          "type": "int"
+        },
+        {
+          "name": "conhpDmg",
+          "type": "int"
+        },
+        {
+          "name": "consanDmg",
+          "type": "int"
+        },
+        {
+          "name": "manhpDmg",
+          "type": "int"
+        },
+        {
+          "name": "mansanDmg",
           "type": "int"
         },
         {
@@ -342,8 +297,9 @@
         {
           "anomalyId": "AN_001",
           "name": "镜面渗漏",
-          "class": "Euclid",
+          "class": "Safe",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 3,
           "maintenanceCostPerDay": 100,
           "invReq": [
             7,
@@ -363,8 +319,12 @@
             6,
             0
           ],
-          "hpDmg": 4,
-          "sanDmg": 5,
+          "invhpDmg": 0,
+          "invsanDmg": 1,
+          "conhpDmg": 3,
+          "consanDmg": 2,
+          "manhpDmg": 0,
+          "mansanDmg": 1,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -373,8 +333,9 @@
         {
           "anomalyId": "AN_002",
           "name": "失声合唱",
-          "class": "Keter",
+          "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -394,8 +355,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 2,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 2,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -404,8 +369,9 @@
         {
           "anomalyId": "AN_003",
           "name": "嗜盐水雾",
-          "class": "Euclid",
+          "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             7,
@@ -425,8 +391,12 @@
             6,
             0
           ],
-          "hpDmg": 4,
-          "sanDmg": 5,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 8,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 3,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -435,8 +405,9 @@
         {
           "anomalyId": "AN_004",
           "name": "空白日记",
-          "class": "Euclid",
+          "class": "Thaumiel",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 12,
           "maintenanceCostPerDay": 100,
           "invReq": [
             8,
@@ -456,8 +427,12 @@
             7,
             0
           ],
-          "hpDmg": 5,
-          "sanDmg": 6,
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 5,
+          "consanDmg": 12,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -466,8 +441,9 @@
         {
           "anomalyId": "AN_005",
           "name": "逆向楼梯间",
-          "class": "Keter",
+          "class": "Apollyon",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 15,
           "maintenanceCostPerDay": 100,
           "invReq": [
             10,
@@ -487,8 +463,12 @@
             9,
             4
           ],
-          "hpDmg": 7,
-          "sanDmg": 8,
+          "invhpDmg": 30,
+          "invsanDmg": 30,
+          "conhpDmg": 15,
+          "consanDmg": 15,
+          "manhpDmg": 0,
+          "mansanDmg": 8,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -499,6 +479,7 @@
           "name": "自复原蜡像",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             8,
@@ -518,8 +499,12 @@
             7,
             0
           ],
-          "hpDmg": 5,
-          "sanDmg": 6,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -530,6 +515,7 @@
           "name": "午夜电台",
           "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -549,8 +535,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -561,6 +551,7 @@
           "name": "低语菌落",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             8,
@@ -580,8 +571,12 @@
             7,
             0
           ],
-          "hpDmg": 5,
-          "sanDmg": 6,
+          "invhpDmg": 0,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -590,8 +585,9 @@
         {
           "anomalyId": "AN_009",
           "name": "无影灯",
-          "class": "Euclid",
+          "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             6,
@@ -611,8 +607,12 @@
             5,
             0
           ],
-          "hpDmg": 3,
-          "sanDmg": 4,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 3,
+          "consanDmg": 4,
+          "manhpDmg": 0,
+          "mansanDmg": 4,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -623,6 +623,7 @@
           "name": "恒温灰尘",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             7,
@@ -642,8 +643,12 @@
             6,
             0
           ],
-          "hpDmg": 4,
-          "sanDmg": 5,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 4,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -654,6 +659,7 @@
           "name": "回声邮筒",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             6,
@@ -673,8 +679,12 @@
             5,
             0
           ],
-          "hpDmg": 3,
-          "sanDmg": 4,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 3,
+          "consanDmg": 4,
+          "manhpDmg": 0,
+          "mansanDmg": 4,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -685,6 +695,7 @@
           "name": "镜中幼体",
           "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -704,8 +715,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -716,6 +731,7 @@
           "name": "祈香残火",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             7,
@@ -735,8 +751,12 @@
             6,
             0
           ],
-          "hpDmg": 4,
-          "sanDmg": 5,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 4,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -747,6 +767,7 @@
           "name": "符箓回路",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             8,
@@ -766,8 +787,12 @@
             7,
             0
           ],
-          "hpDmg": 5,
-          "sanDmg": 6,
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -778,6 +803,7 @@
           "name": "五行失衡井",
           "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -797,8 +823,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -809,6 +839,7 @@
           "name": "洞天影门",
           "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -828,8 +859,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -838,8 +873,9 @@
         {
           "anomalyId": "AN_017",
           "name": "天人回响",
-          "class": "Keter",
+          "class": "Thaumiel",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 12,
           "maintenanceCostPerDay": 100,
           "invReq": [
             11,
@@ -859,8 +895,12 @@
             10,
             5
           ],
-          "hpDmg": 9,
-          "sanDmg": 10,
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -871,6 +911,7 @@
           "name": "业火余烬",
           "class": "Keter",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
           "maintenanceCostPerDay": 100,
           "invReq": [
             12,
@@ -890,8 +931,12 @@
             11,
             6
           ],
-          "hpDmg": 12,
-          "sanDmg": 13,
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 12,
+          "consanDmg": 13,
+          "manhpDmg": 0,
+          "mansanDmg": 13,
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 30,
@@ -900,8 +945,9 @@
         {
           "anomalyId": "AN_019",
           "name": "戒律钟摆",
-          "class": "Euclid",
+          "class": "Apollyon",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 15,
           "maintenanceCostPerDay": 100,
           "invReq": [
             9,
@@ -921,8 +967,12 @@
             8,
             0
           ],
-          "hpDmg": 6,
-          "sanDmg": 7,
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 5,
+          "consanDmg": 12,
+          "manhpDmg": 0,
+          "mansanDmg": 7,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
@@ -933,6 +983,7 @@
           "name": "丹砂雾化",
           "class": "Euclid",
           "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
           "maintenanceCostPerDay": 100,
           "invReq": [
             8,
@@ -952,12 +1003,63 @@
             7,
             0
           ],
-          "hpDmg": 5,
-          "sanDmg": 6,
+          "invhpDmg": 30,
+          "invsanDmg": 30,
+          "conhpDmg": 15,
+          "consanDmg": 15,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 10,
           "manNegentropy PerDay": 10
+        }
+      ]
+    },
+    "AnomaliesGen": {
+      "idField": "day",
+      "columns": [
+        {
+          "name": "day",
+          "type": "int"
+        },
+        {
+          "name": "AnomaliesGenNum",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "day": 1,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 5,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 8,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 15,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 20,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 30,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 38,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 50,
+          "AnomaliesGenNum": 2
         }
       ]
     },
@@ -1074,27 +1176,11 @@
           "type": "string"
         },
         {
-          "name": "baseDays",
-          "type": "int"
-        },
-        {
-          "name": "progressPerDay",
-          "type": "float"
-        },
-        {
           "name": "agentSlotsMin",
           "type": "int"
         },
         {
           "name": "agentSlotsMax",
-          "type": "int"
-        },
-        {
-          "name": "yieldKey",
-          "type": "string"
-        },
-        {
-          "name": "yieldPerDay",
           "type": "int"
         }
       ],
@@ -1103,34 +1189,22 @@
           "taskDefId": "TASK_INVESTIGATE",
           "taskType": "Investigate",
           "name": "调查",
-          "baseDays": 1,
-          "progressPerDay": 0.12,
           "agentSlotsMin": 1,
-          "agentSlotsMax": 5,
-          "yieldKey": "Intel",
-          "yieldPerDay": 1
+          "agentSlotsMax": 5
         },
         {
           "taskDefId": "TASK_CONTAIN",
           "taskType": "Contain",
           "name": "收容",
-          "baseDays": 6,
-          "progressPerDay": 0.1,
           "agentSlotsMin": 1,
-          "agentSlotsMax": 5,
-          "yieldKey": "Money",
-          "yieldPerDay": 0
+          "agentSlotsMax": 5
         },
         {
           "taskDefId": "TASK_MANAGE",
           "taskType": "Manage",
           "name": "管理",
-          "baseDays": 999,
-          "progressPerDay": 0.02,
           "agentSlotsMin": 1,
-          "agentSlotsMax": 5,
-          "yieldKey": "NegEntropy",
-          "yieldPerDay": 2
+          "agentSlotsMax": 5
         }
       ]
     },

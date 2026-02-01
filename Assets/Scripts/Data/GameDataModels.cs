@@ -40,10 +40,8 @@ namespace Data
     {
         public string nodeId;
         public string name;
-        public List<string> tags = new();
-        public int startLocalPanic;
         public int startPopulation;
-        public List<string> startAnomalyIds = new();
+        public int unlocked = 1;
     }
 
     [Serializable]
@@ -52,8 +50,8 @@ namespace Data
         public string anomalyId;
         public string name;
         public string @class;
-        public List<string> tags = new();
         public int baseThreat;
+        public int baseDays;
         public int invExp;
         public int conExp;
         public int manExpPerDay;
@@ -64,8 +62,12 @@ namespace Data
         public int conSan;
         public int manHp;
         public int manSan;
-        public int hpDmg;
-        public int sanDmg;
+        public int invhpDmg;
+        public int invsanDmg;
+        public int conhpDmg;
+        public int consanDmg;
+        public int manhpDmg;
+        public int mansanDmg;
         public int[] invReq = new int[4];
         public int[] conReq = new int[4];
         public int[] manReq = new int[4];
@@ -77,14 +79,15 @@ namespace Data
         public string taskDefId;
         public string taskType;
         public string name;
-        public int baseDays;
-        public float progressPerDay;
         public int agentSlotsMin;
         public int agentSlotsMax;
-        public string yieldKey;
-        public float yieldPerDay;
-        public bool hasYieldKey;
-        public bool hasYieldPerDay;
+    }
+
+    [Serializable]
+    public class AnomaliesGenDef
+    {
+        public int day;
+        public int AnomaliesGenNum;
     }
 
     [Serializable]

@@ -96,6 +96,7 @@ namespace Data
         private bool _warnedMissingNewsMaxDay;
         private bool _warnedMissingNewsCd;
         private bool _warnedMissingNewsLimitNum;
+        private bool _hasTaskDefsTable;
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
@@ -111,11 +112,26 @@ namespace Data
         public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
         public TableRegistry Tables { get; private set; } = new();
+        public List<AnomaliesGenDef> AnomaliesGen { get; private set; } = new();
 
         public int LocalPanicHighThreshold { get; private set; } = 6;
         public double RandomEventBaseProb { get; private set; } = 0.15d;
         public int DefaultAutoResolveAfterDays { get; private set; } = 0;
         public IgnoreApplyMode DefaultIgnoreApplyMode { get; private set; } = IgnoreApplyMode.ApplyDailyKeep;
+
+        public int GetAnomaliesGenNumForDay(int day)
+        {
+            if (AnomaliesGen == null || AnomaliesGen.Count == 0) return 0;
+            int total = 0;
+            foreach (var row in AnomaliesGen)
+            {
+                if (row == null) continue;
+                if (row.day != day) continue;
+                if (row.AnomaliesGenNum <= 0) continue;
+                total += row.AnomaliesGenNum;
+            }
+            return total;
+        }
 
         private DataRegistry() { }
 
@@ -200,6 +216,7 @@ namespace Data
             Tables = new TableRegistry(Root.tables);
             Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
             LogTablesSanity();
+            _hasTaskDefsTable = Tables.TryGetTable("TaskDefs", out _);
 
             NodesById = new Dictionary<string, NodeDef>();
             foreach (var row in Tables.GetRows("Nodes"))
@@ -210,10 +227,8 @@ namespace Data
                 {
                     nodeId = nodeId,
                     name = GetRowString(row, "name"),
-                    tags = GetRowStringList(row, "tags"),
-                    startLocalPanic = GetRowInt(row, "startLocalPanic"),
                     startPopulation = GetRowInt(row, "startPopulation"),
-                    startAnomalyIds = GetRowStringList(row, "startAnomalyIds"),
+                    unlocked = GetRowInt(row, "unlocked", 1),
                 };
             }
 
@@ -227,8 +242,8 @@ namespace Data
                     anomalyId = anomalyId,
                     name = GetRowString(row, "name"),
                     @class = GetRowString(row, "class"),
-                    tags = GetRowStringList(row, "tags"),
                     baseThreat = GetRowInt(row, "baseThreat"),
+                    baseDays = GetRowInt(row, "baseDays"),
                     invExp = GetRowInt(row, "invExp"),
                     conExp = GetRowInt(row, "conExp"),
                     manExpPerDay = GetRowInt(row, "manExpPerDay"),
@@ -239,12 +254,27 @@ namespace Data
                     conSan = GetRowInt(row, "conSan"),
                     manHp = GetRowInt(row, "manHp"),
                     manSan = GetRowInt(row, "manSan"),
-                    hpDmg = GetRowInt(row, "hpDmg"),
-                    sanDmg = GetRowInt(row, "sanDmg"),
+                    invhpDmg = GetRowInt(row, "invhpDmg"),
+                    invsanDmg = GetRowInt(row, "invsanDmg"),
+                    conhpDmg = GetRowInt(row, "conhpDmg"),
+                    consanDmg = GetRowInt(row, "consanDmg"),
+                    manhpDmg = GetRowInt(row, "manhpDmg"),
+                    mansanDmg = GetRowInt(row, "mansanDmg"),
                     invReq = GetRowIntArray4(row, "invReq", anomalyId),
                     conReq = GetRowIntArray4(row, "conReq", anomalyId),
                     manReq = GetRowIntArray4(row, "manReq", anomalyId),
                 };
+            }
+
+            AnomaliesGen = new List<AnomaliesGenDef>();
+            foreach (var row in Tables.GetRows("AnomaliesGen"))
+            {
+                if (row == null) continue;
+                AnomaliesGen.Add(new AnomaliesGenDef
+                {
+                    day = GetRowInt(row, "day"),
+                    AnomaliesGenNum = GetRowInt(row, "AnomaliesGenNum"),
+                });
             }
 
             if (AnomaliesById.TryGetValue("AN_001", out var sampleAnomaly))
@@ -265,14 +295,8 @@ namespace Data
                     taskDefId = GetRowString(row, "taskDefId"),
                     taskType = taskTypeRaw,
                     name = GetRowString(row, "name"),
-                    baseDays = GetRowInt(row, "baseDays"),
-                    progressPerDay = GetRowFloat(row, "progressPerDay"),
                     agentSlotsMin = GetRowInt(row, "agentSlotsMin"),
                     agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
-                    yieldKey = GetRowString(row, "yieldKey"),
-                    yieldPerDay = GetRowFloat(row, "yieldPerDay"),
-                    hasYieldKey = row != null && row.ContainsKey("yieldKey"),
-                    hasYieldPerDay = row != null && row.ContainsKey("yieldPerDay"),
                 };
                 TaskDefsByType[type] = taskDef;
                 if (!string.IsNullOrEmpty(taskDef.taskDefId))
@@ -459,12 +483,17 @@ namespace Data
             CheckTableColumns("Balance", new[] { "key", "p1", "p2", "p3" });
             CheckTableColumns("Nodes", new[]
             {
-                "nodeId", "name", "tags", "startLocalPanic", "startPopulation", "startAnomalyIds",
+                "nodeId", "name", "startPopulation", "unlocked",
             });
             CheckTableColumns("Anomalies", new[]
             {
-                "anomalyId", "name", "class", "baseThreat", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
+                "anomalyId", "name", "class", "baseThreat", "baseDays", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
+                "invhpDmg", "invsanDmg", "conhpDmg", "consanDmg", "manhpDmg", "mansanDmg",
                 "worldPanicPerDayUncontained", "maintenanceCostPerDay",
+            });
+            CheckTableColumns("AnomaliesGen", new[]
+            {
+                "day", "AnomaliesGenNum",
             });
             CheckTableColumns("Events", new[]
             {
@@ -849,15 +878,15 @@ namespace Data
 
         public bool TryGetTaskDefForType(TaskType type, out TaskDef def)
         {
+            if (!_hasTaskDefsTable)
+            {
+                def = null;
+                return false;
+            }
             if (TaskDefsByType.TryGetValue(type, out def)) return true;
             WarnMissingTaskDef(type);
             def = null;
             return false;
-        }
-
-        public int GetTaskBaseDaysWithWarn(TaskType type, int fallback)
-        {
-            return TryGetTaskDefForType(type, out var def) && def.baseDays > 0 ? def.baseDays : fallback;
         }
 
         public (int min, int max) GetTaskAgentSlotRangeWithWarn(TaskType type, int fallbackMin, int fallbackMax)
@@ -871,16 +900,6 @@ namespace Data
             }
 
             return (fallbackMin, fallbackMax);
-        }
-
-        public int GetTaskBaseDays(TaskType type, int fallback)
-        {
-            return TryGetTaskDef(type, out var def) && def.baseDays > 0 ? def.baseDays : fallback;
-        }
-
-        public float GetTaskProgressPerDay(TaskType type, float fallback)
-        {
-            return TryGetTaskDef(type, out var def) && def.progressPerDay > 0f ? def.progressPerDay : fallback;
         }
 
         public IgnoreApplyMode GetIgnoreApplyMode(EventDef def)
@@ -898,6 +917,7 @@ namespace Data
 
         private void WarnMissingTaskDef(TaskType type)
         {
+            if (!_hasTaskDefsTable) return;
             if (_taskDefMissingWarned.Add(type))
                 Debug.LogWarning($"[TaskDef] Missing TaskDefs entry for taskType={type}. Using fallback values.");
         }
@@ -1000,6 +1020,9 @@ namespace Data
 
         public float GetAnomalyFloatWithWarn(string anomalyId, string column, float fallback = 0f)
             => GetTableFloatWithWarn("Anomalies", anomalyId, column, fallback);
+
+        public int GetAnomalyBaseDaysWithWarn(string anomalyId, int fallback = 1)
+            => GetTableIntWithWarn("Anomalies", anomalyId, "baseDays", fallback);
 
         private int GetTableIntWithWarn(string tableName, string rowId, string column, int fallback)
         {
