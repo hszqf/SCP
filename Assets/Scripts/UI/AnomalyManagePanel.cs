@@ -378,6 +378,11 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             // Allow clicking to deselect even if currently busy (soft lock)
             bool isBusyOther = busyTask && !selected;
 
+            string busyText = Sim.BuildAgentBusyText(gc.State, ag.Id);
+            string statusText = isBusyOther
+                ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText)
+                : "<color=#66FF66>IDLE</color>";
+
             var go = Instantiate(agentPickerItemPrefab, agentListContent);
             go.name = "Agent_" + ag.Id;
 
@@ -392,7 +397,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                 BuildAgentAttrLine(ag),
                 isBusyOther,
                 selected,
-                OnAgentClicked);
+                OnAgentClicked,
+                statusText);
 
             _agentItems.Add(item);
         }
@@ -404,7 +410,13 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private static string BuildAgentAttrLine(AgentState a)
     {
         if (a == null) return "";
-        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+        int level = Mathf.Max(1, a.Level);
+        int hpMax = Mathf.Max(1, a.MaxHP);
+        int sanMax = Mathf.Max(1, a.MaxSAN);
+        int expNeed = Sim.ExpToNext(level);
+        string vitals = $"HP {a.HP}/{hpMax}  SAN {a.SAN}/{sanMax}  EXP {a.Exp}/{expNeed}";
+        string attrSummary = $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+        return $"{vitals}  {attrSummary}";
     }
 
 

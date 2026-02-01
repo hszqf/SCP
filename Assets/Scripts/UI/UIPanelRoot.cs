@@ -257,7 +257,14 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 gc.AssignTask(task.Id, agentIds);
-                _managePanelView.Hide();
+                if (_managePanel)
+                {
+                    CloseModal(_managePanel, "assign_confirm");
+                }
+                else
+                {
+                    _managePanelView.Hide();
+                }
                 RefreshNodePanel();
             },
             modeLabel: "Investigate"
@@ -329,7 +336,14 @@ public class UIPanelRoot : MonoBehaviour
 
                 task.SourceAnomalyId = targetAnomalyId;
                 gc.AssignTask(task.Id, agentIds);
-                _managePanelView.Hide();
+                if (_managePanel)
+                {
+                    CloseModal(_managePanel, "assign_confirm");
+                }
+                else
+                {
+                    _managePanelView.Hide();
+                }
                 RefreshNodePanel();
             },
             modeLabel: "Contain"

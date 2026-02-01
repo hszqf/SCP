@@ -129,6 +129,9 @@ public class AgentPickerView : MonoBehaviour, IModalClosable
 
             // Get busy text using BuildAgentBusyText
             string busyText = (gc != null) ? Sim.BuildAgentBusyText(gc.State, agent.Id) : null;
+            string statusText = isBusy
+                ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText)
+                : "IDLE";
 
             string displayName = string.IsNullOrEmpty(agent.Name) ? agent.Id : agent.Name;
             item.Bind(
@@ -138,7 +141,7 @@ public class AgentPickerView : MonoBehaviour, IModalClosable
                 isBusy,
                 _selected.Contains(agent.Id),
                 OnItemClicked,
-                busyText
+                statusText
             );
             _items.Add(item);
         }
@@ -147,7 +150,13 @@ public class AgentPickerView : MonoBehaviour, IModalClosable
     private static string BuildAgentAttrLine(AgentState a)
     {
         if (a == null) return "";
-        return $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+        int level = Mathf.Max(1, a.Level);
+        int hpMax = Mathf.Max(1, a.MaxHP);
+        int sanMax = Mathf.Max(1, a.MaxSAN);
+        int expNeed = Sim.ExpToNext(level);
+        string vitals = $"HP {a.HP}/{hpMax}  SAN {a.SAN}/{sanMax}  EXP {a.Exp}/{expNeed}";
+        string attrSummary = $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
+        return $"{vitals}  {attrSummary}";
     }
 
     void OnItemClicked(string agentId)
