@@ -537,6 +537,17 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         // Update UI
         RefreshUI();
         gc.Notify();
+
+        // Auto-close panel after confirming manage assignment
+        var root = UIPanelRoot.I;
+        if (root != null)
+        {
+            root.CloseModal(gameObject, "manage_confirm");
+        }
+        else
+        {
+            Hide();
+        }
     }
 
     // --------------------
