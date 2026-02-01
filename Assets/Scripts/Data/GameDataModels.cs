@@ -54,12 +54,10 @@ namespace Data
         public string @class;
         public List<string> tags = new();
         public int baseThreat;
-        public int investigateDifficulty;
-        public int containDifficulty;
-        public int manageRisk;
         public int invExp;
         public int conExp;
         public int manExpPerDay;
+        public int manNegentropyPerDay;
         public int invHp;
         public int invSan;
         public int conHp;

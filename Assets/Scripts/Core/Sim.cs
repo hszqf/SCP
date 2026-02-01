@@ -69,7 +69,6 @@ namespace Core
 
         private static readonly HashSet<TaskType> WarnedMissingYieldFields = new();
         private static readonly HashSet<TaskType> WarnedUnknownYieldKey = new();
-        private static readonly HashSet<string> WarnedDifficultyAnomalies = new();
 
         public static void StepDay(GameState s, Random rng)
         {
@@ -123,14 +122,24 @@ namespace Core
 
                     float baseDelta = CalcDailyProgressDelta(t, squad, rng, registry);
                     string anomalyId = GetTaskAnomalyId(n, t);
-                    int diff = 1;
-                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
+                    var team = ComputeTeamAvgProps(squad);
+                    AnomalyDef anomalyDef = null;
+                    if (!string.IsNullOrEmpty(anomalyId))
                     {
-                        diff = GetTaskDifficulty(anomalyId, t.Type, registry);
+                        registry.AnomaliesById.TryGetValue(anomalyId, out anomalyDef);
                     }
 
-                    float effDelta = baseDelta / Math.Max(1, diff);
-                    int manageRisk = (t.Type == TaskType.Manage) ? GetManageRisk(anomalyId, registry) : 0;
+                    int[] req = t.Type switch
+                    {
+                        TaskType.Investigate => NormalizeIntArray4(anomalyDef?.invReq),
+                        TaskType.Contain => NormalizeIntArray4(anomalyDef?.conReq),
+                        TaskType.Manage => NormalizeIntArray4(anomalyDef?.manReq),
+                        _ => new int[4]
+                    };
+
+                    float sMatch = ComputeMatchS_NoWeight(team, req);
+                    float mult = MapSToMult(sMatch);
+                    float effDelta = baseDelta * mult;
 
                     // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
                     // They should never auto-complete.
@@ -140,10 +149,7 @@ namespace Core
                         t.Progress = Math.Max(t.Progress, 0f);
                         t.Progress = Clamp01(t.Progress + effDelta);
                         if (t.Progress >= 1f) t.Progress = 0.99f;
-                        if (Math.Abs(t.Progress - beforeManage) > 0.0001f)
-                        {
-                            Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId} diff={diff} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} risk={manageRisk} progress={t.Progress:0.00}/1 (baseDays=1)");
-                        }
+                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} mult={mult:0.###} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/1 (baseDays=1)");
 
                         var defId = t.SourceAnomalyId;
                         if (string.IsNullOrEmpty(defId))
@@ -158,12 +164,12 @@ namespace Core
                             continue;
                         }
                         var impact = ComputeImpact(s, TaskType.Manage, manageDef, t.AssignedAgentIds);
-                        var req = NormalizeIntArray4(manageDef?.manReq);
+                        var manageReq = NormalizeIntArray4(manageDef?.manReq);
                         float magSan = (manageDef?.sanDmg ?? 0) * impact.sanMul * impact.S * impact.sanRand;
                         Debug.Log(
                             $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.hpDmg ?? 0},{manageDef?.sanDmg ?? 0}) " +
                             $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) rand=({impact.hpRand:0.###},{impact.sanRand:0.###}) " +
-                            $"req={FormatIntArray(req)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
+                            $"req={FormatIntArray(manageReq)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
                         foreach (var agentId in t.AssignedAgentIds)
                         {
                             string reason = $"ManageDaily:node={n.Id},anomaly={defId ?? "unknown"},dayTick={s.Day}";
@@ -175,10 +181,7 @@ namespace Core
                     int baseDays = Math.Max(1, registry.GetTaskBaseDaysWithWarn(t.Type, 1));
                     float before = t.Progress;
                     t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, baseDays);
-                    if (Math.Abs(t.Progress - before) > 0.0001f)
-                    {
-                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId} diff={diff} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
-                    }
+                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} mult={mult:0.###} baseDelta={baseDelta:0.00} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
 
                     if (t.Progress >= baseDays)
                     {
@@ -1231,6 +1234,12 @@ namespace Core
             return $"[{string.Join(",", values)}]";
         }
 
+        private static string FormatFloatArray(float[] values)
+        {
+            if (values == null) return "null";
+            return $"[{string.Join(",", values.Select(v => v.ToString("0.###")))}]";
+        }
+
         // =====================
         // Helpers
         // =====================
@@ -1264,6 +1273,69 @@ namespace Core
             return Math.Max(min, baseDelta + statBonus + noise);
         }
 
+        private static float[] ComputeTeamAvgProps(List<AgentState> members)
+        {
+            if (members == null || members.Count == 0)
+            {
+                Debug.LogWarning("[TeamAvg] Empty members list. Using [0,0,0,0] to avoid divide-by-zero.");
+                return new[] { 0f, 0f, 0f, 0f };
+            }
+
+            float p = 0f, r = 0f, o = 0f, pow = 0f;
+            int count = 0;
+
+            foreach (var m in members)
+            {
+                if (m == null) continue;
+                p += m.Perception;
+                r += m.Resistance;
+                o += m.Operation;
+                pow += m.Power;
+                count += 1;
+            }
+
+            if (count <= 0)
+            {
+                Debug.LogWarning("[TeamAvg] All members were null. Using [0,0,0,0] to avoid divide-by-zero.");
+                return new[] { 0f, 0f, 0f, 0f };
+            }
+
+            float sizeBonus = count > 1 ? 1f + 0.15f * Mathf.Log(count) : 1f;
+            return new[] { (p / count) * sizeBonus, (r / count) * sizeBonus, (o / count) * sizeBonus, (pow / count) * sizeBonus };
+        }
+
+        private static float ComputeMatchS_NoWeight(float[] team, int[] req)
+        {
+            if (team == null || req == null) return 1f;
+
+            float minR = float.PositiveInfinity;
+            float sumR = 0f;
+            int count = 0;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (req[i] <= 0) continue;
+                float ratio = req[i] > 0 ? team[i] / req[i] : 0f;
+                ratio = Mathf.Clamp(ratio, 0f, 2f);
+                if (ratio < minR) minR = ratio;
+                sumR += ratio;
+                count += 1;
+            }
+
+            if (count <= 0) return 1f;
+
+            float avgR = sumR / count;
+            return 0.5f * minR + 0.5f * avgR;
+        }
+
+        private static float MapSToMult(float s)
+        {
+            if (s < 0.7f) return 0.3f;
+            if (s < 1.0f) return Mathf.Lerp(0.3f, 1.0f, (s - 0.7f) / 0.3f);
+            if (s < 1.3f) return Mathf.Lerp(1.0f, 1.6f, (s - 1.0f) / 0.3f);
+            return 1.6f;
+        }
+
         static string GetTaskAnomalyId(NodeState node, NodeTask task)
         {
             if (node == null || task == null) return null;
@@ -1283,31 +1355,6 @@ namespace Core
             }
 
             return node.ActiveAnomalyIds?.FirstOrDefault(id => !string.IsNullOrEmpty(id));
-        }
-
-        static int GetTaskDifficulty(string anomalyId, TaskType type, DataRegistry registry)
-        {
-            int raw = 0;
-            if (!string.IsNullOrEmpty(anomalyId) && registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly))
-            {
-                raw = type == TaskType.Investigate ? anomaly.investigateDifficulty : anomaly.containDifficulty;
-            }
-
-            if (raw > 0) return raw;
-
-            var key = string.IsNullOrEmpty(anomalyId) ? "<unknown>" : anomalyId;
-            if (WarnedDifficultyAnomalies.Add(key))
-            {
-                Debug.LogWarning($"[WARN] Anomaly difficulty missing or <=0: anomalyId={key}. Using fallback=1.");
-            }
-
-            return 1;
-        }
-
-        static int GetManageRisk(string anomalyId, DataRegistry registry)
-        {
-            if (string.IsNullOrEmpty(anomalyId)) return 0;
-            return registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly) ? anomaly.manageRisk : 0;
         }
 
         /// <summary>
@@ -1369,7 +1416,15 @@ namespace Core
                     var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
 
-                    int yield = CalcDailyNegEntropyYield(m, squad, rng);
+                    string defId = t.SourceAnomalyId;
+                    AnomalyDef manageDef = null;
+                    if (!string.IsNullOrEmpty(defId))
+                    {
+                        registry.AnomaliesById.TryGetValue(defId, out manageDef);
+                    }
+                    if (manageDef == null) continue;
+
+                    int yield = CalcDailyNegEntropyYield(m, manageDef);
                     if (yield <= 0) continue;
 
                     nodeTotal += yield;
@@ -1377,24 +1432,20 @@ namespace Core
 
                     if (squad.Count > 0)
                     {
-                        string defId = t.SourceAnomalyId;
-                        if (!string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var manageDef) && manageDef != null)
+                        int totalExp = manageDef.manExpPerDay;
+                        if (totalExp > 0)
                         {
-                            int totalExp = manageDef.manExpPerDay;
-                            if (totalExp > 0)
+                            int perAgentExp = (int)Math.Ceiling(totalExp / (double)squad.Count);
+                            if (perAgentExp > 0)
                             {
-                                int perAgentExp = (int)Math.Ceiling(totalExp / (double)squad.Count);
-                                if (perAgentExp > 0)
+                                foreach (var a in squad)
                                 {
-                                    foreach (var a in squad)
-                                    {
-                                        if (a == null) continue;
-                                        int expBefore = a.Exp;
-                                        int lvBefore = a.Level;
-                                        int tpBefore = a.TalentPoints;
-                                        AddExpAndTryLevelUp(a, perAgentExp, rng);
-                                        Debug.Log($"[AgentExp] day={s.Day} type=Manage node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
-                                    }
+                                    if (a == null) continue;
+                                    int expBefore = a.Exp;
+                                    int lvBefore = a.Level;
+                                    int tpBefore = a.TalentPoints;
+                                    AddExpAndTryLevelUp(a, perAgentExp, rng);
+                                    Debug.Log($"[AgentExp] day={s.Day} type=Manage node={node.Id} anomaly={defId ?? "unknown"} agent={a.Id} +exp={perAgentExp} exp={expBefore}->{a.Exp} lv={lvBefore}->{a.Level} tp={tpBefore}->{a.TalentPoints}");
                                 }
                             }
                         }
@@ -1503,24 +1554,10 @@ namespace Core
             }
         }
 
-        static int CalcDailyNegEntropyYield(ManagedAnomalyState m, List<AgentState> managers, Random rng)
+        static int CalcDailyNegEntropyYield(ManagedAnomalyState m, AnomalyDef def)
         {
-            int level = Math.Max(1, m.Level);
-
-            // 基础产出：与异常等级相关
-            int baseYield = 2 + level;
-
-            // 管理干员加成：偏向 Resistance + Perception
-            int stat = 0;
-            foreach (var a in managers)
-                stat += a.Resistance + a.Perception;
-
-            int bonus = stat / 10; // 每 10 点合计属性 +1
-
-            // 轻微波动（避免过于机械）
-            int noise = (rng.NextDouble() < 0.5) ? 0 : 1;
-
-            return Math.Max(1, baseYield + bonus + noise);
+            if (def == null) return 0;
+            return Math.Max(0, def.manNegentropyPerDay);
         }
 
         static void EnsureManagedAnomalyRecorded(NodeState node, string anomalyId, AnomalyDef anomaly)

@@ -45,30 +45,6 @@
       ],
       "rows": [
         {
-          "key": "LocalPanicHighThreshold",
-          "p1": [
-            6
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
-          "key": "RandomEventBaseProb",
-          "p1": [],
-          "p2": [
-            0.35
-          ],
-          "p3": []
-        },
-        {
-          "key": "DefaultAutoResolveAfterDays",
-          "p1": [
-            0
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
           "key": "DefaultIgnoreApplyMode",
           "p1": [],
           "p2": [],
@@ -77,51 +53,11 @@
           ]
         },
         {
-          "key": "WorldPanicSoftThreshold",
-          "p1": [
-            7
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
-          "key": "StartingIntel",
-          "p1": [
-            2
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
-          "key": "StartingNegEntropy",
-          "p1": [
-            0
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
           "key": "DailyWorldPanicDecay",
           "p1": [],
           "p2": [
             0.05
           ],
-          "p3": []
-        },
-        {
-          "key": "DailyIntelDecay",
-          "p1": [],
-          "p2": [
-            0.0
-          ],
-          "p3": []
-        },
-        {
-          "key": "DailyUpkeepPerAgent",
-          "p1": [
-            4
-          ],
-          "p2": [],
           "p3": []
         },
         {
@@ -144,14 +80,6 @@
           "key": "WagePerAgentPerDay",
           "p1": [
             100
-          ],
-          "p2": [],
-          "p3": []
-        },
-        {
-          "key": "HireCost",
-          "p1": [
-            500
           ],
           "p2": [],
           "p3": []
@@ -366,22 +294,6 @@
           "type": "string"
         },
         {
-          "name": "baseThreat",
-          "type": "int"
-        },
-        {
-          "name": "investigateDifficulty",
-          "type": "int"
-        },
-        {
-          "name": "containDifficulty",
-          "type": "int"
-        },
-        {
-          "name": "manageRisk",
-          "type": "int"
-        },
-        {
           "name": "worldPanicPerDayUncontained",
           "type": "float"
         },
@@ -420,6 +332,10 @@
         {
           "name": "manExpPerDay",
           "type": "int"
+        },
+        {
+          "name": "manNegentropy PerDay",
+          "type": "int"
         }
       ],
       "rows": [
@@ -427,10 +343,6 @@
           "anomalyId": "AN_001",
           "name": "镜面渗漏",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -455,16 +367,13 @@
           "sanDmg": 5,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_002",
           "name": "失声合唱",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -489,16 +398,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_003",
           "name": "嗜盐水雾",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -523,16 +429,13 @@
           "sanDmg": 5,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_004",
           "name": "空白日记",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -557,16 +460,13 @@
           "sanDmg": 6,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_005",
           "name": "逆向楼梯间",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -591,16 +491,13 @@
           "sanDmg": 8,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_006",
           "name": "自复原蜡像",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -625,16 +522,13 @@
           "sanDmg": 6,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_007",
           "name": "午夜电台",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -659,16 +553,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_008",
           "name": "低语菌落",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -693,16 +584,13 @@
           "sanDmg": 6,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_009",
           "name": "无影灯",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -727,16 +615,13 @@
           "sanDmg": 4,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_010",
           "name": "恒温灰尘",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -761,16 +646,13 @@
           "sanDmg": 5,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_011",
           "name": "回声邮筒",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 1,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -795,16 +677,13 @@
           "sanDmg": 4,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_012",
           "name": "镜中幼体",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -829,16 +708,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_013",
           "name": "祈香残火",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 2,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -863,16 +739,13 @@
           "sanDmg": 5,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_014",
           "name": "符箓回路",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -897,16 +770,13 @@
           "sanDmg": 6,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_015",
           "name": "五行失衡井",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -931,16 +801,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_016",
           "name": "洞天影门",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -965,16 +832,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_017",
           "name": "天人回响",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -999,16 +863,13 @@
           "sanDmg": 10,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_018",
           "name": "业火余烬",
           "class": "Keter",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 5,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -1033,16 +894,13 @@
           "sanDmg": 13,
           "invExp": 5,
           "conExp": 5,
-          "manExpPerDay": 30
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_019",
           "name": "戒律钟摆",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 4,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -1067,16 +925,13 @@
           "sanDmg": 7,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         },
         {
           "anomalyId": "AN_020",
           "name": "丹砂雾化",
           "class": "Euclid",
-          "baseThreat": 1,
-          "investigateDifficulty": 1,
-          "containDifficulty": 1,
-          "manageRisk": 3,
           "worldPanicPerDayUncontained": 0.1,
           "maintenanceCostPerDay": 100,
           "invReq": [
@@ -1101,7 +956,8 @@
           "sanDmg": 6,
           "invExp": 2,
           "conExp": 2,
-          "manExpPerDay": 10
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
         }
       ]
     },
@@ -1955,161 +1811,161 @@
       ]
     },
     "Effects": {
-      "idField": "effectId",
+      "idField": "key",
       "columns": [
         {
-          "name": "effectId",
-          "type": "string"
+          "name": "key",
+          "type": "int"
         },
         {
-          "name": "comment",
+          "name": "effectId",
           "type": "string"
         }
       ],
       "rows": [
         {
-          "effectId": "EFF_IGNORE_INV",
-          "comment": "调查事件忽略惩罚"
+          "key": 1,
+          "effectId": "EFF_IGNORE_INV"
         },
         {
-          "effectId": "EFF_OPTION_CALM",
-          "comment": "安抚目击者"
+          "key": 2,
+          "effectId": "EFF_OPTION_CALM"
         },
         {
-          "effectId": "EFF_OPTION_PUSH",
-          "comment": "加速推进任务"
+          "key": 3,
+          "effectId": "EFF_OPTION_PUSH"
         },
         {
-          "effectId": "EFF_IGNORE_RANDOM",
-          "comment": "随机事件忽略惩罚"
+          "key": 4,
+          "effectId": "EFF_IGNORE_RANDOM"
         },
         {
-          "effectId": "EFF_OPTION_RELIEF",
-          "comment": "保障民生"
+          "key": 5,
+          "effectId": "EFF_OPTION_RELIEF"
         },
         {
-          "effectId": "EFF_OPTION_PROJECT",
-          "comment": "保障项目推进"
+          "key": 6,
+          "effectId": "EFF_OPTION_PROJECT"
         },
         {
-          "effectId": "EFF_IGNORE_INV_EVIDENCE",
-          "comment": "忽略证据遗失的惩罚"
+          "key": 7,
+          "effectId": "EFF_IGNORE_INV_EVIDENCE"
         },
         {
-          "effectId": "EFF_IGNORE_INV_MEMETIC",
-          "comment": "忽略认知污染的惩罚"
+          "key": 8,
+          "effectId": "EFF_IGNORE_INV_MEMETIC"
         },
         {
-          "effectId": "EFF_IGNORE_INV_BRIBERY",
-          "comment": "忽略封口要价的惩罚"
+          "key": 9,
+          "effectId": "EFF_IGNORE_INV_BRIBERY"
         },
         {
-          "effectId": "EFF_IGNORE_BLACKOUT",
-          "comment": "忽略停电的惩罚"
+          "key": 10,
+          "effectId": "EFF_IGNORE_BLACKOUT"
         },
         {
-          "effectId": "EFF_IGNORE_AUDIT",
-          "comment": "忽略审计的惩罚"
+          "key": 11,
+          "effectId": "EFF_IGNORE_AUDIT"
         },
         {
-          "effectId": "EFF_IGNORE_LEAK",
-          "comment": "忽略信息外泄的惩罚"
+          "key": 12,
+          "effectId": "EFF_IGNORE_LEAK"
         },
         {
-          "effectId": "EFF_IGNORE_CULT",
-          "comment": "忽略教团活动的惩罚"
+          "key": 13,
+          "effectId": "EFF_IGNORE_CULT"
         },
         {
-          "effectId": "EFF_IGNORE_STRIKE",
-          "comment": "忽略员工罢工的惩罚"
+          "key": 14,
+          "effectId": "EFF_IGNORE_STRIKE"
         },
         {
-          "effectId": "EFF_IGNORE_DRIFT",
-          "comment": "忽略收容漂移的惩罚"
+          "key": 15,
+          "effectId": "EFF_IGNORE_DRIFT"
         },
         {
-          "effectId": "EFF_IGNORE_SEIZURE",
-          "comment": "忽略物资扣押的惩罚"
+          "key": 16,
+          "effectId": "EFF_IGNORE_SEIZURE"
         },
         {
-          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
-          "comment": "封锁回溯取证"
+          "key": 17,
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"
         },
         {
-          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
-          "comment": "旁证替代方案"
+          "key": 18,
+          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"
         },
         {
-          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
-          "comment": "隔离反制协议"
+          "key": 19,
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"
         },
         {
-          "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
-          "comment": "冒险继续推进"
+          "key": 20,
+          "effectId": "EFF_OPT_INV_MEMETIC_PUSH"
         },
         {
-          "effectId": "EFF_OPT_INV_BRIBE_PAY",
-          "comment": "支付封口费"
+          "key": 21,
+          "effectId": "EFF_OPT_INV_BRIBE_PAY"
         },
         {
-          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
-          "comment": "施压威慑"
+          "key": 22,
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"
         },
         {
-          "effectId": "EFF_OPT_BLACKOUT_BACKUP",
-          "comment": "启用备用电源"
+          "key": 23,
+          "effectId": "EFF_OPT_BLACKOUT_BACKUP"
         },
         {
-          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
-          "comment": "低功耗模式"
+          "key": 24,
+          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"
         },
         {
-          "effectId": "EFF_OPT_AUDIT_COOP",
-          "comment": "审计配合"
+          "key": 25,
+          "effectId": "EFF_OPT_AUDIT_COOP"
         },
         {
-          "effectId": "EFF_OPT_AUDIT_DELAY",
-          "comment": "审计拖延"
+          "key": 26,
+          "effectId": "EFF_OPT_AUDIT_DELAY"
         },
         {
-          "effectId": "EFF_OPT_LEAK_PR",
-          "comment": "舆情引导"
+          "key": 27,
+          "effectId": "EFF_OPT_LEAK_PR"
         },
         {
-          "effectId": "EFF_OPT_LEAK_HUNT",
-          "comment": "追查内鬼"
+          "key": 28,
+          "effectId": "EFF_OPT_LEAK_HUNT"
         },
         {
-          "effectId": "EFF_OPT_CULT_SURVEIL",
-          "comment": "秘密监控教团"
+          "key": 29,
+          "effectId": "EFF_OPT_CULT_SURVEIL"
         },
         {
-          "effectId": "EFF_OPT_CULT_RAID",
-          "comment": "清剿教团"
+          "key": 30,
+          "effectId": "EFF_OPT_CULT_RAID"
         },
         {
-          "effectId": "EFF_OPT_STRIKE_RAISE",
-          "comment": "加薪安抚"
+          "key": 31,
+          "effectId": "EFF_OPT_STRIKE_RAISE"
         },
         {
-          "effectId": "EFF_OPT_STRIKE_FORCE",
-          "comment": "强制复岗"
+          "key": 32,
+          "effectId": "EFF_OPT_STRIKE_FORCE"
         },
         {
-          "effectId": "EFF_OPT_DRIFT_REINFORCE",
-          "comment": "追加校准安防"
+          "key": 33,
+          "effectId": "EFF_OPT_DRIFT_REINFORCE"
         },
         {
-          "effectId": "EFF_OPT_DRIFT_TRANSFER",
-          "comment": "转移收容物"
+          "key": 34,
+          "effectId": "EFF_OPT_DRIFT_TRANSFER"
         },
         {
-          "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
-          "comment": "官方疏通"
+          "key": 35,
+          "effectId": "EFF_OPT_SEIZURE_OFFICIAL"
         },
         {
-          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
-          "comment": "黑市替代"
+          "key": 36,
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"
         }
       ]
     },
@@ -2147,10 +2003,6 @@
         {
           "name": "max",
           "type": "float"
-        },
-        {
-          "name": "comment",
-          "type": "string"
         }
       ],
       "rows": [
@@ -2162,8 +2014,7 @@
           "op": "Add",
           "value": -0.2,
           "min": null,
-          "max": null,
-          "comment": "忽略将倒退任务进度"
+          "max": null
         },
         {
           "key": 2,
@@ -2173,8 +2024,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "忽略提升本地恐慌"
+          "max": null
         },
         {
           "key": 3,
@@ -2184,8 +2034,7 @@
           "op": "Add",
           "value": -2.0,
           "min": null,
-          "max": null,
-          "comment": "降低本地恐慌"
+          "max": null
         },
         {
           "key": 4,
@@ -2195,8 +2044,7 @@
           "op": "Add",
           "value": 0.15,
           "min": null,
-          "max": null,
-          "comment": "来源任务获得推进"
+          "max": null
         },
         {
           "key": 5,
@@ -2206,8 +2054,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "全局恐慌上升"
+          "max": null
         },
         {
           "key": 6,
@@ -2217,8 +2064,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "忽略会增加恐慌"
+          "max": null
         },
         {
           "key": 7,
@@ -2228,8 +2074,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "稳定情绪"
+          "max": null
         },
         {
           "key": 8,
@@ -2239,8 +2084,7 @@
           "op": "Add",
           "value": -80.0,
           "min": null,
-          "max": null,
-          "comment": "经费消耗"
+          "max": null
         },
         {
           "key": 9,
@@ -2250,8 +2094,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "人口损失"
+          "max": null
         },
         {
           "key": 10,
@@ -2261,8 +2104,7 @@
           "op": "Add",
           "value": 0.1,
           "min": null,
-          "max": null,
-          "comment": "收容任务推进"
+          "max": null
         },
         {
           "key": 11,
@@ -2272,8 +2114,7 @@
           "op": "Add",
           "value": -0.15,
           "min": null,
-          "max": null,
-          "comment": "忽略导致调查进度退回"
+          "max": null
         },
         {
           "key": 12,
@@ -2283,8 +2124,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "本地恐慌上升"
+          "max": null
         },
         {
           "key": 13,
@@ -2294,8 +2134,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "情报损失"
+          "max": null
         },
         {
           "key": 14,
@@ -2305,8 +2144,7 @@
           "op": "Add",
           "value": 0.1,
           "min": null,
-          "max": null,
-          "comment": "追回物证推进"
+          "max": null
         },
         {
           "key": 15,
@@ -2316,8 +2154,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "封锁引发关注"
+          "max": null
         },
         {
           "key": 16,
@@ -2327,8 +2164,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "补回情报"
+          "max": null
         },
         {
           "key": 17,
@@ -2338,8 +2174,7 @@
           "op": "Add",
           "value": -0.05,
           "min": null,
-          "max": null,
-          "comment": "旁证效率较低"
+          "max": null
         },
         {
           "key": 18,
@@ -2349,8 +2184,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "旁证带来额外线索"
+          "max": null
         },
         {
           "key": 19,
@@ -2360,8 +2194,7 @@
           "op": "Add",
           "value": -0.1,
           "min": null,
-          "max": null,
-          "comment": "小队受损导致进度退回"
+          "max": null
         },
         {
           "key": 20,
@@ -2371,8 +2204,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "污染传闻扩散"
+          "max": null
         },
         {
           "key": 21,
@@ -2382,8 +2214,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "认知危害抬升世界恐慌"
+          "max": null
         },
         {
           "key": 22,
@@ -2393,8 +2224,7 @@
           "op": "Add",
           "value": -0.05,
           "min": null,
-          "max": null,
-          "comment": "隔离导致延误"
+          "max": null
         },
         {
           "key": 23,
@@ -2404,8 +2234,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "传闻被压制"
+          "max": null
         },
         {
           "key": 24,
@@ -2415,8 +2244,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "获得反制记录"
+          "max": null
         },
         {
           "key": 25,
@@ -2426,8 +2254,7 @@
           "op": "Add",
           "value": 0.15,
           "min": null,
-          "max": null,
-          "comment": "冒险推进获得进度"
+          "max": null
         },
         {
           "key": 26,
@@ -2437,8 +2264,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "外部风险上升"
+          "max": null
         },
         {
           "key": 27,
@@ -2448,8 +2274,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "目击者扩散带来恐慌"
+          "max": null
         },
         {
           "key": 28,
@@ -2459,8 +2284,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "舆论发酵"
+          "max": null
         },
         {
           "key": 29,
@@ -2470,8 +2294,7 @@
           "op": "Add",
           "value": -50.0,
           "min": null,
-          "max": null,
-          "comment": "封口费成本"
+          "max": null
         },
         {
           "key": 30,
@@ -2481,8 +2304,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "暂时稳定"
+          "max": null
         },
         {
           "key": 31,
@@ -2492,8 +2314,7 @@
           "op": "Add",
           "value": 0.05,
           "min": null,
-          "max": null,
-          "comment": "强硬推进获得效率"
+          "max": null
         },
         {
           "key": 32,
@@ -2503,8 +2324,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "反弹风险"
+          "max": null
         },
         {
           "key": 33,
@@ -2514,8 +2334,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "可能引发外部关注"
+          "max": null
         },
         {
           "key": 34,
@@ -2525,8 +2344,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "安防薄弱引发恐慌"
+          "max": null
         },
         {
           "key": 35,
@@ -2536,8 +2354,7 @@
           "op": "Add",
           "value": -0.05,
           "min": null,
-          "max": null,
-          "comment": "收容任务受阻"
+          "max": null
         },
         {
           "key": 36,
@@ -2547,8 +2364,7 @@
           "op": "Add",
           "value": -60.0,
           "min": null,
-          "max": null,
-          "comment": "备用电源成本"
+          "max": null
         },
         {
           "key": 37,
@@ -2558,8 +2374,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "风险下降"
+          "max": null
         },
         {
           "key": 38,
@@ -2569,8 +2384,7 @@
           "op": "Add",
           "value": -10.0,
           "min": null,
-          "max": null,
-          "comment": "低功耗维护成本"
+          "max": null
         },
         {
           "key": 39,
@@ -2580,8 +2394,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "压力上升"
+          "max": null
         },
         {
           "key": 40,
@@ -2591,8 +2404,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "追责与处罚预期"
+          "max": null
         },
         {
           "key": 41,
@@ -2602,8 +2414,7 @@
           "op": "Add",
           "value": -20.0,
           "min": null,
-          "max": null,
-          "comment": "合规罚款/机会成本"
+          "max": null
         },
         {
           "key": 42,
@@ -2613,8 +2424,7 @@
           "op": "Add",
           "value": -30.0,
           "min": null,
-          "max": null,
-          "comment": "配合成本"
+          "max": null
         },
         {
           "key": 43,
@@ -2624,8 +2434,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "合规带来稳定"
+          "max": null
         },
         {
           "key": 44,
@@ -2635,8 +2444,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "审计输出形成情报资产"
+          "max": null
         },
         {
           "key": 45,
@@ -2646,8 +2454,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "拖延引发怀疑"
+          "max": null
         },
         {
           "key": 46,
@@ -2657,8 +2464,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "日志缺口导致情报损失"
+          "max": null
         },
         {
           "key": 47,
@@ -2668,8 +2474,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "舆论失控"
+          "max": null
         },
         {
           "key": 48,
@@ -2679,8 +2484,7 @@
           "op": "Add",
           "value": -50.0,
           "min": null,
-          "max": null,
-          "comment": "舆情成本"
+          "max": null
         },
         {
           "key": 49,
@@ -2690,8 +2494,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "压力降低"
+          "max": null
         },
         {
           "key": 50,
@@ -2701,8 +2504,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "本地稳定"
+          "max": null
         },
         {
           "key": 51,
@@ -2712,8 +2514,7 @@
           "op": "Add",
           "value": -20.0,
           "min": null,
-          "max": null,
-          "comment": "调查成本"
+          "max": null
         },
         {
           "key": 52,
@@ -2723,8 +2524,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "获得线索"
+          "max": null
         },
         {
           "key": 53,
@@ -2734,8 +2534,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "短期关注上升"
+          "max": null
         },
         {
           "key": 54,
@@ -2745,8 +2544,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "教团扩散引发恐慌"
+          "max": null
         },
         {
           "key": 55,
@@ -2756,8 +2554,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "外部关注上升"
+          "max": null
         },
         {
           "key": 56,
@@ -2767,8 +2564,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "获取情报"
+          "max": null
         },
         {
           "key": 57,
@@ -2778,8 +2574,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "民间焦虑上升"
+          "max": null
         },
         {
           "key": 58,
@@ -2789,8 +2584,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "清剿带来线索"
+          "max": null
         },
         {
           "key": 59,
@@ -2800,8 +2594,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "冲突扩大"
+          "max": null
         },
         {
           "key": 60,
@@ -2811,8 +2604,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "关注上升"
+          "max": null
         },
         {
           "key": 61,
@@ -2822,8 +2614,7 @@
           "op": "Add",
           "value": -0.1,
           "min": null,
-          "max": null,
-          "comment": "管理任务效率下降"
+          "max": null
         },
         {
           "key": 62,
@@ -2833,8 +2624,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "内部不稳"
+          "max": null
         },
         {
           "key": 63,
@@ -2844,8 +2634,7 @@
           "op": "Add",
           "value": -80.0,
           "min": null,
-          "max": null,
-          "comment": "加薪成本"
+          "max": null
         },
         {
           "key": 64,
@@ -2855,8 +2644,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "稳定内部"
+          "max": null
         },
         {
           "key": 65,
@@ -2866,8 +2654,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "士气恶化"
+          "max": null
         },
         {
           "key": 66,
@@ -2877,8 +2664,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "执行风险上升"
+          "max": null
         },
         {
           "key": 67,
@@ -2888,8 +2674,7 @@
           "op": "Add",
           "value": 2.0,
           "min": null,
-          "max": null,
-          "comment": "收容风险抬升"
+          "max": null
         },
         {
           "key": 68,
@@ -2899,8 +2684,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "外部压力上升"
+          "max": null
         },
         {
           "key": 69,
@@ -2910,8 +2694,7 @@
           "op": "Add",
           "value": -70.0,
           "min": null,
-          "max": null,
-          "comment": "追加成本"
+          "max": null
         },
         {
           "key": 70,
@@ -2921,8 +2704,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "风险下降"
+          "max": null
         },
         {
           "key": 71,
@@ -2932,8 +2714,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "转移引发波动"
+          "max": null
         },
         {
           "key": 72,
@@ -2943,8 +2724,7 @@
           "op": "Add",
           "value": -0.1,
           "min": null,
-          "max": null,
-          "comment": "转移导致收容延期"
+          "max": null
         },
         {
           "key": 73,
@@ -2954,8 +2734,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "外部关注上升"
+          "max": null
         },
         {
           "key": 74,
@@ -2965,8 +2744,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "供给紧张带来恐慌"
+          "max": null
         },
         {
           "key": 75,
@@ -2976,8 +2754,7 @@
           "op": "Add",
           "value": -0.05,
           "min": null,
-          "max": null,
-          "comment": "收容进度受阻"
+          "max": null
         },
         {
           "key": 76,
@@ -2987,8 +2764,7 @@
           "op": "Add",
           "value": -40.0,
           "min": null,
-          "max": null,
-          "comment": "疏通成本"
+          "max": null
         },
         {
           "key": 77,
@@ -2998,8 +2774,7 @@
           "op": "Add",
           "value": -1.0,
           "min": null,
-          "max": null,
-          "comment": "恢复供给"
+          "max": null
         },
         {
           "key": 78,
@@ -3009,8 +2784,7 @@
           "op": "Add",
           "value": -60.0,
           "min": null,
-          "max": null,
-          "comment": "黑市溢价"
+          "max": null
         },
         {
           "key": 79,
@@ -3020,8 +2794,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "黑市关系带来线索"
+          "max": null
         },
         {
           "key": 80,
@@ -3031,8 +2804,7 @@
           "op": "Add",
           "value": 1.0,
           "min": null,
-          "max": null,
-          "comment": "后患增加"
+          "max": null
         }
       ]
     }
