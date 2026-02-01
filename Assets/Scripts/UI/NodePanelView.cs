@@ -40,6 +40,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     [SerializeField] private Button manageButton; // 收容后管理（打开管理面板）
     [SerializeField] private Button processEventButton; // 处理事件
     [SerializeField] private Button closeButton;
+    [SerializeField] private Button dimmerButton;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
 
     // 回调函数
@@ -49,6 +50,8 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 
     // Cached root (for opening manage panel without changing Init signature)
     private UIPanelRoot _uiRoot;
+
+    private bool _dimmerBound;
 
     private string _nodeId;
 
@@ -97,6 +100,42 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 
     private const float EPS = 0.0001f;
 
+    private void Awake()
+    {
+        BindDimmerButton();
+    }
+
+    private void BindDimmerButton()
+    {
+        if (_dimmerBound) return;
+        _dimmerBound = true;
+
+        if (dimmerButton != null)
+        {
+            dimmerButton.onClick.RemoveAllListeners();
+            dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "dimmer"));
+
+            var img = dimmerButton.GetComponent<Image>();
+            if (img != null) img.raycastTarget = true;
+
+            var cg = dimmerButton.GetComponent<CanvasGroup>();
+            if (cg != null) { cg.blocksRaycasts = true; cg.interactable = true; }
+
+            Debug.Log("[UIBind] NodePanel dimmer=ok");
+        }
+        else
+        {
+            Debug.LogWarning("[UIBind] NodePanel dimmer=missing");
+        }
+
+        // Legacy fallback (if backgroundButton is still used in older prefabs)
+        if (backgroundButton != null && backgroundButton != dimmerButton)
+        {
+            backgroundButton.onClick.RemoveAllListeners();
+            backgroundButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "dimmer"));
+        }
+    }
+
     public void Init(Action onInvestigate, Action onContain, Action onClose)
     {
         // Cache UIPanelRoot once
@@ -143,13 +182,6 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         {
             closeButton.onClick.RemoveAllListeners();
             closeButton.onClick.AddListener(() => UIPanelRoot.I?.CloseModal(gameObject, "close btn"));
-        }
-
-        // 蒙版点击 = 关闭
-        if (backgroundButton)
-        {
-            backgroundButton.onClick.RemoveAllListeners();
-            backgroundButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
         }
 
         CacheTaskStatusUIIfNeeded();

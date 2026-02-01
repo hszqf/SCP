@@ -703,6 +703,35 @@ public class UIPanelRoot : MonoBehaviour
         }
 
         LogModalStack("Refresh", relatedPanel, reason);
+        RefreshDimmerStack(reason, relatedPanel);
+    }
+
+    private void RefreshDimmerStack(string reason, GameObject relatedPanel = null)
+    {
+        if (_modalStack == null) return;
+
+        ModalDimmerHandle topHandle = null;
+        for (int i = _modalStack.Count - 1; i >= 0; i--)
+        {
+            var panel = _modalStack[i];
+            if (panel == null) continue;
+
+            var handle = panel.GetComponent<ModalDimmerHandle>();
+            if (handle != null)
+            {
+                topHandle = handle;
+                break;
+            }
+        }
+
+        foreach (var panel in _modalStack)
+        {
+            if (panel == null) continue;
+            var handle = panel.GetComponent<ModalDimmerHandle>();
+            if (handle == null) continue;
+
+            handle.SetDimmerActive(handle == topHandle);
+        }
     }
 
     private void LogModalStack(string action, GameObject panel, string reason)
