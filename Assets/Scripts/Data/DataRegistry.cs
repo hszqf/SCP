@@ -244,6 +244,7 @@ namespace Data
                     @class = GetRowString(row, "class"),
                     baseThreat = GetRowInt(row, "baseThreat"),
                     baseDays = GetRowInt(row, "baseDays"),
+                    actPeopleKill = GetRowInt(row, "actPeopleKill"),
                     invExp = GetRowInt(row, "invExp"),
                     conExp = GetRowInt(row, "conExp"),
                     manExpPerDay = GetRowInt(row, "manExpPerDay"),

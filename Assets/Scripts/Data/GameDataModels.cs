@@ -52,6 +52,7 @@ namespace Data
         public string @class;
         public int baseThreat;
         public int baseDays;
+        public int actPeopleKill;
         public int invExp;
         public int conExp;
         public int manExpPerDay;

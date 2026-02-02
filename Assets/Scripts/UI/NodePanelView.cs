@@ -233,7 +233,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
         }
 
-        if (titleText) titleText.text = n.Name;
+        if (titleText) titleText.text = $"{n.Name} ({n.Population}人口)";
 
         // 统一口径：可收容 = 已发现 - 已收容
         int containableCount = GetContainableCount(n);

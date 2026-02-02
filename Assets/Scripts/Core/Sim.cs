@@ -220,15 +220,12 @@ namespace Core
             float clampWorldPanicMin = registry.GetBalanceFloatWithWarn("ClampWorldPanicMin", 0f);
 
             int moneyBefore = s.Money;
-            int income = 0;
             int maintenance = 0;
             float worldPanicAdd = 0f;
 
             foreach (var node in s.Nodes)
             {
                 if (node == null) continue;
-
-                income += Mathf.FloorToInt(node.Population * popToMoneyRate);
 
                 // Uncontained anomalies on this node.
                 bool hasUncontained = node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
@@ -258,6 +255,42 @@ namespace Core
                     }
                     maintenance += registry.GetAnomalyIntWithWarn(managed.AnomalyId, "maintenanceCostPerDay", maintenanceDefault);
                 }
+            }
+
+            int totalPopLoss = 0;
+            foreach (var node in s.Nodes)
+            {
+                if (node == null || node.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0) continue;
+
+                int popLoss = 0;
+                foreach (var anomalyId in node.ActiveAnomalyIds)
+                {
+                    if (string.IsNullOrEmpty(anomalyId)) continue;
+                    int kill = registry.GetAnomalyIntWithWarn(anomalyId, "actPeopleKill", 0);
+                    if (kill > 0) popLoss += kill;
+                }
+
+                if (popLoss <= 0) continue;
+                int before = node.Population;
+                node.Population = Mathf.Max(0, before - popLoss);
+                int applied = before - node.Population;
+                if (applied > 0)
+                {
+                    totalPopLoss += applied;
+                    Debug.Log($"[AnomalyPopLoss] day={s.Day} node={node.Id} loss={applied} before={before} after={node.Population}");
+                }
+            }
+
+            if (totalPopLoss > 0)
+            {
+                Debug.Log($"[AnomalyPopLossTotal] day={s.Day} totalLoss={totalPopLoss}");
+            }
+
+            int income = 0;
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+                income += Mathf.FloorToInt(node.Population * popToMoneyRate);
             }
 
             int wage = (s.Agents?.Count ?? 0) * wagePerAgentPerDay;
