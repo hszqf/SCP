@@ -283,10 +283,9 @@ public class LogOverlay : MonoBehaviour
 
         foreach (string key in _logKeys)
         {
-            if (!_logDict.ContainsKey(key))
+            if (!_logDict.TryGetValue(key, out var entry))
                 continue;
 
-            var entry = _logDict[key];
             string countInfo = entry.Count > 1 ? $" (occurred {entry.Count} times)" : "";
             sb.AppendLine($"[{entry.LastTimestamp}] {entry.Type}: {entry.Message}{countInfo}");
 
