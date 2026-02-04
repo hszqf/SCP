@@ -3,6 +3,13 @@ name: Build & Deploy Unity WebGL to Pages
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Assets/**'
+      - 'Packages/**'
+      - 'ProjectSettings/**'
+      - 'UserSettings/**'
+      - 'tools/**'
+      - '.github/workflows/build-webgl.yml'
   workflow_dispatch:
 
 permissions:
@@ -80,6 +87,23 @@ jobs:
           key: Library-${{ hashFiles('Assets/**', 'ProjectSettings/**', 'Packages/manifest.json') }}
           restore-keys: |
             Library-
+
+      - name: Set up Python for table export
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install openpyxl
+        run: |
+          pip install openpyxl
+
+      - name: Validate game data
+        run: |
+          python tools/xlsx_to_json.py --validate-only --xlsx "GameData/Local/game_data.xlsx"
+
+      - name: Export game data to StreamingAssets
+        run: |
+          python tools/xlsx_to_json.py --xlsx "GameData/Local/game_data.xlsx" --out "Assets/StreamingAssets/game_data.json"
 
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
