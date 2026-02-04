@@ -46,9 +46,13 @@ public class GameController : MonoBehaviour
     {
         if (_initialized) yield break;
 
+        Debug.Log($"[Boot] Platform={Application.platform} StreamingAssetsPath={Application.streamingAssetsPath}");
+
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
             var url = $"{RemoteGameDataUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            Debug.Log($"[Boot] WebGL Remote URL: {url}");
+            
             string json = null;
             Exception error = null;
 
@@ -60,16 +64,37 @@ public class GameController : MonoBehaviour
 
             if (error != null)
             {
+                Debug.LogError($"[Boot] FAILED to load JSON: {error.Message}");
                 Debug.LogException(error);
                 yield break;
             }
 
-            DataRegistry.InitFromJson(json);
+            int jsonLen = json?.Length ?? 0;
+            string jsonHead = json != null && json.Length > 80 ? json.Substring(0, 80) : (json ?? "");
+            Debug.Log($"[Boot] JSON loaded successfully: length={jsonLen} head={jsonHead}");
+
+            try
+            {
+                DataRegistry.InitFromJson(json);
+                Debug.Log("[Boot] InitFromJson succeeded");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Boot] InitFromJson FAILED: {ex.Message}");
+                Debug.LogException(ex);
+                yield break;
+            }
+
+            Debug.Log("[Boot] Calling InitGame");
             InitGame();
+            Debug.Log("[Boot] InitGame completed");
             yield break;
         }
 
+        Debug.Log("[Boot] Non-WebGL path");
+        Debug.Log("[Boot] Calling InitGame");
         InitGame();
+        Debug.Log("[Boot] InitGame completed");
     }
 
     private void InitGame()

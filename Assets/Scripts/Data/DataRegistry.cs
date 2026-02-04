@@ -186,17 +186,22 @@ namespace Data
 
         public static IEnumerator LoadJsonTextCoroutine(string url, Action<string> onOk, Action<Exception> onErr)
         {
-            Debug.Log($"[DataRegistry] WebGL loading json: {url}");
+            Debug.Log($"[DataRegistry] Sending HTTP request to: {url}");
             using var request = UnityWebRequest.Get(url);
             yield return request.SendWebRequest();
 
+            Debug.Log($"[DataRegistry] Request completed - result={request.result} responseCode={request.responseCode} error={request.error ?? "none"}");
+
             if (request.result != UnityWebRequest.Result.Success)
             {
+                Debug.LogError($"[DataRegistry] HTTP request FAILED - code={request.responseCode} error={request.error}");
                 onErr?.Invoke(new InvalidOperationException(
-                    $"[DataRegistry] Failed to load JSON from {url}: {request.error}"));
+                    $"[DataRegistry] Failed to load JSON from {url}: code={request.responseCode} error={request.error}"));
                 yield break;
             }
 
+            int textLen = request.downloadHandler.text?.Length ?? 0;
+            Debug.Log($"[DataRegistry] HTTP request SUCCESS - text length={textLen} characters");
             onOk?.Invoke(request.downloadHandler.text);
         }
 
