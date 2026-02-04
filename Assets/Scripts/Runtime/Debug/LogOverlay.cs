@@ -27,6 +27,11 @@ public class LogOverlay : MonoBehaviour
     private GUIStyle _buttonStyle;
     private bool _stylesInitialized = false;
 
+    /// <summary>
+    /// Log entry with deduplication support.
+    /// Class (not struct) is required to enable in-place updates to Count and LastTimestamp
+    /// when the same log occurs multiple times.
+    /// </summary>
     private class LogEntry
     {
         public string Message;           // Original message (without timestamp)
@@ -65,7 +70,7 @@ public class LogOverlay : MonoBehaviour
             Debug.Log($"[LogOverlay] Display {(_isVisible ? "enabled" : "disabled")}");
         }
 #endif
-        // Keyboard input disabled when Input System is not enabled to avoid exceptions
+        // Keyboard input requires Input System package to be enabled
     }
 
     private void HandleLog(string message, string stackTrace, LogType type)
@@ -104,12 +109,11 @@ public class LogOverlay : MonoBehaviour
         
         string timestamp = DateTime.Now.ToString("HH:mm:ss");
 
-        if (_logDict.ContainsKey(key))
+        if (_logDict.TryGetValue(key, out var existingEntry))
         {
             // Update existing entry
-            var entry = _logDict[key];
-            entry.Count++;
-            entry.LastTimestamp = timestamp;
+            existingEntry.Count++;
+            existingEntry.LastTimestamp = timestamp;
             // Stack trace lines remain the same
         }
         else
