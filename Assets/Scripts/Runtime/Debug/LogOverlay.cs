@@ -65,7 +65,7 @@ public class LogOverlay : MonoBehaviour
             Debug.Log($"[LogOverlay] Display {(_isVisible ? "enabled" : "disabled")}");
         }
 #endif
-        // No keyboard input when Input System is not enabled to avoid exceptions
+        // Keyboard input disabled when Input System is not enabled to avoid exceptions
     }
 
     private void HandleLog(string message, string stackTrace, LogType type)
@@ -214,26 +214,29 @@ public class LogOverlay : MonoBehaviour
         // Draw deduplicated logs with counter
         foreach (string key in _logKeys)
         {
-            if (!_logDict.ContainsKey(key))
-                continue;
+            if (!_logDict.TryGetValue(key, out var entry))
+                continue; // Should never happen, but defensive check
                 
-            var entry = _logDict[key];
             Color color = GetColorForLogType(entry.Type);
             string colorHex = ColorUtility.ToHtmlStringRGB(color);
             
             // Format: [timestamp] message (xN if count > 1)
-            string countSuffix = entry.Count > 1 ? $" <b>(x{entry.Count})</b>" : "";
-            string displayText = $"<color=#{colorHex}>[{entry.LastTimestamp}] {entry.Message}{countSuffix}</color>";
+            string countSuffix = entry.Count > 1 ? $" (x{entry.Count})" : "";
+            string plainText = $"[{entry.LastTimestamp}] {entry.Message}{countSuffix}";
+            string displayText = $"<color=#{colorHex}>{plainText}</color>";
             
-            GUI.Label(GUILayoutUtility.GetRect(new GUIContent(entry.Message + countSuffix), _logStyle), displayText, _logStyle);
+            // Use plain text for size calculation to avoid rich text markup issues
+            GUIContent content = new GUIContent(plainText);
+            GUI.Label(GUILayoutUtility.GetRect(content, _logStyle), displayText, _logStyle);
 
             // Show stack trace lines only for Exception/Error (already limited to 1-2 lines)
             if (entry.StackTraceLines != null)
             {
                 foreach (string line in entry.StackTraceLines)
                 {
-                    string stackLine = $"<color=#ff8888>  {line}</color>";
-                    GUI.Label(GUILayoutUtility.GetRect(new GUIContent(line), _logStyle), stackLine, _logStyle);
+                    string plainStackLine = $"  {line}";
+                    string coloredStackLine = $"<color=#ff8888>{plainStackLine}</color>";
+                    GUI.Label(GUILayoutUtility.GetRect(new GUIContent(plainStackLine), _logStyle), coloredStackLine, _logStyle);
                 }
             }
         }
