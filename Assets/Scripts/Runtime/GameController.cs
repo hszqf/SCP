@@ -40,13 +40,15 @@ public class GameController : MonoBehaviour
         _rng = new System.Random(seed);
     }
 
+    private const string RemoteGameDataUrl = "https://raw.githubusercontent.com/hszqf/SCP/main/GameData/Published/game_data.json";
+
     private IEnumerator Start()
     {
         if (_initialized) yield break;
 
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
-            var url = $"{Application.streamingAssetsPath}/game_data.json";
+            var url = $"{RemoteGameDataUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
             string json = null;
             Exception error = null;
 

@@ -1,0 +1,49 @@
+name: Export Game Data
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'GameData/Local/game_data.xlsx'
+      - 'tools/xlsx_to_json.py'
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install openpyxl
+
+      - name: Validate game data
+        run: |
+          python tools/xlsx_to_json.py --validate-only --xlsx "GameData/Local/game_data.xlsx" --log-level INFO
+
+      - name: Export game data to Published
+        run: |
+          python tools/xlsx_to_json.py --xlsx "GameData/Local/game_data.xlsx" --out "GameData/Published/game_data.json" --log-level INFO --no-pretty
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code GameData/Published/game_data.json || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add GameData/Published/game_data.json
+          git commit -m "Auto-export: Update Published game_data.json"
+          git push
