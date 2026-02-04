@@ -81,7 +81,7 @@ public class GameController : MonoBehaviour
                 }
 
                 int jsonLen = json?.Length ?? 0;
-                string jsonHead = json != null && json.Length > 80 ? json.Substring(0, 80) : (json ?? "");
+                string jsonHead = json?.Length > 80 ? json.Substring(0, 80) : (json ?? "");
                 Debug.Log($"[Boot] Remote URL OK #{i + 1}: length={jsonLen} head={jsonHead}");
                 loadSuccess = true;
                 break; // Success, stop trying other URLs

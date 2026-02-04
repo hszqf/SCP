@@ -37,7 +37,10 @@ jobs:
 
       - name: Verify Published exists
         run: |
-          test -f GameData/Published/game_data.json || (echo "Missing GameData/Published/game_data.json" && exit 1)
+          if [ ! -f GameData/Published/game_data.json ]; then
+            echo "ERROR: Missing GameData/Published/game_data.json"
+            exit 1
+          fi
 
       - name: Check for changes
         id: git-check
