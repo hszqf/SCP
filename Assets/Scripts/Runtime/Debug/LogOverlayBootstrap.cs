@@ -20,9 +20,11 @@ public static class LogOverlayBootstrap
 
         // Create new GameObject with LogOverlay component
         var go = new GameObject("LogOverlay");
-        go.AddComponent<LogOverlay>();
+        var overlay = go.AddComponent<LogOverlay>();
         Object.DontDestroyOnLoad(go);
         
         Debug.Log("[LogOverlayBootstrap] LogOverlay created and initialized");
+        
+        // Note: Initial visibility is set in LogOverlay.OnEnable() based on platform and URL
     }
 }
