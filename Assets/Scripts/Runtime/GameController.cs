@@ -40,7 +40,12 @@ public class GameController : MonoBehaviour
         _rng = new System.Random(seed);
     }
 
-    private const string RemoteGameDataUrl = "https://raw.githubusercontent.com/hszqf/scp-config/main/game_data.json";
+    // Remote URLs: Primary = main branch, Fallback = copilot branch
+    private static readonly string[] RemoteGameDataUrls = new[]
+    {
+        "https://raw.githubusercontent.com/hszqf/SCP/main/GameData/Published/game_data.json",
+        "https://raw.githubusercontent.com/hszqf/SCP/copilot/GameData/Published/game_data.json"
+    };
 
     private IEnumerator Start()
     {
@@ -50,28 +55,43 @@ public class GameController : MonoBehaviour
 
         if (Application.platform == RuntimePlatform.WebGLPlayer)
         {
-            var url = $"{RemoteGameDataUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-            Debug.Log($"[Boot] WebGL Remote URL: {url}");
-            
             string json = null;
-            Exception error = null;
+            bool loadSuccess = false;
 
-            yield return DataRegistry.LoadJsonTextCoroutine(
-                url,
-                text => json = text,
-                ex => error = ex
-            );
-
-            if (error != null)
+            // Try each remote URL in order
+            for (int i = 0; i < RemoteGameDataUrls.Length; i++)
             {
-                Debug.LogError($"[Boot] FAILED to load JSON: {error.Message}");
-                Debug.LogException(error);
-                yield break;
+                var baseUrl = RemoteGameDataUrls[i];
+                var url = $"{baseUrl}?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                Debug.Log($"[Boot] Try remote URL #{i + 1}: {url}");
+                
+                Exception error = null;
+
+                yield return DataRegistry.LoadJsonTextCoroutine(
+                    url,
+                    text => json = text,
+                    ex => error = ex
+                );
+
+                if (error != null)
+                {
+                    Debug.LogError($"[Boot] Remote URL failed #{i + 1}: {error.Message}");
+                    Debug.LogException(error);
+                    continue; // Try next URL
+                }
+
+                int jsonLen = json?.Length ?? 0;
+                string jsonHead = json?.Length > 80 ? json.Substring(0, 80) : (json ?? "");
+                Debug.Log($"[Boot] Remote URL OK #{i + 1}: length={jsonLen} head={jsonHead}");
+                loadSuccess = true;
+                break; // Success, stop trying other URLs
             }
 
-            int jsonLen = json?.Length ?? 0;
-            string jsonHead = json != null && json.Length > 80 ? json.Substring(0, 80) : (json ?? "");
-            Debug.Log($"[Boot] JSON loaded successfully: length={jsonLen} head={jsonHead}");
+            if (!loadSuccess)
+            {
+                Debug.LogError("[Boot] FAILED to load JSON from all remote URLs");
+                yield break;
+            }
 
             try
             {
