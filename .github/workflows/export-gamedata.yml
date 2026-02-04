@@ -47,3 +47,34 @@ jobs:
           git add GameData/Published/game_data.json
           git commit -m "Auto-export: Update Published game_data.json"
           git push
+
+      - name: Check CONFIG_REPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.CONFIG_REPO_TOKEN }}" ]; then
+            echo "ERROR: Missing secret CONFIG_REPO_TOKEN (needs write access to hszqf/scp-config)."
+            exit 1
+          fi
+
+      - name: Checkout scp-config repo
+        uses: actions/checkout@v4
+        with:
+          repository: hszqf/scp-config
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+          path: _config_repo
+
+      - name: Copy JSON to scp-config
+        run: |
+          cp GameData/Published/game_data.json _config_repo/game_data.json
+
+      - name: Commit & push scp-config if changed
+        run: |
+          cd _config_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git status --porcelain | grep -q "game_data.json"; then
+            git add game_data.json
+            git commit -m "chore: update game_data.json"
+            git push
+          else
+            echo "No changes to scp-config."
+          fi

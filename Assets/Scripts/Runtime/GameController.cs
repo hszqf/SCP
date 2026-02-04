@@ -40,7 +40,7 @@ public class GameController : MonoBehaviour
         _rng = new System.Random(seed);
     }
 
-    private const string RemoteGameDataUrl = "https://raw.githubusercontent.com/hszqf/SCP/main/GameData/Published/game_data.json";
+    private const string RemoteGameDataUrl = "https://raw.githubusercontent.com/hszqf/scp-config/main/game_data.json";
 
     private IEnumerator Start()
     {
