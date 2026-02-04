@@ -26,6 +26,18 @@ public class LogOverlay : MonoBehaviour
     private GUIStyle _backgroundStyle;
     private GUIStyle _buttonStyle;
     private bool _stylesInitialized = false;
+    
+    // Export panel state
+    private bool _exportPanelOpen = false;
+    private Vector2 _exportScrollPosition;
+    private string _exportText = "";
+    private string _copyMessage = "";
+    private float _copyMessageEndTime = 0f;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")]
+    private static extern int SCP_CopyToClipboard(string str);
+#endif
 
     /// <summary>
     /// Log entry with deduplication support.
@@ -71,6 +83,12 @@ public class LogOverlay : MonoBehaviour
         }
 #endif
         // Keyboard input requires Input System package to be enabled
+        
+        // Clear copy message after timeout
+        if (Time.time > _copyMessageEndTime)
+        {
+            _copyMessage = "";
+        }
     }
 
     private void HandleLog(string message, string stackTrace, LogType type)
@@ -205,7 +223,38 @@ public class LogOverlay : MonoBehaviour
             CopyLogsToClipboard();
         }
         
+        // Export button
+        if (GUILayout.Button("Export", _buttonStyle, GUILayout.Height(ButtonHeight)))
+        {
+            GenerateExportText();
+            _exportPanelOpen = true;
+        }
+        
+        // Close button (only when Export panel is open)
+        if (_exportPanelOpen)
+        {
+            if (GUILayout.Button("Close", _buttonStyle, GUILayout.Height(ButtonHeight)))
+            {
+                _exportPanelOpen = false;
+            }
+        }
+        
+        // Refresh button (only when Export panel is open)
+        if (_exportPanelOpen)
+        {
+            if (GUILayout.Button("Refresh", _buttonStyle, GUILayout.Height(ButtonHeight)))
+            {
+                GenerateExportText();
+            }
+        }
+        
         GUILayout.EndHorizontal();
+        
+        // Show copy message if present
+        if (!string.IsNullOrEmpty(_copyMessage))
+        {
+            GUILayout.Label(_copyMessage, _buttonStyle);
+        }
 
         if (!_isVisible)
         {
@@ -213,46 +262,63 @@ public class LogOverlay : MonoBehaviour
             return;
         }
 
-        _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(width), GUILayout.Height(height - ButtonHeight - 10));
-
-        // Draw deduplicated logs with counter
-        foreach (string key in _logKeys)
+        // Show either the log view or export panel
+        if (_exportPanelOpen)
         {
-            if (!_logDict.TryGetValue(key, out var entry))
-                continue; // Should never happen, but defensive check
-                
-            Color color = GetColorForLogType(entry.Type);
-            string colorHex = ColorUtility.ToHtmlStringRGB(color);
+            // Export panel with scrollable textarea
+            float panelHeight = height - ButtonHeight - 40;
+            _exportScrollPosition = GUILayout.BeginScrollView(_exportScrollPosition, GUILayout.Width(width - 10), GUILayout.Height(panelHeight));
             
-            // Format: [timestamp] message (xN if count > 1)
-            string countSuffix = entry.Count > 1 ? $" (x{entry.Count})" : "";
-            string plainText = $"[{entry.LastTimestamp}] {entry.Message}{countSuffix}";
-            string displayText = $"<color=#{colorHex}>{plainText}</color>";
+            // Multi-line text area (users can long-press to select and copy)
+            GUILayout.TextArea(_exportText, GUILayout.ExpandHeight(true));
             
-            // Use plain text for size calculation to avoid rich text markup issues
-            GUIContent content = new GUIContent(plainText);
-            GUI.Label(GUILayoutUtility.GetRect(content, _logStyle), displayText, _logStyle);
+            GUILayout.EndScrollView();
+        }
+        else
+        {
+            // Normal log view
+            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(width), GUILayout.Height(height - ButtonHeight - 10));
 
-            // Show stack trace lines only for Exception/Error (already limited to 1-2 lines)
-            if (entry.StackTraceLines != null)
+            // Draw deduplicated logs with counter
+            foreach (string key in _logKeys)
             {
-                foreach (string line in entry.StackTraceLines)
+                if (!_logDict.TryGetValue(key, out var entry))
+                    continue; // Should never happen, but defensive check
+                    
+                Color color = GetColorForLogType(entry.Type);
+                string colorHex = ColorUtility.ToHtmlStringRGB(color);
+                
+                // Format: [timestamp] message (xN if count > 1)
+                string countSuffix = entry.Count > 1 ? $" (x{entry.Count})" : "";
+                string plainText = $"[{entry.LastTimestamp}] {entry.Message}{countSuffix}";
+                string displayText = $"<color=#{colorHex}>{plainText}</color>";
+                
+                // Use plain text for size calculation to avoid rich text markup issues
+                GUIContent content = new GUIContent(plainText);
+                GUI.Label(GUILayoutUtility.GetRect(content, _logStyle), displayText, _logStyle);
+
+                // Show stack trace lines only for Exception/Error (already limited to 1-2 lines)
+                if (entry.StackTraceLines != null)
                 {
-                    string plainStackLine = $"  {line}";
-                    string coloredStackLine = $"<color=#ff8888>{plainStackLine}</color>";
-                    GUI.Label(GUILayoutUtility.GetRect(new GUIContent(plainStackLine), _logStyle), coloredStackLine, _logStyle);
+                    foreach (string line in entry.StackTraceLines)
+                    {
+                        string plainStackLine = $"  {line}";
+                        string coloredStackLine = $"<color=#ff8888>{plainStackLine}</color>";
+                        GUI.Label(GUILayoutUtility.GetRect(new GUIContent(plainStackLine), _logStyle), coloredStackLine, _logStyle);
+                    }
                 }
+            }
+
+            GUILayout.EndScrollView();
+            
+            // Auto-scroll to bottom when new logs arrive
+            if (Event.current.type == EventType.Repaint)
+            {
+                _scrollPosition.y = float.MaxValue;
             }
         }
 
-        GUILayout.EndScrollView();
         GUILayout.EndArea();
-
-        // Auto-scroll to bottom when new logs arrive
-        if (Event.current.type == EventType.Repaint)
-        {
-            _scrollPosition.y = float.MaxValue;
-        }
     }
 
     private Color GetColorForLogType(LogType type)
@@ -279,6 +345,46 @@ public class LogOverlay : MonoBehaviour
             return;
         }
 
+        string text = GenerateAggregatedLogText();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // WebGL: use JS clipboard bridge
+        try
+        {
+            int result = SCP_CopyToClipboard(text);
+            if (result == 1)
+            {
+                _copyMessage = "Copied!";
+                _copyMessageEndTime = Time.time + 1.5f;
+                Debug.Log($"[LogOverlay] Copied {_logKeys.Count} log entries via WebGL clipboard");
+            }
+            else
+            {
+                _copyMessage = "Copy failed, use Export";
+                _copyMessageEndTime = Time.time + 1.5f;
+                Debug.LogWarning("[LogOverlay] WebGL clipboard failed, user should use Export");
+            }
+        }
+        catch (Exception ex)
+        {
+            _copyMessage = "Copy failed, use Export";
+            _copyMessageEndTime = Time.time + 1.5f;
+            Debug.LogWarning($"[LogOverlay] WebGL clipboard exception: {ex.Message}");
+        }
+#else
+        // Non-WebGL: use system clipboard
+        GUIUtility.systemCopyBuffer = text;
+        _copyMessage = "Copied!";
+        _copyMessageEndTime = Time.time + 1.5f;
+        Debug.Log($"[LogOverlay] Copied {_logKeys.Count} log entries to clipboard");
+#endif
+    }
+    
+    /// <summary>
+    /// Generate aggregated log text for export/copy
+    /// </summary>
+    private string GenerateAggregatedLogText()
+    {
         var sb = new StringBuilder();
         sb.AppendLine("=== LogOverlay Export ===");
         sb.AppendLine($"Exported at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
@@ -290,7 +396,7 @@ public class LogOverlay : MonoBehaviour
             if (!_logDict.TryGetValue(key, out var entry))
                 continue;
 
-            string countInfo = entry.Count > 1 ? $" (occurred {entry.Count} times)" : "";
+            string countInfo = entry.Count > 1 ? $" (x{entry.Count})" : "";
             sb.AppendLine($"[{entry.LastTimestamp}] {entry.Type}: {entry.Message}{countInfo}");
 
             if (entry.StackTraceLines != null)
@@ -303,8 +409,15 @@ public class LogOverlay : MonoBehaviour
             sb.AppendLine();
         }
 
-        GUIUtility.systemCopyBuffer = sb.ToString();
-        Debug.Log($"[LogOverlay] Copied {_logKeys.Count} log entries to clipboard");
+        return sb.ToString();
+    }
+    
+    /// <summary>
+    /// Generate text for export panel
+    /// </summary>
+    private void GenerateExportText()
+    {
+        _exportText = GenerateAggregatedLogText();
     }
 
     /// <summary>
