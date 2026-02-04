@@ -21,15 +21,21 @@ public class LogOverlay : MonoBehaviour
 
     private struct LogEntry
     {
-        public string Timestamp;
-        public string Message;
-        public string StackTrace;
+        public string FormattedLine;     // Pre-formatted: "[HH:mm:ss] message"
+        public string[] StackTraceLines; // Only for Exception/Error, max 2 lines
         public LogType Type;
     }
 
     private void OnEnable()
     {
         Application.logMessageReceived += HandleLog;
+        
+        // Default visibility: enabled only if WebGL with ?debug=1
+        if (Application.platform == RuntimePlatform.WebGLPlayer)
+        {
+            _isVisible = IsDebugModeEnabled();
+        }
+        
         Debug.Log("[LogOverlay] Enabled - press ` (backtick) to toggle display");
     }
 
@@ -59,11 +65,27 @@ public class LogOverlay : MonoBehaviour
         if (!shouldShow)
             return;
 
+        // Pre-format the log line once (don't repeat every frame)
+        string timestamp = DateTime.Now.ToString("HH:mm:ss");
+        string formattedLine = $"[{timestamp}] {message}";
+
+        // Extract stack trace lines only for Exception/Error (max 2 lines)
+        string[] stackLines = null;
+        if ((type == LogType.Exception || type == LogType.Error) && !string.IsNullOrEmpty(stackTrace))
+        {
+            string[] allLines = stackTrace.Split('\n');
+            int maxLines = Mathf.Min(allLines.Length, 2);
+            stackLines = new string[maxLines];
+            for (int i = 0; i < maxLines; i++)
+            {
+                stackLines[i] = allLines[i];
+            }
+        }
+
         var entry = new LogEntry
         {
-            Timestamp = DateTime.Now.ToString("HH:mm:ss"),
-            Message = message,
-            StackTrace = stackTrace,
+            FormattedLine = formattedLine,
+            StackTraceLines = stackLines,
             Type = type
         };
 
@@ -117,22 +139,22 @@ public class LogOverlay : MonoBehaviour
 
         _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(width), GUILayout.Height(height - 30));
 
+        // Draw line-by-line: no large string concatenation
         foreach (var entry in _logBuffer)
         {
             Color color = GetColorForLogType(entry.Type);
             string colorHex = ColorUtility.ToHtmlStringRGB(color);
-            string displayText = $"<color=#{colorHex}>[{entry.Timestamp}] {entry.Message}</color>";
+            string displayText = $"<color=#{colorHex}>{entry.FormattedLine}</color>";
             
-            GUILayout.Label(displayText, _logStyle);
+            GUI.Label(GUILayoutUtility.GetRect(new GUIContent(entry.FormattedLine), _logStyle), displayText, _logStyle);
 
-            // Show stack trace for exceptions (first few lines only)
-            if (entry.Type == LogType.Exception && !string.IsNullOrEmpty(entry.StackTrace))
+            // Show stack trace lines only for Exception/Error (already limited to 1-2 lines)
+            if (entry.StackTraceLines != null)
             {
-                string[] lines = entry.StackTrace.Split('\n');
-                int maxLines = Mathf.Min(lines.Length, 3);
-                for (int i = 0; i < maxLines; i++)
+                foreach (string line in entry.StackTraceLines)
                 {
-                    GUILayout.Label($"<color=#ff8888>  {lines[i]}</color>", _logStyle);
+                    string stackLine = $"<color=#ff8888>  {line}</color>";
+                    GUI.Label(GUILayoutUtility.GetRect(new GUIContent(line), _logStyle), stackLine, _logStyle);
                 }
             }
         }
@@ -158,6 +180,25 @@ public class LogOverlay : MonoBehaviour
             LogType.Exception => new Color(1f, 0.2f, 0.2f),
             _ => Color.white
         };
+    }
+
+    /// <summary>
+    /// Check if debug mode is enabled via URL parameter (?debug=1)
+    /// </summary>
+    private bool IsDebugModeEnabled()
+    {
+        if (Application.platform != RuntimePlatform.WebGLPlayer)
+            return true; // Non-WebGL: show by default for development
+        
+        try
+        {
+            string url = Application.absoluteURL;
+            return !string.IsNullOrEmpty(url) && url.Contains("debug=1");
+        }
+        catch
+        {
+            return false; // If absoluteURL fails, default to hidden
+        }
     }
 
     private Texture2D MakeTexture(int width, int height, Color color)
