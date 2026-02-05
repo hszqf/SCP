@@ -2000,6 +2000,16 @@ namespace Core
                 return;
             }
 
+            // Validate fact type against FactTypes table
+            var registry = Data.DataRegistry.Instance;
+            if (registry?.FactTypesById != null && !string.IsNullOrEmpty(type))
+            {
+                if (!registry.FactTypesById.ContainsKey(type))
+                {
+                    Debug.LogWarning($"[Fact] Unknown factType='{type}' not in FactTypes table. Add to GameData/Local/game_data.xlsx > FactTypes sheet to resolve this warning.");
+                }
+            }
+
             var fact = FactInstanceFactory.Create(
                 type: type,
                 day: state.Day,

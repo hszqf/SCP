@@ -113,6 +113,12 @@ namespace Data
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
         public TableRegistry Tables { get; private set; } = new();
         public List<AnomaliesGenDef> AnomaliesGen { get; private set; } = new();
+        public Dictionary<string, MediaProfileDef> MediaProfilesById { get; private set; } = new();
+        public List<MediaProfileDef> MediaProfiles { get; private set; } = new();
+        public Dictionary<string, FactTemplateDef> FactTemplatesById { get; private set; } = new();
+        public List<FactTemplateDef> FactTemplates { get; private set; } = new();
+        public Dictionary<string, string> FactTypesById { get; private set; } = new();
+        public List<string> FactTypes { get; private set; } = new();
 
         public int LocalPanicHighThreshold { get; private set; } = 6;
         public double RandomEventBaseProb { get; private set; } = 0.15d;
@@ -444,6 +450,62 @@ namespace Data
             LogGroupIndexSummary("EventOptions", "eventDefId", OptionsByEventId);
             LogGroupIndexSummary("EffectOps", "effectId", EffectOpsByEffectId);
 
+            // Load MediaProfiles
+            MediaProfilesById = new Dictionary<string, MediaProfileDef>();
+            MediaProfiles = new List<MediaProfileDef>();
+            foreach (var row in Tables.GetRows("MediaProfiles"))
+            {
+                var profileId = GetRowString(row, "profileId");
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    Debug.LogWarning("[DataRegistry] MediaProfiles: Skipping row with empty profileId");
+                    continue;
+                }
+                var profile = new MediaProfileDef
+                {
+                    profileId = profileId,
+                    name = GetRowString(row, "name"),
+                    tone = GetRowString(row, "tone"),
+                    weight = GetRowInt(row, "weight", 1),
+                };
+                MediaProfilesById[profileId] = profile;
+                MediaProfiles.Add(profile);
+            }
+
+            // Load FactTemplates
+            FactTemplatesById = new Dictionary<string, FactTemplateDef>();
+            FactTemplates = new List<FactTemplateDef>();
+            foreach (var row in Tables.GetRows("FactTemplates"))
+            {
+                var templateId = GetRowString(row, "templateId");
+                if (string.IsNullOrEmpty(templateId))
+                {
+                    Debug.LogWarning("[DataRegistry] FactTemplates: Skipping row with empty templateId");
+                    continue;
+                }
+                var template = new FactTemplateDef
+                {
+                    factType = GetRowString(row, "factType"),
+                    mediaProfileId = GetRowString(row, "mediaProfileId"),
+                    severityMin = GetRowInt(row, "severityMin", 1),
+                    severityMax = GetRowInt(row, "severityMax", 5),
+                };
+                FactTemplatesById[templateId] = template;
+                FactTemplates.Add(template);
+            }
+
+            // Load FactTypes
+            FactTypesById = new Dictionary<string, string>();
+            FactTypes = new List<string>();
+            foreach (var row in Tables.GetRows("FactTypes"))
+            {
+                var typeId = GetRowString(row, "typeId");
+                if (string.IsNullOrEmpty(typeId)) continue;
+                var description = GetRowString(row, "description");
+                FactTypesById[typeId] = description;
+                FactTypes.Add(typeId);
+            }
+
             LocalPanicHighThreshold = GetBalanceInt("LocalPanicHighThreshold", LocalPanicHighThreshold);
             RandomEventBaseProb = GetBalanceFloat("RandomEventBaseProb", (float)RandomEventBaseProb);
             DefaultAutoResolveAfterDays = GetBalanceInt("DefaultAutoResolveAfterDays", DefaultAutoResolveAfterDays);
@@ -469,8 +531,12 @@ namespace Data
             int newsCount = GetTableRowCountWithWarn("NewsDefs");
             int effectsCount = GetTableRowCountWithWarn("Effects");
             int opsCount = GetTableRowCountWithWarn("EffectOps");
+            int mediaProfilesCount = MediaProfiles?.Count ?? 0;
+            int factTemplatesCount = FactTemplates?.Count ?? 0;
+            int factTypesCount = FactTypes?.Count ?? 0;
 
             Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} news={newsCount} effects={effectsCount} ops={opsCount}");
+            Debug.Log($"[Data] mediaProfiles={mediaProfilesCount} factTemplates={factTemplatesCount} factTypes={factTypesCount}");
         }
 
         private void LogTablesSanity()

@@ -53,8 +53,23 @@ namespace Core
         {
             if (fact == null) return null;
 
-            // Get default media profiles (hardcoded for now, can be moved to JSON later)
-            var mediaProfiles = GetDefaultMediaProfiles();
+            // Get media profiles from registry with fallback to hardcoded defaults
+            var mediaProfiles = (registry.MediaProfiles != null && registry.MediaProfiles.Count > 0)
+                ? registry.MediaProfiles 
+                : GetDefaultMediaProfiles();
+            
+            if (mediaProfiles == null || mediaProfiles.Count == 0)
+            {
+                Debug.LogWarning("[FactNews] No media profiles available (registry or defaults)");
+                return null;
+            }
+            
+            // Log fallback usage
+            if (registry.MediaProfiles == null || registry.MediaProfiles.Count == 0)
+            {
+                Debug.LogWarning("[FactNews] MediaProfiles table is empty, using hardcoded fallback");
+            }
+            
             var profile = SelectMediaProfile(mediaProfiles, fact);
             
             // Generate title and description using templates
@@ -87,8 +102,8 @@ namespace Core
         }
 
         /// <summary>
-        /// Get default media profiles (hardcoded for now).
-        /// Can be moved to JSON/DataRegistry later.
+        /// Get default media profiles (fallback when table is empty).
+        /// Normally loaded from MediaProfiles table via DataRegistry.
         /// </summary>
         private static List<MediaProfileDef> GetDefaultMediaProfiles()
         {
