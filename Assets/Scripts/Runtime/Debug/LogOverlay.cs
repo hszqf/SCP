@@ -103,6 +103,10 @@ public class LogOverlay : MonoBehaviour
         if (!shouldShow)
             return;
 
+        // Strip non-ASCII characters to diagnose WebGL tofu issue
+        message = StripNonAscii(message);
+        stackTrace = StripNonAscii(stackTrace);
+
         // Extract first line of stack trace for deduplication key
         string stackFirstLine = "";
         string[] stackLines = null;
@@ -170,7 +174,7 @@ public class LogOverlay : MonoBehaviour
         {
             fontSize = FontSize,
             wordWrap = false,
-            richText = true,
+            richText = false, // Temporarily disabled to diagnose WebGL tofu issue
             normal = { textColor = Color.white }
         };
 
@@ -191,10 +195,13 @@ public class LogOverlay : MonoBehaviour
 
     private void OnGUI()
     {
+        InitializeStyles();
+
+        // ASCII self-check: Always visible at top-left to verify overlay rendering
+        GUI.Label(new Rect(10, 10, 400, 30), $"OVERLAY_OK entries={_logDict.Count}", _logStyle);
+
         if (_logDict.Count == 0)
             return;
-
-        InitializeStyles();
 
         // Position overlay in top-right area to avoid HUD panels
         float width = Mathf.Min(Screen.width * 0.4f, 600f);
@@ -286,16 +293,12 @@ public class LogOverlay : MonoBehaviour
                 if (!_logDict.TryGetValue(key, out var entry))
                     continue; // Should never happen, but defensive check
                     
-                Color color = GetColorForLogType(entry.Type);
-                string colorHex = ColorUtility.ToHtmlStringRGB(color);
-                
                 // Format: [timestamp] message (xN if count > 1)
                 string countSuffix = entry.Count > 1 ? $" (x{entry.Count})" : "";
-                string plainText = $"[{entry.LastTimestamp}] {entry.Message}{countSuffix}";
-                string displayText = $"<color=#{colorHex}>{plainText}</color>";
+                string displayText = $"[{entry.LastTimestamp}] {entry.Message}{countSuffix}";
                 
-                // Use plain text for size calculation to avoid rich text markup issues
-                GUIContent content = new GUIContent(plainText);
+                // Use plain text without rich text markup (richText is disabled)
+                GUIContent content = new GUIContent(displayText);
                 GUI.Label(GUILayoutUtility.GetRect(content, _logStyle), displayText, _logStyle);
 
                 // Show stack trace lines only for Exception/Error (already limited to 1-2 lines)
@@ -303,9 +306,8 @@ public class LogOverlay : MonoBehaviour
                 {
                     foreach (string line in entry.StackTraceLines)
                     {
-                        string plainStackLine = $"  {line}";
-                        string coloredStackLine = $"<color=#ff8888>{plainStackLine}</color>";
-                        GUI.Label(GUILayoutUtility.GetRect(new GUIContent(plainStackLine), _logStyle), coloredStackLine, _logStyle);
+                        string stackLine = $"  {line}";
+                        GUI.Label(GUILayoutUtility.GetRect(new GUIContent(stackLine), _logStyle), stackLine, _logStyle);
                     }
                 }
             }
@@ -450,5 +452,26 @@ public class LogOverlay : MonoBehaviour
         texture.SetPixels(pixels);
         texture.Apply();
         return texture;
+    }
+
+    /// <summary>
+    /// Strip non-ASCII characters to diagnose WebGL text rendering issues (tofu blocks).
+    /// Replaces characters > 127 with '?' to ensure only ASCII is displayed.
+    /// </summary>
+    private string StripNonAscii(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var sb = new StringBuilder(input.Length);
+        foreach (char c in input)
+        {
+            // Keep only ASCII characters (0-127)
+            if (c <= 127)
+                sb.Append(c);
+            else
+                sb.Append('?'); // Replace non-ASCII with '?'
+        }
+        return sb.ToString();
     }
 }
