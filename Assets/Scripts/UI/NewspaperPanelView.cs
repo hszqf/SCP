@@ -37,23 +37,18 @@ namespace UI
 
             Core.NewsGenerator.EnsureBootstrapNews(state, data);
             
-            // Filter news to only show current day's news
-            var currentDayNews = state.NewsLog?.Where(n => n != null && n.Day == state.Day).ToList() ?? new List<Core.NewsInstance>();
+            // Filter news to only show current day's news and build pool directly
+            var pool = state.NewsLog?
+                .Where(n => n != null && n.Day == state.Day)
+                .ToList() ?? new List<Core.NewsInstance>();
             
-            Debug.Log($"[NewsUI] Open day={state.Day} totalNews={state.NewsLog?.Count ?? 0} currentDayNews={currentDayNews.Count}");
-            Debug.Log($"[Newspaper] render day={state.Day} items={currentDayNews.Count}");
+            Debug.Log($"[NewsUI] Open day={state.Day} totalNews={state.NewsLog?.Count ?? 0} currentDayNews={pool.Count}");
 
             var titleTmp = FindTMP("Window/Header/TitleTMP");
             if (titleTmp != null) titleTmp.text = "基金会晨报";
 
             var dayTmp = FindTMP("Window/Header/DayTMP");
             if (dayTmp != null) dayTmp.text = $"Day{state.Day}";
-
-            var pool = new List<Core.NewsInstance>();
-            for (int i = 0; i < currentDayNews.Count; i++)
-            {
-                if (currentDayNews[i] != null) pool.Add(currentDayNews[i]);
-            }
 
             var global = FindByKeyword(pool, "GLOBAL");
             var node = FindByKeyword(pool, "NODE");
