@@ -17,11 +17,12 @@ namespace Core
         }
         public string CauseType;
         public int AgeDays;
+        public int Day; // The day this news was created
     }
 
     public static class NewsInstanceFactory
     {
-        public static NewsInstance Create(string newsDefId, string nodeId, string sourceAnomalyId, string causeType)
+        public static NewsInstance Create(string newsDefId, string nodeId, string sourceAnomalyId, string causeType, int day = 1)
         {
             return new NewsInstance
             {
@@ -31,6 +32,7 @@ namespace Core
                 SourceAnomalyId = sourceAnomalyId,
                 CauseType = causeType,
                 AgeDays = 0,
+                Day = day,
             };
         }
     }
