@@ -105,6 +105,14 @@ jobs:
         run: |
           python tools/xlsx_to_json.py --xlsx "GameData/Local/game_data.xlsx" --out "Assets/StreamingAssets/game_data.json"
 
+      - name: Debug dirty status (after export)
+        run: |
+          echo "=== git status --porcelain ==="
+          git status --porcelain || true
+          echo "=== git diff --name-only ==="
+          git diff --name-only || true
+          echo "=== Note: StreamingAssets changes are expected and will be included in build ==="
+
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
         env:
