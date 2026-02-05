@@ -4814,6 +4814,1686 @@
           "limitNum": 1,
           "title": "都市传闻：黑暗中有人“点名”你的名字",
           "desc": "多名目击者称在夜间听到低语与重复的编号。真实性未知，但具备异常特征——可作为低成本调查线索。"
+        },
+        {
+          "newsDefId": "NEWS_W001",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "城市日报头条：失踪案激增",
+          "desc": "警方接到12起失踪报告，均在午夜后消失，监控录像显示部分人员走向无人区后信号中断。"
+        },
+        {
+          "newsDefId": "NEWS_W002",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "社交媒体热搜：梦境重复",
+          "desc": "网友反映连续3晚梦到相同场景，具体细节一致，涉及编号、白色走廊与铁门声。"
+        },
+        {
+          "newsDefId": "NEWS_W003",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "晚报副刊：地铁乘客集体晕厥",
+          "desc": "6号线列车上7人同时昏迷，送医后无异常指标，自述\"听到低频嗡鸣\"。"
+        },
+        {
+          "newsDefId": "NEWS_W004",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "电视新闻：公园水池变色",
+          "desc": "某社区公园水池在72小时内由清澈转为深紫色，水质检测报告显示\"未知有机物\"。"
+        },
+        {
+          "newsDefId": "NEWS_W005",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "网络论坛：街灯集体闪烁",
+          "desc": "市民拍摄到某街区所有路灯以每秒1次频率闪烁，持续40分钟后恢复正常。"
+        },
+        {
+          "newsDefId": "NEWS_W006",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "都市快讯：流浪猫集体消失",
+          "desc": "某区域内登记的37只流浪猫在同一夜间全部失踪，现场无打斗痕迹。"
+        },
+        {
+          "newsDefId": "NEWS_W007",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "地方报纸：深夜电话异常",
+          "desc": "多户居民报告凌晨3点接到无声电话，来电显示为\"本机号码\"。"
+        },
+        {
+          "newsDefId": "NEWS_W008",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "媒体播报：书店书籍自行摆放",
+          "desc": "店主监控显示书架上图书在无人时段自行归位，摆放顺序符合ISBN编码。"
+        },
+        {
+          "newsDefId": "NEWS_W009",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "社区公告：电梯楼层显示错误",
+          "desc": "住宅楼电梯频繁显示\"负13层\"，按键无反应，维修人员确认无此楼层。"
+        },
+        {
+          "newsDefId": "NEWS_W010",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "晨报简讯：候车厅时钟倒转",
+          "desc": "火车站候车大厅时钟在23:59后显示00:00，随后倒转至23:58运行。"
+        },
+        {
+          "newsDefId": "NEWS_W011",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "调查报道：医院记录出现矛盾",
+          "desc": "审计发现某医院病历系统中同一患者在不同科室同时就诊，地理位置相距120公里。"
+        },
+        {
+          "newsDefId": "NEWS_W012",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "晚间新闻：市政监控大面积失效",
+          "desc": "市中心30%摄像头在同一时段记录到雪花画面，数据恢复显示\"文件格式未知\"。"
+        },
+        {
+          "newsDefId": "NEWS_W013",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "媒体专题：民众恐慌情绪上升",
+          "desc": "民调显示42%受访者表示\"感到不安全\"，相关话题搜索量激增370%。"
+        },
+        {
+          "newsDefId": "NEWS_W014",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "政府声明：加强公共安全措施",
+          "desc": "市政府宣布扩大夜间巡逻范围，部分区域实施临时管制，未提及具体原因。"
+        },
+        {
+          "newsDefId": "NEWS_W015",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "网络传闻：神秘组织目击增加",
+          "desc": "匿名用户声称看到穿制服人员在事发现场采集样本，车辆无明显标识。"
+        },
+        {
+          "newsDefId": "NEWS_W016",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "独立调查：失踪人员关联分析",
+          "desc": "数据显示失踪者中67%曾访问过同一地点，位置信息显示为\"已废弃建筑群\"。"
+        },
+        {
+          "newsDefId": "NEWS_W017",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "官方通告：部分区域施工封闭",
+          "desc": "市政部门封锁3条街道进行\"紧急管线维护\"，工期不定，现场设有高围栏。"
+        },
+        {
+          "newsDefId": "NEWS_W018",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "舆论焦点：专家无法解释现象",
+          "desc": "物理学教授公开表示\"现有理论无法覆盖观测数据\"，建议暂停相关区域活动。"
+        },
+        {
+          "newsDefId": "NEWS_W019",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "紧急通知：血库储备告急",
+          "desc": "市血液中心呼吁献血，消耗速度超出常规3倍，未披露具体用途。"
+        },
+        {
+          "newsDefId": "NEWS_W020",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "深度报道：企业员工集体请假",
+          "desc": "某科技园区公司出现异常离职潮，员工自述\"工作环境不适\"，人事部门拒绝回应。"
+        },
+        {
+          "newsDefId": "NEWS_W021",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "紧急广播：多区域实施宵禁",
+          "desc": "政府宣布自今晚起对5个行政区实施22:00-06:00宵禁，违者强制送返。"
+        },
+        {
+          "newsDefId": "NEWS_W022",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "突发新闻：军方接管交通枢纽",
+          "desc": "机场、火车站由武装部队接管，民航暂停非必要航班，官方称\"预防性措施\"。"
+        },
+        {
+          "newsDefId": "NEWS_W023",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "特别报道：医疗系统超负荷运转",
+          "desc": "急诊科接诊量超过设计容量240%，大量病例症状描述\"与已知病理不符\"。"
+        },
+        {
+          "newsDefId": "NEWS_W024",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "政府声明：启动应急预案",
+          "desc": "国家安全部门激活\"特殊响应机制\"，授权部分机构采取\"非常规手段\"。"
+        },
+        {
+          "newsDefId": "NEWS_W025",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "媒体管制：部分新闻渠道关闭",
+          "desc": "5家媒体因\"传播未经证实信息\"被暂停营业，社交平台启动关键词过滤。"
+        },
+        {
+          "newsDefId": "NEWS_W026",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "目击报告：城市边缘出现隔离带",
+          "desc": "卫星图像显示郊区建立长达20公里的围栏，配备照明塔与巡逻车辆。"
+        },
+        {
+          "newsDefId": "NEWS_W027",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "内部消息：关键人员失联",
+          "desc": "多名高级官员与科研人员行踪不明，政府发言人称\"参与机密项目\"。"
+        },
+        {
+          "newsDefId": "NEWS_W028",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "社会动荡：民众囤积物资",
+          "desc": "超市货架被抢购一空，政府宣布实施配给制，限制每户采购量。"
+        },
+        {
+          "newsDefId": "NEWS_W029",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "国际关注：外国使馆撤离",
+          "desc": "7个国家使馆建议本国公民尽快离境，民航公司增开撤离航班。"
+        },
+        {
+          "newsDefId": "NEWS_W030",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "突发事件：通信网络间歇中断",
+          "desc": "移动网络与互联网出现周期性断连，每次持续15-30分钟，运营商未作说明。"
+        },
+        {
+          "newsDefId": "NEWS_W031",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "科技新闻：AI聊天记录异常",
+          "desc": "多个聊天机器人同时输出乱码，解析后显示古老语言文字，开发商紧急下线服务。"
+        },
+        {
+          "newsDefId": "NEWS_W032",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "气象播报：局部区域雨水倒流",
+          "desc": "某小区雨水从地面向天空运动，持续8分钟后恢复正常，气象局称\"仪器故障\"。"
+        },
+        {
+          "newsDefId": "NEWS_W033",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "社区通告：宠物行为异常",
+          "desc": "居民反映犬类集体朝向同一方位吠叫，持续3小时，方位指向市郊荒地。"
+        },
+        {
+          "newsDefId": "NEWS_W034",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "教育新闻：学生集体迟到",
+          "desc": "某中学137名学生同时迟到15分钟，自述\"手表同步停滞\"，但校内时钟正常。"
+        },
+        {
+          "newsDefId": "NEWS_W035",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "交通简讯：隧道回声延迟异常",
+          "desc": "司机报告隧道内鸣笛后回声延迟达17秒，声学专家认为\"物理结构不支持此现象\"。"
+        },
+        {
+          "newsDefId": "NEWS_W036",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "民生热点：自来水出现金属味",
+          "desc": "3个街区自来水呈现金属味道，检测报告显示铁含量超标500%，管道检查未发现问题。"
+        },
+        {
+          "newsDefId": "NEWS_W037",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "市政通报：下水道传出机械音",
+          "desc": "维修工报告地下传出规律性机械声，频率每分钟60次，声源定位失败。"
+        },
+        {
+          "newsDefId": "NEWS_W038",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "医疗通告：献血者血型变化",
+          "desc": "血站发现12名献血者血型与历史记录不符，二次检测结果一致，排除人为错误。"
+        },
+        {
+          "newsDefId": "NEWS_W039",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "文化新闻：图书馆古籍自燃",
+          "desc": "特藏室3本古籍在恒温环境下自燃，消防部门排除外部火源，温度记录显示恒定18°C。"
+        },
+        {
+          "newsDefId": "NEWS_W040",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "科研快讯：粒子对撞数据异常",
+          "desc": "实验室报告加速器产生\"不应存在\"的粒子轨迹，数据重复验证后暂停实验。"
+        },
+        {
+          "newsDefId": "NEWS_W041",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "战时状态：征召预备役人员",
+          "desc": "国防部发布征召令，要求18-45岁符合条件人员待命，未说明具体任务。"
+        },
+        {
+          "newsDefId": "NEWS_W042",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "全面管制：禁止拍摄特定区域",
+          "desc": "法令禁止拍摄、传播15个指定区域影像，违者面临刑事指控。"
+        },
+        {
+          "newsDefId": "NEWS_W043",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "社会混乱：抢劫事件激增",
+          "desc": "治安案件数量暴涨，警力不足，部分区域由民兵组织维持秩序。"
+        },
+        {
+          "newsDefId": "NEWS_W044",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "心理健康：集体恐慌症状蔓延",
+          "desc": "精神科门诊爆满，大量患者出现\"幻听、被监视感、记忆混乱\"症状。"
+        },
+        {
+          "newsDefId": "NEWS_W045",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "基础设施：电力配给制度",
+          "desc": "发电厂产能下降，实施分区轮流停电，每日供电8小时。"
+        },
+        {
+          "newsDefId": "NEWS_W046",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "经济崩溃：货币贬值失控",
+          "desc": "通货膨胀率达到每日5%，政府冻结价格但黑市交易猖獗。"
+        },
+        {
+          "newsDefId": "NEWS_W047",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "人口流动：城市出现逃离潮",
+          "desc": "高速公路拥堵严重，城市人口一周内减少23%，边境站实施管制。"
+        },
+        {
+          "newsDefId": "NEWS_W048",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "信息封锁：国际通信中断",
+          "desc": "卫星与海底光缆连接中断，国际长途电话无法拨通，邮件延迟超过72小时。"
+        },
+        {
+          "newsDefId": "NEWS_W049",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "军事部署：装甲车队进驻城区",
+          "desc": "街道出现坦克与装甲运兵车，军方宣布\"维稳行动\"，戒严时间不定。"
+        },
+        {
+          "newsDefId": "NEWS_W050",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "最终警告：政府发布疏散指令",
+          "desc": "部分居民区被强制疏散，民众被转移至\"安全营地\"，禁止擅自返回。"
+        },
+        {
+          "newsDefId": "NEWS_S001",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "站点简报：新干员入职培训",
+          "desc": "本周迎接7名新干员，完成基础安保与异常识别培训，分配至3个辖区。"
+        },
+        {
+          "newsDefId": "NEWS_S002",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "后勤通知：物资补给延迟",
+          "desc": "因运输路线调整，下批医疗用品延迟3天到达，各站点提前规划库存。"
+        },
+        {
+          "newsDefId": "NEWS_S003",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "演习公告：收容失效模拟",
+          "desc": "下周三进行代号\"暗箱\"演习，模拟Euclid级收容失效，所有人员准时到岗。"
+        },
+        {
+          "newsDefId": "NEWS_S004",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "人事变动：站点主管调任",
+          "desc": "D区主管调往外站支援，副主管接任职务，人员交接在48小时内完成。"
+        },
+        {
+          "newsDefId": "NEWS_S005",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "技术维护：监控系统升级",
+          "desc": "网络部门对全站监控系统进行升级，预计停机6小时，期间加派人工巡逻。"
+        },
+        {
+          "newsDefId": "NEWS_S006",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "安全提醒：内部通信加密",
+          "desc": "信息安全部要求所有通讯使用新加密协议，旧设备将在72小时后停用。"
+        },
+        {
+          "newsDefId": "NEWS_S007",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "福利通告：员工体检安排",
+          "desc": "医务室安排年度体检，重点检查辐射暴露与心理状态，按部门分批进行。"
+        },
+        {
+          "newsDefId": "NEWS_S008",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "后勤日志：收容室清洁完成",
+          "desc": "3号收容单元完成深度消毒，残留物检测合格，明日恢复正常使用。"
+        },
+        {
+          "newsDefId": "NEWS_S009",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "培训通知：应急撤离路线",
+          "desc": "新版疏散图已分发，新增2条逃生通道，要求全员熟记路线与集合点。"
+        },
+        {
+          "newsDefId": "NEWS_S010",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "招募信息：技术岗位空缺",
+          "desc": "研发部门招聘数据分析师2名，要求心理评估A级以上，保密协议强制签署。"
+        },
+        {
+          "newsDefId": "NEWS_S011",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "紧急会议：收容协议修订",
+          "desc": "管理层召开紧急会议，对17项收容协议进行修订，新版本将在24小时内生效。"
+        },
+        {
+          "newsDefId": "NEWS_S012",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "站点封锁：部分区域禁入",
+          "desc": "B区因异常活动升级封锁至二级，非授权人员禁止进入，违者记过处分。"
+        },
+        {
+          "newsDefId": "NEWS_S013",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "审计报告：资源消耗异常",
+          "desc": "财务部发现上月物资消耗超过预算40%，启动内部调查，要求各部门配合。"
+        },
+        {
+          "newsDefId": "NEWS_S014",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "通信故障：外部联络中断",
+          "desc": "卫星通讯系统出现故障，与总部联络中断8小时，技术组正在抢修。"
+        },
+        {
+          "newsDefId": "NEWS_S015",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "人员调配：支援外站任务",
+          "desc": "抽调15名干员前往外站支援，预计任务周期2周，家属联络由人事部协调。"
+        },
+        {
+          "newsDefId": "NEWS_S016",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "安全警报：未授权访问记录",
+          "desc": "系统检测到3次未授权登录尝试，源IP地址位于站点内部，安保部门介入调查。"
+        },
+        {
+          "newsDefId": "NEWS_S017",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "设备损耗：收容单元故障",
+          "desc": "7号收容单元电磁锁失效，临时使用机械锁替代，维修零件预计3天后到货。"
+        },
+        {
+          "newsDefId": "NEWS_S018",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "心理评估：干员压力激增",
+          "desc": "心理科报告显示32%干员出现焦虑症状，建议增加休息时间与心理辅导。"
+        },
+        {
+          "newsDefId": "NEWS_S019",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "预算削减：非必要开支冻结",
+          "desc": "总部通知削减15%运营预算，非紧急采购暂停，优先保障收容与安保。"
+        },
+        {
+          "newsDefId": "NEWS_S020",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "异常报告：监控画面空白",
+          "desc": "监控录像中出现连续27秒空白帧，传感器数据正常，技术部门无法解释。"
+        },
+        {
+          "newsDefId": "NEWS_S021",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "紧急动员：全员取消休假",
+          "desc": "站点进入一级响应状态，所有休假取消，人员24小时待命。"
+        },
+        {
+          "newsDefId": "NEWS_S022",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "全面封锁：站点进入隔离模式",
+          "desc": "所有出入口封闭，人员禁止进出，物资由无人机投送，隔离期限待定。"
+        },
+        {
+          "newsDefId": "NEWS_S023",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "收容危机：多个单元同时告警",
+          "desc": "6个收容单元同时触发警报，安保力量分散，部分区域依赖自动系统。"
+        },
+        {
+          "newsDefId": "NEWS_S024",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "总部指令：启动应急协议",
+          "desc": "收到总部加密指令，启动代号\"最终防线\"协议，细节仅管理层知晓。"
+        },
+        {
+          "newsDefId": "NEWS_S025",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "人员伤亡：行动中2名干员失联",
+          "desc": "外勤任务中失去2名干员信号，搜救队已派出，现场发现疑似异常活动。"
+        },
+        {
+          "newsDefId": "NEWS_S026",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "设施崩溃：主电力系统过载",
+          "desc": "主发电机组超负荷运行，备用系统已启动，核心设施优先供电。"
+        },
+        {
+          "newsDefId": "NEWS_S027",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "道德困境：执行记忆删除指令",
+          "desc": "管理层批准对部分干员执行记忆删除，防止信息泄露，心理科反对但无效。"
+        },
+        {
+          "newsDefId": "NEWS_S028",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "外部压力：政府机构介入",
+          "desc": "不明政府部门要求访问站点，总部指示\"保持合作但限制信息\"。"
+        },
+        {
+          "newsDefId": "NEWS_S029",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "内部叛逃：安保人员叛变",
+          "desc": "3名安保人员携带机密文件叛逃，追捕行动进行中，站点进入反间谍模式。"
+        },
+        {
+          "newsDefId": "NEWS_S030",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "最终准备：销毁敏感资料",
+          "desc": "接到销毁指令，所有纸质档案与非核心数据库将在12小时内清除。"
+        },
+        {
+          "newsDefId": "NEWS_A001",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "数据异常：身份证号重复出现",
+          "desc": "人口数据库检测到17个身份证号重复使用，但持有人照片与资料完全不同。"
+        },
+        {
+          "newsDefId": "NEWS_A002",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "监控故障：连续空帧记录",
+          "desc": "某区域监控在凌晨2:00-2:15产生连续空白帧，传感器显示无设备故障。"
+        },
+        {
+          "newsDefId": "NEWS_A003",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "集体梦境：相同梦境报告",
+          "desc": "网络论坛上437人描述相同梦境，涉及白色房间、数字倒计时与金属门。"
+        },
+        {
+          "newsDefId": "NEWS_A004",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "统计怪异：人口普查数据自洽",
+          "desc": "三次独立人口统计数据完全一致，精确到小数点后6位，统计学家认为\"不可能\"。"
+        },
+        {
+          "newsDefId": "NEWS_A005",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "时间异常：GPS时间戳错误",
+          "desc": "卫星定位系统在某区域显示时间回退3分钟，但其他时间源正常。"
+        },
+        {
+          "newsDefId": "NEWS_A006",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "声学怪象：回声来自未来",
+          "desc": "实验室录音发现回声比声源提前0.7秒出现，重复实验结果一致。"
+        },
+        {
+          "newsDefId": "NEWS_A007",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "生物异常：鸟类绕行特定区域",
+          "desc": "候鸟迁徙路线出现半径2公里空白圆形，飞鸟绕行但不进入该区域。"
+        },
+        {
+          "newsDefId": "NEWS_A008",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "温度反常：局部区域恒温",
+          "desc": "某街区温度恒定在17.3°C，不受天气影响，红外成像显示\"温度墙\"。"
+        },
+        {
+          "newsDefId": "NEWS_A009",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "电磁干扰：指南针失效",
+          "desc": "某公园内所有指南针同时指向东偏南15°，离开区域后恢复正常。"
+        },
+        {
+          "newsDefId": "NEWS_A010",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "光学现象：影子不随光源",
+          "desc": "路灯下行人影子方向与光源不符，多角度拍摄验证，物理学家无解。"
+        },
+        {
+          "newsDefId": "NEWS_A011",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "语言异常：方言突然传播",
+          "desc": "某地出现\"未知方言\"，120人声称\"突然听懂\"，语言学家无法归类。"
+        },
+        {
+          "newsDefId": "NEWS_A012",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "记忆错乱：集体记忆矛盾",
+          "desc": "300人记忆中某建筑为红色，但照片与档案显示一直是蓝色。"
+        },
+        {
+          "newsDefId": "NEWS_A013",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 5,
+          "p": 0.3,
+          "minDay": 1,
+          "maxDay": 80,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "数字诡异：彩票号码重复",
+          "desc": "连续3期彩票出现相同号码组合，概率计算显示可能性为10^-27。"
+        },
+        {
+          "newsDefId": "NEWS_A014",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "广域异常：区域时间减速",
+          "desc": "某街区时钟运行速度为正常98.3%，居民自述\"时间流逝感变慢\"。"
+        },
+        {
+          "newsDefId": "NEWS_A015",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "空间扭曲：距离测量矛盾",
+          "desc": "同一路段GPS显示800米，实地测量为650米，重复验证数据稳定。"
+        },
+        {
+          "newsDefId": "NEWS_A016",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "生理怪象：血型集体转变",
+          "desc": "医院发现27名患者血型在一周内转变，基因检测显示\"未知标记\"。"
+        },
+        {
+          "newsDefId": "NEWS_A017",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "感知异常：颜色识别错误",
+          "desc": "84人声称某颜色\"看起来不对\"，色谱仪显示波长正常，但主观感受一致异常。"
+        },
+        {
+          "newsDefId": "NEWS_A018",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "重力反常：物体悬浮时段",
+          "desc": "监控拍摄到办公室文具悬浮12秒后落下，加速度传感器数据缺失。"
+        },
+        {
+          "newsDefId": "NEWS_A019",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "通信诡异：接收未发送的信息",
+          "desc": "73人收到\"自己发出\"的消息，但发送记录不存在，内容涉及\"警告与坐标\"。"
+        },
+        {
+          "newsDefId": "NEWS_A020",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "认知失调：地标建筑消失",
+          "desc": "市民发现地标建筑\"从未存在\"，但照片与记忆中清晰可见，地图无该建筑。"
+        },
+        {
+          "newsDefId": "NEWS_A021",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "生态异常：植物逆向生长",
+          "desc": "公园树木年轮由外向内生长，碳-14测年显示\"时间倒置\"。"
+        },
+        {
+          "newsDefId": "NEWS_A022",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "物理违规：液体逆流",
+          "desc": "水龙头关闭后水流继续向上流动3秒，重复实验成功率100%。"
+        },
+        {
+          "newsDefId": "NEWS_A023",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "能量异常：电池无限充电",
+          "desc": "某品牌手机电池充电后始终显示100%，连续使用72小时未降低。"
+        },
+        {
+          "newsDefId": "NEWS_A024",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "精神传染：情绪同步现象",
+          "desc": "办公楼内200人同时出现悲伤情绪，持续20分钟后消失，无外部刺激。"
+        },
+        {
+          "newsDefId": "NEWS_A025",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "音频怪异：录音播放变速",
+          "desc": "同一录音文件在不同设备播放速度不同，但时长显示一致。"
+        },
+        {
+          "newsDefId": "NEWS_A026",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 8,
+          "p": 0.4,
+          "minDay": 81,
+          "maxDay": 220,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "视觉错乱：镜像反射延迟",
+          "desc": "镜子中影像延迟2秒出现，但光速测量正常，光学仪器无法解释。"
+        },
+        {
+          "newsDefId": "NEWS_A027",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "现实崩塌：物体相位重叠",
+          "desc": "目击者拍摄到两个物体占据同一空间，触摸时\"手穿过一个但碰到另一个\"。"
+        },
+        {
+          "newsDefId": "NEWS_A028",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "时空裂缝：行人凭空消失",
+          "desc": "监控显示行人在街道中央突然消失，无闪光无声音，消失前无异常行为。"
+        },
+        {
+          "newsDefId": "NEWS_A029",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "因果倒置：结果先于原因",
+          "desc": "车祸现场先出现损坏痕迹，3秒后车辆才到达并发生碰撞。"
+        },
+        {
+          "newsDefId": "NEWS_A030",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "集体幻觉：虚假建筑出现",
+          "desc": "1400人声称看到\"不存在的摩天楼\"，描述细节一致，但无照片记录。"
+        },
+        {
+          "newsDefId": "NEWS_A031",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "量子纠缠：物品同步移动",
+          "desc": "两个相距20公里的物体同步移动，角度与速度完全一致，无物理连接。"
+        },
+        {
+          "newsDefId": "NEWS_A032",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "意识入侵：集体思维同步",
+          "desc": "37人同时产生\"不属于自己\"的想法，内容相同，涉及坐标与指令。"
+        },
+        {
+          "newsDefId": "NEWS_A033",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "维度泄露：二维影像突现",
+          "desc": "墙面出现\"完全平面\"的人形影像，无法触摸但可见，持续存在6小时。"
+        },
+        {
+          "newsDefId": "NEWS_A034",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "物质转化：金属自发液化",
+          "desc": "铁质栏杆在常温下转为液态，冷却后恢复固态，分子结构未变。"
+        },
+        {
+          "newsDefId": "NEWS_A035",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "生命异化：植物展现动物行为",
+          "desc": "公园植物出现\"寻找光源\"行为，移动速度每小时3厘米，具备躲避能力。"
+        },
+        {
+          "newsDefId": "NEWS_A036",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "信息污染：文字自行改写",
+          "desc": "书籍与屏幕文字在观察过程中改变，多人同时目击，摄像机记录正常。"
+        },
+        {
+          "newsDefId": "NEWS_A037",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "概率失效：随机事件规律化",
+          "desc": "骰子投掷结果出现规律，连续300次呈现周期性序列，概率论失效。"
+        },
+        {
+          "newsDefId": "NEWS_A038",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "感官剥夺：区域内五感消失",
+          "desc": "进入某区域后视觉听觉嗅觉同时消失，离开后恢复，影响范围半径50米。"
+        },
+        {
+          "newsDefId": "NEWS_A039",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "存在抹除：人员记录消失",
+          "desc": "12人在社会系统中记录全部消失，身份证、银行账户、学历档案均不存在。"
+        },
+        {
+          "newsDefId": "NEWS_A040",
+          "source": "RandomDaily",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 10,
+          "p": 0.5,
+          "minDay": 221,
+          "maxDay": 500,
+          "CD": 0,
+          "limitNum": 0,
+          "title": "终极异常：现实逻辑崩塌",
+          "desc": "物理定律在核心区域失效，物体行为不可预测，科学理论全面失灵。"
         }
       ]
     },
@@ -4951,7 +6631,7 @@
           "weight": 10,
           "title": "维度门隔离协议更新",
           "desc": "收容单元内检测到时空扭曲，影响范围4.7平方米。需要紧急决策干预，已记录6份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -4973,7 +6653,7 @@
           "weight": 5,
           "title": "维度门紧急情况汇报",
           "desc": "技术部门检测到维度门的异常指数指数下降至86%。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -4996,7 +6676,7 @@
           "weight": 10,
           "title": "灭世之眼分析结果汇总",
           "desc": "研究员报告周围4名D级人员出现生理异常症状。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5018,7 +6698,7 @@
           "weight": 5,
           "title": "灭世之眼人事变动通知",
           "desc": "安保系统显示导致特斯拉防护网负荷达到96%。安保部门请求授权采取应急措施，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5041,7 +6721,7 @@
           "weight": 10,
           "title": "镜面渗漏器材更换申请",
           "desc": "对AN_003进行的第35次观测中发现使7件标准设备出现功能异常。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5063,7 +6743,7 @@
           "weight": 10,
           "title": "失声合唱紧急应对决策",
           "desc": "站点监测系统记录到失声合唱触发了2处独立监测点的警报。需要权衡资源投入与潜在风险。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5085,7 +6765,7 @@
           "weight": 10,
           "title": "记忆吞噬者例行检查汇报",
           "desc": "收容单元内引发局部区域模因扩散，持续140秒。触发了应急预案，等待上级指示，已记录7份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5107,7 +6787,7 @@
           "weight": 5,
           "title": "记忆吞噬者观测数据异常",
           "desc": "技术部门检测到AN_005的休谟上升82%，超出安全阈值。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5130,7 +6810,7 @@
           "weight": 10,
           "title": "时间囚笼处置方案修订",
           "desc": "研究员报告造成收容区斯克兰顿现实稳定锚运行异常。站点主管需做出最终裁决，已记录10份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5152,7 +6832,7 @@
           "weight": 5,
           "title": "时间囚笼应急事件档案",
           "desc": "安保系统显示产生2次异常能量波动，峰值91焦耳。收容协议要求立即响应，已记录12份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5175,7 +6855,7 @@
           "weight": 10,
           "title": "嗜盐水雾试验流程变化",
           "desc": "对AN_007进行的第41次观测中发现导致危险等级读数偏离正常值67个标准差。需要紧急决策干预。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5197,7 +6877,7 @@
           "weight": 10,
           "title": "现实崩解人员状况报告",
           "desc": "站点监测系统记录到现实崩解出现8次信息辐射，持续时间37秒。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5219,7 +6899,7 @@
           "weight": 5,
           "title": "现实崩解仪器故障报告",
           "desc": "收容单元内检测到概率场扰动，影响范围1.8平方米。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5242,7 +6922,7 @@
           "weight": 10,
           "title": "末日预言临界状态警报",
           "desc": "技术部门检测到末日预言的熵值指数上升至87%。安保部门请求授权采取应急措施，已记录8份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5264,7 +6944,7 @@
           "weight": 5,
           "title": "末日预言常规巡检报告",
           "desc": "研究员报告周围5名D级人员出现空间迷向症状。伦理委员会要求审核后续处理方案，已记录9份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5287,7 +6967,7 @@
           "weight": 10,
           "title": "纸鹤记忆检测系统警告",
           "desc": "安保系统显示导致负熵泵负荷达到96%。需要权衡资源投入与潜在风险，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5309,7 +6989,7 @@
           "weight": 10,
           "title": "意识寄生安保协议变更",
           "desc": "对AN_011进行的第47次观测中发现使4件标准设备出现功能异常。触发了应急预案，等待上级指示。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5331,7 +7011,7 @@
           "weight": 5,
           "title": "意识寄生突发事件记录",
           "desc": "站点监测系统记录到意识寄生触发了5处独立监测点的警报。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5354,7 +7034,7 @@
           "weight": 10,
           "title": "时钟倒影测试数据异常",
           "desc": "收容单元内引发局部区域因果紊乱，持续106秒。站点主管需做出最终裁决，已记录6份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5376,7 +7056,7 @@
           "weight": 10,
           "title": "形态模仿D级人员记录",
           "desc": "技术部门检测到形态模仿的扩散速度下降88%，超出安全阈值。收容协议要求立即响应。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5398,7 +7078,7 @@
           "weight": 5,
           "title": "形态模仿装置性能下降",
           "desc": "研究员报告造成收容区Xyank时序调节器运行异常。需要紧急决策干预，已记录10份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5421,7 +7101,7 @@
           "weight": 10,
           "title": "梦魇织网风险评估报告",
           "desc": "安保系统显示产生5次异常能量波动，峰值90焦耳。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5443,7 +7123,7 @@
           "weight": 5,
           "title": "梦魇织网标准流程执行",
           "desc": "对AN_014进行的第53次观测中发现导致现实稳定度读数偏离正常值74个标准差。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5466,7 +7146,7 @@
           "weight": 10,
           "title": "静电蝴蝶能量波动记录",
           "desc": "站点监测系统记录到静电蝴蝶出现4次时间流速异常，持续时间98秒。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5488,7 +7168,7 @@
           "weight": 10,
           "title": "沉默石隔离协议更新",
           "desc": "收容单元内检测到空间折叠，影响范围7.7平方米。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5510,7 +7190,7 @@
           "weight": 10,
           "title": "虚空凝视紧急情况汇报",
           "desc": "技术部门检测到虚空凝视的异常指数指数下降至92%。需要权衡资源投入与潜在风险，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5532,7 +7212,7 @@
           "weight": 5,
           "title": "虚空凝视分析结果汇总",
           "desc": "研究员报告周围2名D级人员出现生理异常症状。触发了应急预案，等待上级指示，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5555,7 +7235,7 @@
           "weight": 10,
           "title": "腐化种子人事变动通知",
           "desc": "安保系统显示导致休谟场发生器负荷达到88%。研究小组建议暂停当前收容流程，已记录10份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5577,7 +7257,7 @@
           "weight": 5,
           "title": "腐化种子器材更换申请",
           "desc": "对AN_018进行的第59次观测中发现使7件标准设备出现功能异常。站点主管需做出最终裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5600,7 +7280,7 @@
           "weight": 10,
           "title": "共生幻影紧急应对决策",
           "desc": "站点监测系统记录到共生幻影触发了3处独立监测点的警报。收容协议要求立即响应，已记录12份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5622,7 +7302,7 @@
           "weight": 5,
           "title": "共生幻影例行检查汇报",
           "desc": "收容单元内引发局部区域时空扭曲，持续84秒。需要紧急决策干预，已记录9份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5645,7 +7325,7 @@
           "weight": 10,
           "title": "梦境碎片观测数据异常",
           "desc": "技术部门检测到梦境碎片的休谟上升73%，超出安全阈值。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5667,7 +7347,7 @@
           "weight": 10,
           "title": "逆熵引擎处置方案修订",
           "desc": "研究员报告造成收容区生物遏制单元运行异常。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5689,7 +7369,7 @@
           "weight": 5,
           "title": "逆熵引擎应急事件档案",
           "desc": "安保系统显示产生3次异常能量波动，峰值75焦耳。安保部门请求授权采取应急措施，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5712,7 +7392,7 @@
           "weight": 10,
           "title": "生长笔记试验流程变化",
           "desc": "对AN_022进行的第65次观测中发现导致危险等级读数偏离正常值91个标准差。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5734,7 +7414,7 @@
           "weight": 10,
           "title": "影子玩偶人员状况报告",
           "desc": "站点监测系统记录到影子玩偶出现3次认知污染，持续时间75秒。需要权衡资源投入与潜在风险。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5756,7 +7436,7 @@
           "weight": 10,
           "title": "思维回声仪器故障报告",
           "desc": "收容单元内检测到模因扩散，影响范围7.3平方米。触发了应急预案，等待上级指示，已记录6份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5778,7 +7458,7 @@
           "weight": 5,
           "title": "思维回声临界状态警报",
           "desc": "技术部门检测到思维回声的熵值指数下降至81%。研究小组建议暂停当前收容流程，已记录11份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5801,7 +7481,7 @@
           "weight": 10,
           "title": "重构黏液常规巡检报告",
           "desc": "研究员报告周围4名D级人员出现空间迷向症状。站点主管需做出最终裁决，已记录8份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5823,7 +7503,7 @@
           "weight": 5,
           "title": "重构黏液检测系统警告",
           "desc": "安保系统显示导致特斯拉防护网负荷达到90%。收容协议要求立即响应，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5846,7 +7526,7 @@
           "weight": 10,
           "title": "无限增殖安保协议变更",
           "desc": "对AN_026进行的第71次观测中发现使3件标准设备出现功能异常。需要紧急决策干预。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5868,7 +7548,7 @@
           "weight": 5,
           "title": "无限增殖突发事件记录",
           "desc": "站点监测系统[已编辑]到无限增殖触发了4处独立监测点的警报。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5891,7 +7571,7 @@
           "weight": 10,
           "title": "预知镜面测试数据异常",
           "desc": "收容单元内引发局部区域概率场扰动，持续61秒。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5913,7 +7593,7 @@
           "weight": 5,
           "title": "预知镜面D级人员记录",
           "desc": "技术部门检测到预知镜面的扩散速度上升72%，超出安全阈值。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -5936,7 +7616,7 @@
           "weight": 10,
           "title": "回声墙装置性能下降",
           "desc": "研究员报告造成收容区斯克兰顿现实稳定锚运行异常。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5958,7 +7638,7 @@
           "weight": 10,
           "title": "意识瘟疫风险评估报告",
           "desc": "安保系统显示产生8次异常能量波动，峰值70焦耳。需要权衡资源投入与潜在风险，已记录4份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -5980,7 +7660,7 @@
           "weight": 5,
           "title": "意识瘟疫标准流程执行",
           "desc": "对AN_029进行的第77次观测中发现导致现实稳定度读数偏离正常值79个标准差。触发了应急预案，等待上级指示。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6003,7 +7683,7 @@
           "weight": 10,
           "title": "温度灯能量波动记录",
           "desc": "站点监测系统记录到温度灯出现3次维度裂隙，持续时间57秒。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6025,7 +7705,7 @@
           "weight": 10,
           "title": "时间吞噬隔离协议更新",
           "desc": "收容单元内检测到因果紊乱，影响范围6.1平方米。站点主管需做出最终裁决，已记录11份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6047,7 +7727,7 @@
           "weight": 5,
           "title": "时间吞噬紧急情况汇报",
           "desc": "技术部门检测到时间吞噬的异常指数指数波动至72%。收容协议要求立即响应，已记录8份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6070,7 +7750,7 @@
           "weight": 10,
           "title": "重力珠分析结果汇总",
           "desc": "研究员报告周围2名D级人员出现生理异常症状。需要紧急决策干预，已记录11份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6092,7 +7772,7 @@
           "weight": 10,
           "title": "情绪漩涡人事变动通知",
           "desc": "安保系统显示导致负熵泵负荷达到78%。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6114,7 +7794,7 @@
           "weight": 5,
           "title": "情绪漩涡器材更换申请",
           "desc": "对AN_033进行的第83次观测中发现使5件标准设备出现功能异常。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6137,7 +7817,7 @@
           "weight": 10,
           "title": "透明生物紧急应对决策",
           "desc": "站点监测系统记录到透明生物触发了3处独立监测点的警报。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6159,7 +7839,7 @@
           "weight": 10,
           "title": "锈蚀触媒例行检查汇报",
           "desc": "收容单元内引发局部区域空间折叠，持续31秒。伦理委员会要求审核后续处理方案，已记录10份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6181,7 +7861,7 @@
           "weight": 10,
           "title": "维度入侵观测数据异常",
           "desc": "技术部门检测到维度入侵的休谟波动95%，超出安全阈值。需要权衡资源投入与潜在风险。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6203,7 +7883,7 @@
           "weight": 5,
           "title": "维度入侵处置方案修订",
           "desc": "研究员报告造成收容区Xyank时序调节器运行异常。触发了应急预案，等待上级指示。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6226,7 +7906,7 @@
           "weight": 10,
           "title": "存在抹消应急事件档案",
           "desc": "安保系统显示产生8次异常能量波动，峰值71焦耳。研究小组建议暂停当前收容流程，已记录3份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6248,7 +7928,7 @@
           "weight": 5,
           "title": "存在抹消试验流程变化",
           "desc": "对AN_037进行的第89次观测中发现导致危险等级读数偏离正常值84个标准差。站点主管需做出最终裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6271,7 +7951,7 @@
           "weight": 10,
           "title": "平行投影人员状况报告",
           "desc": "站点监测系统记录到平行投影出现2次能量峰值，持续时间95秒。收容协议要求立即响应。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6293,7 +7973,7 @@
           "weight": 5,
           "title": "平行投影仪器故障报告",
           "desc": "收容单元内检测到时空扭曲，影响范围4.6平方米。需要紧急决策干预，已记录4份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6316,7 +7996,7 @@
           "weight": 10,
           "title": "记忆碎片化临界状态警报",
           "desc": "技术部门检测到AN_039的熵值指数上升至91%。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6338,7 +8018,7 @@
           "weight": 5,
           "title": "记忆碎片化常规巡检报告",
           "desc": "研究员报告周围3名D级人员出现空间迷向症状。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6361,7 +8041,7 @@
           "weight": 10,
           "title": "虚空裂缝检测系统警告",
           "desc": "安保系统显示导致休谟场发生器负荷达到86%。安保部门请求授权采取应急措施，已记录8份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6383,7 +8063,7 @@
           "weight": 5,
           "title": "虚空裂缝安保协议变更",
           "desc": "对AN_040进行的第95次观测中发现使6件标准设备出现功能异常。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6406,7 +8086,7 @@
           "weight": 10,
           "title": "记忆书签突发事件记录",
           "desc": "站点监测系统记录到记忆书签触发了8处独立监测点的警报。需要权衡资源投入与潜在风险。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6428,7 +8108,7 @@
           "weight": 10,
           "title": "时空褶皱测试数据异常",
           "desc": "收容单元内引发局部区域模因扩散，持续118秒。触发了应急预案，等待上级指示，已记录6份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6450,7 +8130,7 @@
           "weight": 5,
           "title": "时空褶皱D级人员记录",
           "desc": "技术部门检测到时空褶皱的扩散速度上升70%，超出安全阈值。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6473,7 +8153,7 @@
           "weight": 10,
           "title": "意识复写装置性能下降",
           "desc": "研究员报告造成收容区生物遏制单元运行异常。站点主管需做出最终裁决，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6495,7 +8175,7 @@
           "weight": 5,
           "title": "意识复写风险评估报告",
           "desc": "安保系统显示产生4次异常能量波动，峰值69焦耳。收容协议要求立即响应，已记录8份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6518,7 +8198,7 @@
           "weight": 10,
           "title": "熵增加速标准流程执行",
           "desc": "对AN_044进行的第101次观测中发现导致现实稳定度读数偏离正常值66个标准差。需要紧急决策干预。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6540,7 +8220,7 @@
           "weight": 5,
           "title": "熵增加速能量波动记录",
           "desc": "站点监测系统记录到熵增加速出现6次信息辐射，持续时间80秒。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6563,7 +8243,7 @@
           "weight": 10,
           "title": "因果断裂隔离协议更新",
           "desc": "收容单元内检测到概率场扰动，影响范围7.2平方米。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6585,7 +8265,7 @@
           "weight": 5,
           "title": "因果断裂紧急情况汇报",
           "desc": "技术部门检测到因果断裂的异常指数指数上升至65%。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6608,7 +8288,7 @@
           "weight": 10,
           "title": "概念抹杀分析结果汇总",
           "desc": "研究员报告周围7名D级人员出现生理异常症状。伦理委员会要求审核后续处理方案，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6630,7 +8310,7 @@
           "weight": 5,
           "title": "概念抹杀人事变动通知",
           "desc": "安保系统显示导致特斯拉防护网负荷达到98%。需要权衡资源投入与潜在风险，已记录9份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6653,7 +8333,7 @@
           "weight": 10,
           "title": "愈合泥土器材更换申请",
           "desc": "对AN_047进行的第107次观测中发现使3件标准设备出现功能异常。触发了应急预案，等待上级指示。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6675,7 +8355,7 @@
           "weight": 10,
           "title": "全知之眼紧急应对决策",
           "desc": "站点监测系统记录到全知之眼触发了5处独立监测点的警报。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6697,7 +8377,7 @@
           "weight": 5,
           "title": "全知之眼例行检查汇报",
           "desc": "收容单元内引发局部区域因果紊乱，持续111秒。站点主管需做出最终裁决，已记录10份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6720,7 +8400,7 @@
           "weight": 10,
           "title": "寒霜种子观测数据异常",
           "desc": "技术部门检测到寒霜种子的休谟上升90%，超出安全阈值。收容协议要求立即响应，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6742,7 +8422,7 @@
           "weight": 10,
           "title": "回声贝壳处置方案修订",
           "desc": "研究员报告造成收容区斯克兰顿现实稳定锚运行异常。需要紧急决策干预，已记录11份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6764,7 +8444,7 @@
           "weight": 10,
           "title": "概念侵蚀应急事件档案",
           "desc": "安保系统显示产生7次异常能量波动，峰值90焦耳。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6786,7 +8466,7 @@
           "weight": 5,
           "title": "概念侵蚀试验流程变化",
           "desc": "对AN_051进行的第113次观测中发现导致危险等级读数偏离正常值73个标准差。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6809,7 +8489,7 @@
           "weight": 10,
           "title": "量子纠缠体人员状况报告",
           "desc": "站点监测系统[已编辑]到AN_052出现4次时间流速异常，持续时间94秒。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6831,7 +8511,7 @@
           "weight": 5,
           "title": "量子纠缠体仪器故障报告",
           "desc": "收容单元内检测到空间折叠，影响范围3.3平方米。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6854,7 +8534,7 @@
           "weight": 10,
           "title": "记忆羽毛临界状态警报",
           "desc": "技术部门检测到记忆羽毛的熵值指数上升至73%。需要权衡资源投入与潜在风险，已记录12份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6876,7 +8556,7 @@
           "weight": 10,
           "title": "反物质种子常规巡检报告",
           "desc": "研究员报告周围3名D级人员出现空间迷向症状。触发了应急预案，等待上级指示，已记录8份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6898,7 +8578,7 @@
           "weight": 5,
           "title": "反物质种子检测系统警告",
           "desc": "安保系统显示导致负熵泵负荷达到88%。研究小组建议暂停当前收容流程，已记录8份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6921,7 +8601,7 @@
           "weight": 10,
           "title": "熵之终结安保协议变更",
           "desc": "对AN_055进行的第119次观测中发现使3件标准设备出现功能异常。站点主管需做出最终裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6943,7 +8623,7 @@
           "weight": 5,
           "title": "熵之终结突发事件记录",
           "desc": "站点监测系统记录到熵之终结触发了4处独立监测点的警报。收容协议要求立即响应，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -6966,7 +8646,7 @@
           "weight": 10,
           "title": "维度寄生测试数据异常",
           "desc": "收容单元内引发局部区域时空扭曲，持续86秒。需要紧急决策干预，已记录10份异常[数据删除]报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -6988,7 +8668,7 @@
           "weight": 5,
           "title": "维度寄生D级人员记录",
           "desc": "技术部门检测到维度寄生的扩散速度下降85%，超出安全阈值。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -7011,7 +8691,7 @@
           "weight": 10,
           "title": "光影碎片装置性能下降",
           "desc": "研究员报告造成收容区Xyank时序调节器运行异常。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7033,7 +8713,7 @@
           "weight": 10,
           "title": "因果武器风险评估报告",
           "desc": "安保系统显示产生4次异常能量波动，峰值73焦耳。安保部门请求授权采取应急措施，已记录4份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7055,7 +8735,7 @@
           "weight": 5,
           "title": "因果武器标准流程执行",
           "desc": "对AN_058进行的第125次观测中发现导致现实稳定度读数偏离正常值83个标准差。伦理委员会要求审核后续处理方案。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -7078,7 +8758,7 @@
           "weight": 10,
           "title": "共鸣音叉能量波动记录",
           "desc": "站点监测系统记录到共鸣音叉出现5次认知污染，持续时间170秒。需要权衡资源投入与潜在风险。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7100,7 +8780,7 @@
           "weight": 10,
           "title": "集体无意识隔离协议更新",
           "desc": "收容单元内检测到模因扩散，影响范围7.9平方米。触发了应急预案，等待上级指示，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7122,7 +8802,7 @@
           "weight": 5,
           "title": "集体无意识紧急情况汇报",
           "desc": "技术部门检测到AN_060的异常指数指数波动至73%。研究小组建议暂停当前收容流程。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -7145,7 +8825,7 @@
           "weight": 10,
           "title": "静止胶囊分析结果汇总",
           "desc": "研究员报告周围8名D级人员出现生理异常症状。站点主管需做出最终裁决，已记录5份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7167,7 +8847,7 @@
           "weight": 10,
           "title": "幻象镜人事变动通知",
           "desc": "安保系统显示导致休谟场发生器负荷达到96%。收容协议要求立即响应，已记录7份异常数据报告。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7189,7 +8869,7 @@
           "weight": 10,
           "title": "信息黑洞器材更换申请",
           "desc": "对AN_063进行的第131次观测中发现使8件标准设备出现功能异常。需要紧急决策干预。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7211,7 +8891,7 @@
           "weight": 5,
           "title": "信息黑洞紧急应对决策",
           "desc": "站点监测系统记录到信息黑洞触发了3处独立监测点的警报。技术部门提交了多套应对方案，需要主管裁决。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "Global",
             "OriginTask"
@@ -7234,7 +8914,7 @@
           "weight": 10,
           "title": "呼吸石例行检查汇报",
           "desc": "收容单元内引发局部区域概率场扰动，持续76秒。现有收容措施已接近临界值，要求调整策略。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
@@ -7256,7 +8936,7 @@
           "weight": 10,
           "title": "数字虫观测数据异常",
           "desc": "技术部门检测到数字虫的休谟波动90%，超出安全阈值。安保部门请求授权采取应急措施。",
-          "blockPolicy": "",
+          "blockPolicy": "None",
           "defaultAffects": [
             "OriginTask"
           ],
