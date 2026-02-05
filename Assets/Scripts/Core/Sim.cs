@@ -501,11 +501,21 @@ namespace Core
         {
             if (s == null || s.Nodes == null) return;
 
+            // Create a day-specific RNG to ensure each day has different news
+            // Use base seed from rng.Next() XOR day to maintain reproducibility while varying per day
+            int baseSeed = rng.Next();
+            int newsSeed = baseSeed ^ (s.Day * 31337); // XOR with day-dependent value
+            var newsRng = new Random(newsSeed);
+            
+            Debug.Log($"[News] day={s.Day} baseSeed={baseSeed} newsSeed={newsSeed} rngType=System.Random");
+
             var randomDailyDefs = registry.NewsDefsById.Values
                 .Where(def => def != null &&
                               !string.IsNullOrEmpty(def.newsDefId) &&
                               string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase))
                 .ToList();
+            
+            Debug.Log($"[News] day={s.Day} poolBefore={randomDailyDefs.Count} source={RandomDailySource}");
 
             int nodeAnomCtxChecked = 0;
             int nodeAnomPicked = 0;
@@ -527,15 +537,16 @@ namespace Core
                     nodeAnomCtxChecked += 1;
 
                     var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, anomalyId, firedCounts, lastFiredDay, requireAnomalyAny: false);
+                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} poolAfterFilter={matched.Count}");
                     if (matched.Count == 0) continue;
 
-                    if (!TryPickWeightedNews(matched, rng, out var picked)) continue;
+                    if (!TryPickWeightedNews(matched, newsRng, out var picked)) continue;
                     nodeAnomPicked += 1;
 
-                    double roll = rng.NextDouble();
+                    double roll = newsRng.NextDouble();
                     bool emit = roll <= picked.p;
                     string reason = emit ? "Picked" : "RolledAboveP";
-                    Debug.Log($"[NewsPick] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
+                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
                     if (!emit) continue;
 
                     string sourceAnomalyId = IsRequirementAny(picked.requiresAnomalyId) ? null : anomalyId;
@@ -544,7 +555,7 @@ namespace Core
                     UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
                     nodeAnomEmitted += 1;
 
-                    Debug.Log($"[NewsGen] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} instId={instance.Id} cause={RandomDailySource}");
+                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} instId={instance.Id} EMITTED");
                 }
             }
 
@@ -554,15 +565,16 @@ namespace Core
                 nodeCtxChecked += 1;
 
                 var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, null, firedCounts, lastFiredDay, requireAnomalyAny: true);
+                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} poolAfterFilter={matched.Count}");
                 if (matched.Count == 0) continue;
 
-                if (!TryPickWeightedNews(matched, rng, out var picked)) continue;
+                if (!TryPickWeightedNews(matched, newsRng, out var picked)) continue;
                 nodePicked += 1;
 
-                double roll = rng.NextDouble();
+                double roll = newsRng.NextDouble();
                 bool emit = roll <= picked.p;
                 string reason = emit ? "Picked" : "RolledAboveP";
-                Debug.Log($"[NewsPick] day={s.Day} ctx=Node nodeId={node.Id} anomalyId=none newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
+                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
                 if (!emit) continue;
 
                 var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, null, RandomDailySource);
@@ -570,10 +582,10 @@ namespace Core
                 UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
                 nodeEmitted += 1;
 
-                Debug.Log($"[NewsGen] day={s.Day} ctx=Node nodeId={node.Id} anomalyId=none newsDefId={picked.newsDefId} instId={instance.Id} cause={RandomDailySource}");
+                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} newsDefId={picked.newsDefId} instId={instance.Id} EMITTED");
             }
 
-            Debug.Log($"[RandomDailyNewsSummary] day={s.Day} nodeAnomCtxChecked={nodeAnomCtxChecked} nodeAnomPicked={nodeAnomPicked} nodeAnomEmitted={nodeAnomEmitted} nodeCtxChecked={nodeCtxChecked} nodePicked={nodePicked} nodeEmitted={nodeEmitted} newsTotal={(s.NewsLog?.Count ?? 0)}");
+            Debug.Log($"[News] day={s.Day} SUMMARY nodeAnomCtxChecked={nodeAnomCtxChecked} nodeAnomPicked={nodeAnomPicked} nodeAnomEmitted={nodeAnomEmitted} nodeCtxChecked={nodeCtxChecked} nodePicked={nodePicked} nodeEmitted={nodeEmitted} newsTotal={(s.NewsLog?.Count ?? 0)}");
         }
 
         public static bool ApplyIgnorePenaltyOnDayEnd(GameState s, DataRegistry registry)
@@ -903,6 +915,7 @@ namespace Core
             if (totalWeight <= 0) return false;
 
             int roll = rng.Next(totalWeight);
+            int originalRoll = roll;
             foreach (var news in candidates)
             {
                 if (news == null || news.weight <= 0) continue;
@@ -910,11 +923,13 @@ namespace Core
                 if (roll < 0)
                 {
                     picked = news;
+                    Debug.Log($"[News] TryPickWeightedNews totalWeight={totalWeight} roll={originalRoll} picked={picked.newsDefId}");
                     return true;
                 }
             }
 
             picked = candidates.FirstOrDefault(news => news != null && news.weight > 0);
+            Debug.Log($"[News] TryPickWeightedNews totalWeight={totalWeight} roll={originalRoll} picked={(picked?.newsDefId ?? "null")} fallback=true");
             return picked != null;
         }
 
