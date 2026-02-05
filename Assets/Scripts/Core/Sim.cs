@@ -550,7 +550,7 @@ namespace Core
                     if (!emit) continue;
 
                     string sourceAnomalyId = IsRequirementAny(picked.requiresAnomalyId) ? null : anomalyId;
-                    var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, sourceAnomalyId, RandomDailySource);
+                    var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, sourceAnomalyId, RandomDailySource, s.Day);
                     AddNewsToLog(s, instance);
                     UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
                     nodeAnomEmitted += 1;
@@ -577,7 +577,7 @@ namespace Core
                 Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
                 if (!emit) continue;
 
-                var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, null, RandomDailySource);
+                var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, null, RandomDailySource, s.Day);
                 AddNewsToLog(s, instance);
                 UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
                 nodeEmitted += 1;

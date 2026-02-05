@@ -40,7 +40,7 @@ namespace Core
                     Debug.Log($"[NewsGen] bind START newsDefId={def.newsDefId} nodeId={nodeId}");
                 }
 
-                var instance = NewsInstanceFactory.Create(def.newsDefId, nodeId, null, "Bootstrap");
+                var instance = NewsInstanceFactory.Create(def.newsDefId, nodeId, null, "Bootstrap", day);
                 state.NewsLog.Add(instance);
                 existing.Add(def.newsDefId);
                 created += 1;

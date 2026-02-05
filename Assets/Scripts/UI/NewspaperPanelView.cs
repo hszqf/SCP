@@ -35,7 +35,12 @@ namespace UI
             if (state == null || data == null) return;
 
             Core.NewsGenerator.EnsureBootstrapNews(state, data);
-            Debug.Log($"[Newspaper] render day={state.Day} items={(state.NewsLog?.Count ?? 0)}");
+            
+            // Filter news to only show current day's news
+            var currentDayNews = state.NewsLog?.Where(n => n != null && n.Day == state.Day).ToList() ?? new List<Core.NewsInstance>();
+            
+            Debug.Log($"[NewsUI] Open day={state.Day} totalNews={state.NewsLog?.Count ?? 0} currentDayNews={currentDayNews.Count}");
+            Debug.Log($"[Newspaper] render day={state.Day} items={currentDayNews.Count}");
 
             var titleTmp = FindTMP("Window/Header/TitleTMP");
             if (titleTmp != null) titleTmp.text = "基金会晨报";
@@ -44,12 +49,9 @@ namespace UI
             if (dayTmp != null) dayTmp.text = $"Day{state.Day}";
 
             var pool = new List<Core.NewsInstance>();
-            if (state.NewsLog != null)
+            for (int i = 0; i < currentDayNews.Count; i++)
             {
-                for (int i = 0; i < state.NewsLog.Count; i++)
-                {
-                    if (state.NewsLog[i] != null) pool.Add(state.NewsLog[i]);
-                }
+                if (currentDayNews[i] != null) pool.Add(currentDayNews[i]);
             }
 
             var global = FindByKeyword(pool, "GLOBAL");
@@ -78,6 +80,29 @@ namespace UI
         private void OnEnable()
         {
             WireButtons();
+            if (GameController.I != null)
+            {
+                GameController.I.OnStateChanged += OnGameStateChanged;
+            }
+            // Render when panel is shown
+            Render();
+        }
+
+        private void OnDisable()
+        {
+            if (GameController.I != null)
+            {
+                GameController.I.OnStateChanged -= OnGameStateChanged;
+            }
+        }
+
+        private void OnGameStateChanged()
+        {
+            // Refresh the newspaper when game state changes (e.g., day advances)
+            if (gameObject.activeSelf)
+            {
+                Render();
+            }
         }
 
         private void WireButtons()
