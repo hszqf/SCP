@@ -14,6 +14,8 @@ namespace Data
         public List<EventDef> events = new();
         public List<EventOptionDef> eventOptions = new();
         public List<NewsDef> newsDefs = new();
+        public List<MediaProfileDef> mediaProfiles = new();
+        public List<FactTemplateDef> factTemplates = new();
         public List<EffectDef> effects = new();
         public List<EffectOpRow> effectOps = new();
         public Dictionary<string, GameDataTable> tables = new();
@@ -140,6 +142,30 @@ namespace Data
         public string requiresAnomalyId;
         public string title;
         public string desc;
+    }
+
+    // MediaProfile: Defines different media styles for news reporting
+    [Serializable]
+    public class MediaProfileDef
+    {
+        public string profileId;
+        public string name; // e.g., "Formal", "Sensational", "Investigative"
+        public string tone; // e.g., "neutral", "alarmist", "optimistic"
+        public List<string> titleTemplates = new(); // Template strings with {placeholders}
+        public List<string> descTemplates = new();
+        public int weight = 1; // For random selection
+    }
+
+    // FactTemplateDef: Maps fact types to news templates
+    [Serializable]
+    public class FactTemplateDef
+    {
+        public string factType; // e.g., "AnomalySpawned", "TaskCompleted"
+        public string mediaProfileId; // Which media profile to use
+        public string titleTemplate; // e.g., "Breaking: Anomaly detected at {nodeName}"
+        public string descTemplate; // e.g., "Authorities report strange activity..."
+        public int severityMin = 1; // Min severity level to use this template
+        public int severityMax = 5; // Max severity level to use this template
     }
 
     [Serializable]
