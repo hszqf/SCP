@@ -54,7 +54,7 @@ namespace Core
             if (fact == null) return null;
 
             // Get media profiles from registry with fallback to hardcoded defaults
-            var mediaProfiles = registry.MediaProfiles?.Count > 0 
+            var mediaProfiles = (registry.MediaProfiles != null && registry.MediaProfiles.Count > 0)
                 ? registry.MediaProfiles 
                 : GetDefaultMediaProfiles();
             

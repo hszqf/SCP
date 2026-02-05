@@ -2006,7 +2006,7 @@ namespace Core
             {
                 if (!registry.FactTypesById.ContainsKey(type))
                 {
-                    Debug.LogWarning($"[Fact] Unknown factType='{type}' not in FactTypes table. This may cause issues with news generation. Consider adding to FactTypes table in Excel.");
+                    Debug.LogWarning($"[Fact] Unknown factType='{type}' not in FactTypes table. Add to GameData/Local/game_data.xlsx > FactTypes sheet to resolve this warning.");
                 }
             }
 

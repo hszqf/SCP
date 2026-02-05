@@ -456,7 +456,11 @@ namespace Data
             foreach (var row in Tables.GetRows("MediaProfiles"))
             {
                 var profileId = GetRowString(row, "profileId");
-                if (string.IsNullOrEmpty(profileId)) continue;
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    Debug.LogWarning("[DataRegistry] MediaProfiles: Skipping row with empty profileId");
+                    continue;
+                }
                 var profile = new MediaProfileDef
                 {
                     profileId = profileId,
@@ -474,7 +478,11 @@ namespace Data
             foreach (var row in Tables.GetRows("FactTemplates"))
             {
                 var templateId = GetRowString(row, "templateId");
-                if (string.IsNullOrEmpty(templateId)) continue;
+                if (string.IsNullOrEmpty(templateId))
+                {
+                    Debug.LogWarning("[DataRegistry] FactTemplates: Skipping row with empty templateId");
+                    continue;
+                }
                 var template = new FactTemplateDef
                 {
                     factType = GetRowString(row, "factType"),
