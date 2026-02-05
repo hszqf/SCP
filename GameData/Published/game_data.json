@@ -1,1 +1,4878 @@
-{"meta": {"schemaVersion": "0.1", "dataVersion": "2026.01.25b"}, "tables": {"Meta": {"idField": "schemaVersion", "columns": [{"name": "schemaVersion", "type": "string"}, {"name": "dataVersion", "type": "string"}], "rows": [{"schemaVersion": "0.1", "dataVersion": "2026.01.25b"}]}, "Balance": {"idField": "key", "columns": [{"name": "key", "type": "string"}, {"name": "p1", "type": "int[]"}, {"name": "p2", "type": "float[]"}, {"name": "p3", "type": "string[]"}], "rows": [{"key": "DefaultIgnoreApplyMode", "p1": [], "p2": [], "p3": ["ApplyDailyKeep"]}, {"key": "DailyWorldPanicDecay", "p1": [], "p2": [0.05], "p3": []}, {"key": "StartMoney", "p1": [10000], "p2": [], "p3": []}, {"key": "PopToMoneyRate", "p1": [], "p2": [0.1], "p3": []}, {"key": "WagePerAgentPerDay", "p1": [100], "p2": [], "p3": []}, {"key": "ContainedAnomalyMaintenanceDefault", "p1": [100], "p2": [], "p3": []}, {"key": "StartWorldPanic", "p1": [], "p2": [0.0], "p3": []}, {"key": "WorldPanicFailThreshold", "p1": [100], "p2": [], "p3": []}, {"key": "ContainReliefFixed", "p1": [20], "p2": [], "p3": []}, {"key": "WorldPanicDecayPerSafeNodePerDay", "p1": [], "p2": [0.5], "p3": []}, {"key": "ClampWorldPanicMin", "p1": [0], "p2": [], "p3": []}, {"key": "ClampMoneyMin", "p1": [0], "p2": [], "p3": []}]}, "Nodes": {"idField": "nodeId", "columns": [{"name": "nodeId", "type": "string"}, {"name": "name", "type": "string"}, {"name": "startPopulation", "type": "int"}, {"name": "unlocked", "type": "int"}], "rows": [{"nodeId": "N1", "name": "节点1", "startPopulation": 10000, "unlocked": 1}, {"nodeId": "N2", "name": "节点2", "startPopulation": 20000, "unlocked": 1}, {"nodeId": "N3", "name": "节点3", "startPopulation": 5000, "unlocked": 1}, {"nodeId": "N4", "name": "节点4", "startPopulation": 100000, "unlocked": 0}, {"nodeId": "N5", "name": "节点5", "startPopulation": 2000, "unlocked": 0}, {"nodeId": "N6", "name": "节点6", "startPopulation": 3000, "unlocked": 0}, {"nodeId": "N7", "name": "节点7", "startPopulation": 500, "unlocked": 0}, {"nodeId": "N8", "name": "节点8", "startPopulation": 100, "unlocked": 0}]}, "Anomalies": {"idField": "anomalyId", "columns": [{"name": "anomalyId", "type": "string"}, {"name": "name", "type": "string"}, {"name": "class", "type": "string"}, {"name": "worldPanicPerDayUncontained", "type": "float"}, {"name": "baseDays", "type": "int"}, {"name": "maintenanceCostPerDay", "type": "int"}, {"name": "actPeopleKill", "type": "int"}, {"name": "invReq", "type": "int[]"}, {"name": "conReq", "type": "int[]"}, {"name": "manReq", "type": "int[]"}, {"name": "invhpDmg", "type": "int"}, {"name": "invsanDmg", "type": "int"}, {"name": "conhpDmg", "type": "int"}, {"name": "consanDmg", "type": "int"}, {"name": "manhpDmg", "type": "int"}, {"name": "mansanDmg", "type": "int"}, {"name": "invExp", "type": "int"}, {"name": "conExp", "type": "int"}, {"name": "manExpPerDay", "type": "int"}, {"name": "manNegentropy PerDay", "type": "int"}], "rows": [{"anomalyId": "AN_001", "name": "镜面渗漏", "class": "Safe", "worldPanicPerDayUncontained": 0.1, "baseDays": 3, "maintenanceCostPerDay": 100, "actPeopleKill": 1, "invReq": [7, 6, 0, 0], "conReq": [5, 7, 0, 5], "manReq": [4, 7, 6, 0], "invhpDmg": 0, "invsanDmg": 1, "conhpDmg": 3, "consanDmg": 2, "manhpDmg": 0, "mansanDmg": 1, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_002", "name": "失声合唱", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 10, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 2, "consanDmg": 5, "manhpDmg": 0, "mansanDmg": 2, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_003", "name": "嗜盐水雾", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [7, 6, 0, 0], "conReq": [5, 7, 0, 5], "manReq": [4, 7, 6, 0], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 8, "consanDmg": 5, "manhpDmg": 0, "mansanDmg": 3, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_004", "name": "空白日记", "class": "Thaumiel", "worldPanicPerDayUncontained": 0.1, "baseDays": 12, "maintenanceCostPerDay": 100, "actPeopleKill": 1000, "invReq": [8, 7, 0, 0], "conReq": [6, 8, 0, 6], "manReq": [5, 8, 7, 0], "invhpDmg": 10, "invsanDmg": 10, "conhpDmg": 5, "consanDmg": 12, "manhpDmg": 0, "mansanDmg": 5, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_005", "name": "逆向楼梯间", "class": "Apollyon", "worldPanicPerDayUncontained": 0.1, "baseDays": 15, "maintenanceCostPerDay": 100, "actPeopleKill": 1000, "invReq": [10, 9, 0, 0], "conReq": [7, 10, 0, 9], "manReq": [6, 10, 9, 4], "invhpDmg": 30, "invsanDmg": 30, "conhpDmg": 15, "consanDmg": 15, "manhpDmg": 0, "mansanDmg": 8, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_006", "name": "自复原蜡像", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [8, 7, 0, 0], "conReq": [6, 8, 0, 6], "manReq": [5, 8, 7, 0], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 5, "consanDmg": 6, "manhpDmg": 0, "mansanDmg": 6, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_007", "name": "午夜电台", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 9, "consanDmg": 10, "manhpDmg": 0, "mansanDmg": 10, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_008", "name": "低语菌落", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [8, 7, 0, 0], "conReq": [6, 8, 0, 6], "manReq": [5, 8, 7, 0], "invhpDmg": 0, "invsanDmg": 2, "conhpDmg": 5, "consanDmg": 6, "manhpDmg": 0, "mansanDmg": 6, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_009", "name": "无影灯", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [6, 5, 0, 0], "conReq": [4, 6, 0, 4], "manReq": [3, 6, 5, 0], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 3, "consanDmg": 4, "manhpDmg": 0, "mansanDmg": 4, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_010", "name": "恒温灰尘", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [7, 6, 0, 0], "conReq": [5, 7, 0, 5], "manReq": [4, 7, 6, 0], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 4, "consanDmg": 5, "manhpDmg": 0, "mansanDmg": 5, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_011", "name": "回声邮筒", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [6, 5, 0, 0], "conReq": [4, 6, 0, 4], "manReq": [3, 6, 5, 0], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 3, "consanDmg": 4, "manhpDmg": 0, "mansanDmg": 4, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_012", "name": "镜中幼体", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 9, "consanDmg": 10, "manhpDmg": 0, "mansanDmg": 10, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_013", "name": "祈香残火", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [7, 6, 0, 0], "conReq": [5, 7, 0, 5], "manReq": [4, 7, 6, 0], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 4, "consanDmg": 5, "manhpDmg": 0, "mansanDmg": 5, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_014", "name": "符箓回路", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [8, 7, 0, 0], "conReq": [6, 8, 0, 6], "manReq": [5, 8, 7, 0], "invhpDmg": 2, "invsanDmg": 2, "conhpDmg": 5, "consanDmg": 6, "manhpDmg": 0, "mansanDmg": 6, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_015", "name": "五行失衡井", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 9, "consanDmg": 10, "manhpDmg": 0, "mansanDmg": 10, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_016", "name": "洞天影门", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 9, "consanDmg": 10, "manhpDmg": 0, "mansanDmg": 10, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_017", "name": "天人回响", "class": "Thaumiel", "worldPanicPerDayUncontained": 0.1, "baseDays": 12, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [11, 10, 0, 0], "conReq": [8, 11, 0, 10], "manReq": [7, 11, 10, 5], "invhpDmg": 10, "invsanDmg": 10, "conhpDmg": 9, "consanDmg": 10, "manhpDmg": 0, "mansanDmg": 10, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_018", "name": "业火余烬", "class": "Keter", "worldPanicPerDayUncontained": 0.1, "baseDays": 8, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [12, 11, 0, 0], "conReq": [9, 12, 0, 11], "manReq": [8, 12, 11, 6], "invhpDmg": 4, "invsanDmg": 4, "conhpDmg": 12, "consanDmg": 13, "manhpDmg": 0, "mansanDmg": 13, "invExp": 5, "conExp": 5, "manExpPerDay": 30, "manNegentropy PerDay": 10}, {"anomalyId": "AN_019", "name": "戒律钟摆", "class": "Apollyon", "worldPanicPerDayUncontained": 0.1, "baseDays": 15, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [9, 8, 0, 0], "conReq": [7, 9, 0, 7], "manReq": [6, 9, 8, 0], "invhpDmg": 10, "invsanDmg": 10, "conhpDmg": 5, "consanDmg": 12, "manhpDmg": 0, "mansanDmg": 7, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}, {"anomalyId": "AN_020", "name": "丹砂雾化", "class": "Euclid", "worldPanicPerDayUncontained": 0.1, "baseDays": 5, "maintenanceCostPerDay": 100, "actPeopleKill": 100, "invReq": [8, 7, 0, 0], "conReq": [6, 8, 0, 6], "manReq": [5, 8, 7, 0], "invhpDmg": 30, "invsanDmg": 30, "conhpDmg": 15, "consanDmg": 15, "manhpDmg": 0, "mansanDmg": 6, "invExp": 2, "conExp": 2, "manExpPerDay": 10, "manNegentropy PerDay": 10}]}, "AnomaliesGen": {"idField": "day", "columns": [{"name": "day", "type": "int"}, {"name": "AnomaliesGenNum", "type": "int"}], "rows": [{"day": 1, "AnomaliesGenNum": 1}, {"day": 5, "AnomaliesGenNum": 1}, {"day": 8, "AnomaliesGenNum": 1}, {"day": 15, "AnomaliesGenNum": 3}, {"day": 20, "AnomaliesGenNum": 2}, {"day": 30, "AnomaliesGenNum": 1}, {"day": 38, "AnomaliesGenNum": 5}, {"day": 50, "AnomaliesGenNum": 2}]}, "NewsDefs": {"idField": "newsDefId", "columns": [{"name": "newsDefId", "type": "string"}, {"name": "source", "type": "string"}, {"name": "requiresNodeId", "type": "string"}, {"name": "requiresAnomalyId", "type": "string"}, {"name": "weight", "type": "int"}, {"name": "p", "type": "float"}, {"name": "minDay", "type": "int"}, {"name": "maxDay", "type": "int"}, {"name": "CD", "type": "int"}, {"name": "limitNum", "type": "int"}, {"name": "title", "type": "string"}, {"name": "desc", "type": "string"}], "rows": [{"newsDefId": "NEWS_BOOTSTRAP_GLOBAL", "source": "Bootstrap", "requiresNodeId": "ANY", "requiresAnomalyId": "ANY", "weight": 1, "p": 1.0, "minDay": 1, "maxDay": 1, "CD": 0, "limitNum": 1, "title": "O5通告：站点网络进入一级响应", "desc": "过去48小时异常目击上升。各站点提升警戒，优先处理“可快速验证”的线索，避免无谓暴露。"}, {"newsDefId": "NEWS_BOOTSTRAP_NODE", "source": "Bootstrap", "requiresNodeId": "START", "requiresAnomalyId": "ANY", "weight": 1, "p": 1.0, "minDay": 1, "maxDay": 1, "CD": 0, "limitNum": 1, "title": "站点简报：N1辖区出现不明活动", "desc": "本地渠道报告多起“异常传闻”与人员失踪。建议先派遣小队调查，确认是否存在可收容目标。"}, {"newsDefId": "NEWS_BOOTSTRAP_RUMOR", "source": "Bootstrap", "requiresNodeId": "ANY", "requiresAnomalyId": "ANY", "weight": 1, "p": 1.0, "minDay": 1, "maxDay": 1, "CD": 0, "limitNum": 1, "title": "都市传闻：黑暗中有人“点名”你的名字", "desc": "多名目击者称在夜间听到低语与重复的编号。真实性未知，但具备异常特征——可作为低成本调查线索。"}]}, "TaskDefs": {"idField": "taskDefId", "columns": [{"name": "taskDefId", "type": "string"}, {"name": "taskType", "type": "string"}, {"name": "name", "type": "string"}, {"name": "agentSlotsMin", "type": "int"}, {"name": "agentSlotsMax", "type": "int"}], "rows": [{"taskDefId": "TASK_INVESTIGATE", "taskType": "Investigate", "name": "调查", "agentSlotsMin": 1, "agentSlotsMax": 5}, {"taskDefId": "TASK_CONTAIN", "taskType": "Contain", "name": "收容", "agentSlotsMin": 1, "agentSlotsMax": 5}, {"taskDefId": "TASK_MANAGE", "taskType": "Manage", "name": "管理", "agentSlotsMin": 1, "agentSlotsMax": 5}]}, "Events": {"idField": "eventDefId", "columns": [{"name": "eventDefId", "type": "string"}, {"name": "requiresAnomalyId", "type": "string"}, {"name": "requiresNodeId", "type": "string"}, {"name": "requiresTaskType", "type": "string"}, {"name": "source", "type": "string"}, {"name": "weight", "type": "int"}, {"name": "title", "type": "string"}, {"name": "desc", "type": "string"}, {"name": "blockPolicy", "type": "string"}, {"name": "defaultAffects", "type": "string[]"}, {"name": "autoResolveAfterDays", "type": "int"}, {"name": "ignoreApplyMode", "type": "string"}, {"name": "ignoreEffectId", "type": "string"}, {"name": "p", "type": "float"}, {"name": "minDay", "type": "int"}, {"name": "maxDay", "type": "int"}, {"name": "CD", "type": "int"}, {"name": "limitNum", "type": "int"}], "rows": [{"eventDefId": "EVT_INVESTIGATE_SPOTTED", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "TaskInvestigate", "source": "RandomDaily", "weight": 10, "title": "调查暴露", "desc": "调查行动被目击，必须立即回应。", "blockPolicy": "BlockOriginTask", "defaultAffects": ["OriginTask", "Node"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_INV", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_SHORTAGE", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 6, "title": "补给短缺", "desc": "供应链出现波动，需要做出取舍。", "blockPolicy": "None", "defaultAffects": ["Node"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyOnceThenRemove", "ignoreEffectId": "EFF_IGNORE_RANDOM", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "TaskInvestigate", "source": "RandomDaily", "weight": 8, "title": "证据遗失", "desc": "关键物证在转运中丢失，调查线索可能断裂。", "blockPolicy": "BlockOriginTask", "defaultAffects": ["OriginTask", "Node"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "TaskInvestigate", "source": "RandomDaily", "weight": 7, "title": "认知污染", "desc": "调查员疑似遭受认知污染，需立即处置。", "blockPolicy": "BlockOriginTask", "defaultAffects": ["OriginTask", "Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_INVESTIGATE_BRIBERY", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "TaskInvestigate", "source": "RandomDaily", "weight": 6, "title": "封口要价", "desc": "当地关键人物索要好处以保持沉默。", "blockPolicy": "BlockOriginTask", "defaultAffects": ["OriginTask", "Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyOnceThenRemove", "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_BLACKOUT", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 7, "title": "区域停电", "desc": "区域性停电导致监控失效与安防薄弱。", "blockPolicy": "None", "defaultAffects": ["Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_BLACKOUT", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_AUDIT", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 5, "title": "总部审计", "desc": "总部派出审计组，要求检查报表与日志。", "blockPolicy": "None", "defaultAffects": ["Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyOnceThenRemove", "ignoreEffectId": "EFF_IGNORE_AUDIT", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_LEAK", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 6, "title": "信息外泄", "desc": "内部消息疑似外泄，媒体开始追问。", "blockPolicy": "None", "defaultAffects": ["Global", "Node"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_LEAK", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_CULT_ACTIVITY", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 6, "title": "教团活动", "desc": "可疑教团在附近活动，疑似与异常相关。", "blockPolicy": "None", "defaultAffects": ["Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_CULT", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_STAFF_STRIKE", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 4, "title": "员工罢工", "desc": "后勤与安保提出待遇要求，工作效率下降。", "blockPolicy": "None", "defaultAffects": ["Global", "Node"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_STRIKE", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 5, "title": "收容漂移", "desc": "收容措施出现偏移迹象，需立即校准。", "blockPolicy": "None", "defaultAffects": ["Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyDailyKeep", "ignoreEffectId": "EFF_IGNORE_DRIFT", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}, {"eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE", "requiresAnomalyId": "ANY", "requiresNodeId": "ANY", "requiresTaskType": "ANY", "source": "RandomDaily", "weight": 5, "title": "物资扣押", "desc": "地方机关临时扣押物资，项目补给受阻。", "blockPolicy": "None", "defaultAffects": ["Node", "Global"], "autoResolveAfterDays": 1, "ignoreApplyMode": "ApplyOnceThenRemove", "ignoreEffectId": "EFF_IGNORE_SEIZURE", "p": 0.1, "minDay": 1, "maxDay": 99, "CD": 20, "limitNum": 1}]}, "EventOptions": {"idField": "key", "columns": [{"name": "key", "type": "int"}, {"name": "eventDefId", "type": "string"}, {"name": "optionId", "type": "string"}, {"name": "text", "type": "string"}, {"name": "resultText", "type": "string"}, {"name": "affects", "type": "string[]"}, {"name": "effectId", "type": "string"}], "rows": [{"key": 1, "eventDefId": "EVT_INVESTIGATE_SPOTTED", "optionId": "O1", "text": "安抚目击者", "resultText": "舆情暂时稳定。", "affects": ["Node"], "effectId": "EFF_OPTION_CALM"}, {"key": 2, "eventDefId": "EVT_INVESTIGATE_SPOTTED", "optionId": "O2", "text": "加速推进任务", "resultText": "调查小队冒险推进，压力上升。", "affects": ["OriginTask", "Global"], "effectId": "EFF_OPTION_PUSH"}, {"key": 3, "eventDefId": "EVT_RANDOM_SHORTAGE", "optionId": "O1", "text": "优先保障民生", "resultText": "民众情绪稳定，但经费吃紧。", "affects": ["Node", "Global"], "effectId": "EFF_OPTION_RELIEF"}, {"key": 4, "eventDefId": "EVT_RANDOM_SHORTAGE", "optionId": "O2", "text": "保障项目推进", "resultText": "项目得到资源，人口受到影响。", "affects": ["Node", "TaskType:Contain"], "effectId": "EFF_OPTION_PROJECT"}, {"key": 5, "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST", "optionId": "O1", "text": "封锁现场并回溯", "resultText": "线索回收，进度回补，但引发关注。", "affects": ["OriginTask", "Node", "Global"], "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"}, {"key": 6, "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST", "optionId": "O2", "text": "放弃物证，改走旁证", "resultText": "进度受损，但不惊动外界。", "affects": ["OriginTask", "Global"], "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"}, {"key": 7, "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE", "optionId": "O1", "text": "隔离并执行反制协议", "resultText": "行动延缓，污染被压制。", "affects": ["OriginTask", "Node", "Global"], "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"}, {"key": 8, "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE", "optionId": "O2", "text": "继续行动，押注稳定", "resultText": "小队冒险推进，外部风险上升。", "affects": ["OriginTask", "Global"], "effectId": "EFF_OPT_INV_MEMETIC_PUSH"}, {"key": 9, "eventDefId": "EVT_INVESTIGATE_BRIBERY", "optionId": "O1", "text": "支付封口费", "resultText": "对方保持沉默，舆情回落。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_INV_BRIBE_PAY"}, {"key": 10, "eventDefId": "EVT_INVESTIGATE_BRIBERY", "optionId": "O2", "text": "施压/威慑", "resultText": "对方退让，但反弹风险增加。", "affects": ["OriginTask", "Node", "Global"], "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"}, {"key": 11, "eventDefId": "EVT_RANDOM_BLACKOUT", "optionId": "O1", "text": "启用备用电源", "resultText": "维持安防与监控，消耗经费。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_BLACKOUT_BACKUP"}, {"key": 12, "eventDefId": "EVT_RANDOM_BLACKOUT", "optionId": "O2", "text": "切换到低功耗模式", "resultText": "节省资源，但收容压力上升。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"}, {"key": 13, "eventDefId": "EVT_RANDOM_AUDIT", "optionId": "O1", "text": "全力配合", "resultText": "合规风险下降，但需要投入成本。", "affects": ["Global"], "effectId": "EFF_OPT_AUDIT_COOP"}, {"key": 14, "eventDefId": "EVT_RANDOM_AUDIT", "optionId": "O2", "text": "拖延并整理", "resultText": "短期省钱，但可能引发追责。", "affects": ["Global"], "effectId": "EFF_OPT_AUDIT_DELAY"}, {"key": 15, "eventDefId": "EVT_RANDOM_LEAK", "optionId": "O1", "text": "启动舆情引导", "resultText": "舆论被压制，成本较高。", "affects": ["Global", "Node"], "effectId": "EFF_OPT_LEAK_PR"}, {"key": 16, "eventDefId": "EVT_RANDOM_LEAK", "optionId": "O2", "text": "封禁渠道，追查内鬼", "resultText": "找到线索，但外部压力上升。", "affects": ["Global"], "effectId": "EFF_OPT_LEAK_HUNT"}, {"key": 17, "eventDefId": "EVT_RANDOM_CULT_ACTIVITY", "optionId": "O1", "text": "秘密监控", "resultText": "获得情报，但民间焦虑上升。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_CULT_SURVEIL"}, {"key": 18, "eventDefId": "EVT_RANDOM_CULT_ACTIVITY", "optionId": "O2", "text": "直接清剿", "resultText": "短期平息，但引发更大关注。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_CULT_RAID"}, {"key": 19, "eventDefId": "EVT_RANDOM_STAFF_STRIKE", "optionId": "O1", "text": "临时加薪", "resultText": "秩序恢复，但资金承压。", "affects": ["Global"], "effectId": "EFF_OPT_STRIKE_RAISE"}, {"key": 20, "eventDefId": "EVT_RANDOM_STAFF_STRIKE", "optionId": "O2", "text": "强制复岗", "resultText": "成本降低，但士气与风险恶化。", "affects": ["Global", "Node"], "effectId": "EFF_OPT_STRIKE_FORCE"}, {"key": 21, "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT", "optionId": "O1", "text": "追加安防与校准", "resultText": "风险下降，但需要经费。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_DRIFT_REINFORCE"}, {"key": 22, "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT", "optionId": "O2", "text": "转移收容物", "resultText": "暂时止损，但任务与舆情受损。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_DRIFT_TRANSFER"}, {"key": 23, "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE", "optionId": "O1", "text": "走官方渠道疏通", "resultText": "成本可控，恢复供给。", "affects": ["Node", "Global"], "effectId": "EFF_OPT_SEIZURE_OFFICIAL"}, {"key": 24, "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE", "optionId": "O2", "text": "走黑市替代", "resultText": "供给恢复，但后患增加。", "affects": ["Global", "Node"], "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"}]}, "Effects": {"idField": "key", "columns": [{"name": "key", "type": "int"}, {"name": "effectId", "type": "string"}], "rows": [{"key": 1, "effectId": "EFF_IGNORE_INV"}, {"key": 2, "effectId": "EFF_OPTION_CALM"}, {"key": 3, "effectId": "EFF_OPTION_PUSH"}, {"key": 4, "effectId": "EFF_IGNORE_RANDOM"}, {"key": 5, "effectId": "EFF_OPTION_RELIEF"}, {"key": 6, "effectId": "EFF_OPTION_PROJECT"}, {"key": 7, "effectId": "EFF_IGNORE_INV_EVIDENCE"}, {"key": 8, "effectId": "EFF_IGNORE_INV_MEMETIC"}, {"key": 9, "effectId": "EFF_IGNORE_INV_BRIBERY"}, {"key": 10, "effectId": "EFF_IGNORE_BLACKOUT"}, {"key": 11, "effectId": "EFF_IGNORE_AUDIT"}, {"key": 12, "effectId": "EFF_IGNORE_LEAK"}, {"key": 13, "effectId": "EFF_IGNORE_CULT"}, {"key": 14, "effectId": "EFF_IGNORE_STRIKE"}, {"key": 15, "effectId": "EFF_IGNORE_DRIFT"}, {"key": 16, "effectId": "EFF_IGNORE_SEIZURE"}, {"key": 17, "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"}, {"key": 18, "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"}, {"key": 19, "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"}, {"key": 20, "effectId": "EFF_OPT_INV_MEMETIC_PUSH"}, {"key": 21, "effectId": "EFF_OPT_INV_BRIBE_PAY"}, {"key": 22, "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"}, {"key": 23, "effectId": "EFF_OPT_BLACKOUT_BACKUP"}, {"key": 24, "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"}, {"key": 25, "effectId": "EFF_OPT_AUDIT_COOP"}, {"key": 26, "effectId": "EFF_OPT_AUDIT_DELAY"}, {"key": 27, "effectId": "EFF_OPT_LEAK_PR"}, {"key": 28, "effectId": "EFF_OPT_LEAK_HUNT"}, {"key": 29, "effectId": "EFF_OPT_CULT_SURVEIL"}, {"key": 30, "effectId": "EFF_OPT_CULT_RAID"}, {"key": 31, "effectId": "EFF_OPT_STRIKE_RAISE"}, {"key": 32, "effectId": "EFF_OPT_STRIKE_FORCE"}, {"key": 33, "effectId": "EFF_OPT_DRIFT_REINFORCE"}, {"key": 34, "effectId": "EFF_OPT_DRIFT_TRANSFER"}, {"key": 35, "effectId": "EFF_OPT_SEIZURE_OFFICIAL"}, {"key": 36, "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"}]}, "EffectOps": {"idField": "key", "columns": [{"name": "key", "type": "int"}, {"name": "effectId", "type": "string"}, {"name": "scope", "type": "string"}, {"name": "statKey", "type": "string"}, {"name": "op", "type": "string"}, {"name": "value", "type": "float"}, {"name": "min", "type": "float"}, {"name": "max", "type": "float"}], "rows": [{"key": 1, "effectId": "EFF_IGNORE_INV", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.2, "min": null, "max": null}, {"key": 2, "effectId": "EFF_IGNORE_INV", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 3, "effectId": "EFF_OPTION_CALM", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -2.0, "min": null, "max": null}, {"key": 4, "effectId": "EFF_OPTION_PUSH", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": 0.15, "min": null, "max": null}, {"key": 5, "effectId": "EFF_OPTION_PUSH", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 6, "effectId": "EFF_IGNORE_RANDOM", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 7, "effectId": "EFF_OPTION_RELIEF", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 8, "effectId": "EFF_OPTION_RELIEF", "scope": "Global", "statKey": "Money", "op": "Add", "value": -80.0, "min": null, "max": null}, {"key": 9, "effectId": "EFF_OPTION_PROJECT", "scope": "Node", "statKey": "Population", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 10, "effectId": "EFF_OPTION_PROJECT", "scope": "TaskType:Contain", "statKey": "TaskProgressDelta", "op": "Add", "value": 0.1, "min": null, "max": null}, {"key": 11, "effectId": "EFF_IGNORE_INV_EVIDENCE", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.15, "min": null, "max": null}, {"key": 12, "effectId": "EFF_IGNORE_INV_EVIDENCE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 13, "effectId": "EFF_IGNORE_INV_EVIDENCE", "scope": "Global", "statKey": "Intel", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 14, "effectId": "EFF_OPT_INV_EVIDENCE_LOCK", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": 0.1, "min": null, "max": null}, {"key": 15, "effectId": "EFF_OPT_INV_EVIDENCE_LOCK", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 16, "effectId": "EFF_OPT_INV_EVIDENCE_LOCK", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 17, "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.05, "min": null, "max": null}, {"key": 18, "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 19, "effectId": "EFF_IGNORE_INV_MEMETIC", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.1, "min": null, "max": null}, {"key": 20, "effectId": "EFF_IGNORE_INV_MEMETIC", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 21, "effectId": "EFF_IGNORE_INV_MEMETIC", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 22, "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.05, "min": null, "max": null}, {"key": 23, "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 24, "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 25, "effectId": "EFF_OPT_INV_MEMETIC_PUSH", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": 0.15, "min": null, "max": null}, {"key": 26, "effectId": "EFF_OPT_INV_MEMETIC_PUSH", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 27, "effectId": "EFF_IGNORE_INV_BRIBERY", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 28, "effectId": "EFF_IGNORE_INV_BRIBERY", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 29, "effectId": "EFF_OPT_INV_BRIBE_PAY", "scope": "Global", "statKey": "Money", "op": "Add", "value": -50.0, "min": null, "max": null}, {"key": 30, "effectId": "EFF_OPT_INV_BRIBE_PAY", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 31, "effectId": "EFF_OPT_INV_BRIBE_PRESSURE", "scope": "OriginTask", "statKey": "TaskProgressDelta", "op": "Add", "value": 0.05, "min": null, "max": null}, {"key": 32, "effectId": "EFF_OPT_INV_BRIBE_PRESSURE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 33, "effectId": "EFF_OPT_INV_BRIBE_PRESSURE", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 34, "effectId": "EFF_IGNORE_BLACKOUT", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 35, "effectId": "EFF_IGNORE_BLACKOUT", "scope": "TaskType:Contain", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.05, "min": null, "max": null}, {"key": 36, "effectId": "EFF_OPT_BLACKOUT_BACKUP", "scope": "Global", "statKey": "Money", "op": "Add", "value": -60.0, "min": null, "max": null}, {"key": 37, "effectId": "EFF_OPT_BLACKOUT_BACKUP", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 38, "effectId": "EFF_OPT_BLACKOUT_LOWPOWER", "scope": "Global", "statKey": "Money", "op": "Add", "value": -10.0, "min": null, "max": null}, {"key": 39, "effectId": "EFF_OPT_BLACKOUT_LOWPOWER", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 40, "effectId": "EFF_IGNORE_AUDIT", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 41, "effectId": "EFF_IGNORE_AUDIT", "scope": "Global", "statKey": "Money", "op": "Add", "value": -20.0, "min": null, "max": null}, {"key": 42, "effectId": "EFF_OPT_AUDIT_COOP", "scope": "Global", "statKey": "Money", "op": "Add", "value": -30.0, "min": null, "max": null}, {"key": 43, "effectId": "EFF_OPT_AUDIT_COOP", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 44, "effectId": "EFF_OPT_AUDIT_COOP", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 45, "effectId": "EFF_OPT_AUDIT_DELAY", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 46, "effectId": "EFF_OPT_AUDIT_DELAY", "scope": "Global", "statKey": "Intel", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 47, "effectId": "EFF_IGNORE_LEAK", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 48, "effectId": "EFF_OPT_LEAK_PR", "scope": "Global", "statKey": "Money", "op": "Add", "value": -50.0, "min": null, "max": null}, {"key": 49, "effectId": "EFF_OPT_LEAK_PR", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 50, "effectId": "EFF_OPT_LEAK_PR", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 51, "effectId": "EFF_OPT_LEAK_HUNT", "scope": "Global", "statKey": "Money", "op": "Add", "value": -20.0, "min": null, "max": null}, {"key": 52, "effectId": "EFF_OPT_LEAK_HUNT", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 53, "effectId": "EFF_OPT_LEAK_HUNT", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 54, "effectId": "EFF_IGNORE_CULT", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 55, "effectId": "EFF_IGNORE_CULT", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 56, "effectId": "EFF_OPT_CULT_SURVEIL", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 57, "effectId": "EFF_OPT_CULT_SURVEIL", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 58, "effectId": "EFF_OPT_CULT_RAID", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 59, "effectId": "EFF_OPT_CULT_RAID", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 60, "effectId": "EFF_OPT_CULT_RAID", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 61, "effectId": "EFF_IGNORE_STRIKE", "scope": "TaskType:Manage", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.1, "min": null, "max": null}, {"key": 62, "effectId": "EFF_IGNORE_STRIKE", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 63, "effectId": "EFF_OPT_STRIKE_RAISE", "scope": "Global", "statKey": "Money", "op": "Add", "value": -80.0, "min": null, "max": null}, {"key": 64, "effectId": "EFF_OPT_STRIKE_RAISE", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 65, "effectId": "EFF_OPT_STRIKE_FORCE", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 66, "effectId": "EFF_OPT_STRIKE_FORCE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 67, "effectId": "EFF_IGNORE_DRIFT", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 2.0, "min": null, "max": null}, {"key": 68, "effectId": "EFF_IGNORE_DRIFT", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 69, "effectId": "EFF_OPT_DRIFT_REINFORCE", "scope": "Global", "statKey": "Money", "op": "Add", "value": -70.0, "min": null, "max": null}, {"key": 70, "effectId": "EFF_OPT_DRIFT_REINFORCE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 71, "effectId": "EFF_OPT_DRIFT_TRANSFER", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 72, "effectId": "EFF_OPT_DRIFT_TRANSFER", "scope": "TaskType:Contain", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.1, "min": null, "max": null}, {"key": 73, "effectId": "EFF_OPT_DRIFT_TRANSFER", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 74, "effectId": "EFF_IGNORE_SEIZURE", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 75, "effectId": "EFF_IGNORE_SEIZURE", "scope": "TaskType:Contain", "statKey": "TaskProgressDelta", "op": "Add", "value": -0.05, "min": null, "max": null}, {"key": 76, "effectId": "EFF_OPT_SEIZURE_OFFICIAL", "scope": "Global", "statKey": "Money", "op": "Add", "value": -40.0, "min": null, "max": null}, {"key": 77, "effectId": "EFF_OPT_SEIZURE_OFFICIAL", "scope": "Node", "statKey": "LocalPanic", "op": "Add", "value": -1.0, "min": null, "max": null}, {"key": 78, "effectId": "EFF_OPT_SEIZURE_BLACKMARKET", "scope": "Global", "statKey": "Money", "op": "Add", "value": -60.0, "min": null, "max": null}, {"key": 79, "effectId": "EFF_OPT_SEIZURE_BLACKMARKET", "scope": "Global", "statKey": "Intel", "op": "Add", "value": 1.0, "min": null, "max": null}, {"key": 80, "effectId": "EFF_OPT_SEIZURE_BLACKMARKET", "scope": "Global", "statKey": "WorldPanic", "op": "Add", "value": 1.0, "min": null, "max": null}]}}}
+{
+  "meta": {
+    "schemaVersion": "0.1",
+    "dataVersion": "2026.01.25b"
+  },
+  "tables": {
+    "Meta": {
+      "idField": "schemaVersion",
+      "columns": [
+        {
+          "name": "schemaVersion",
+          "type": "string"
+        },
+        {
+          "name": "dataVersion",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "schemaVersion": "0.1",
+          "dataVersion": "2026.01.25b"
+        }
+      ]
+    },
+    "Balance": {
+      "idField": "key",
+      "columns": [
+        {
+          "name": "key",
+          "type": "string"
+        },
+        {
+          "name": "p1",
+          "type": "int[]"
+        },
+        {
+          "name": "p2",
+          "type": "float[]"
+        },
+        {
+          "name": "p3",
+          "type": "string[]"
+        }
+      ],
+      "rows": [
+        {
+          "key": "DefaultIgnoreApplyMode",
+          "p1": [],
+          "p2": [],
+          "p3": [
+            "ApplyDailyKeep"
+          ]
+        },
+        {
+          "key": "DailyWorldPanicDecay",
+          "p1": [],
+          "p2": [
+            0.05
+          ],
+          "p3": []
+        },
+        {
+          "key": "StartMoney",
+          "p1": [
+            10000
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "PopToMoneyRate",
+          "p1": [],
+          "p2": [
+            0.1
+          ],
+          "p3": []
+        },
+        {
+          "key": "WagePerAgentPerDay",
+          "p1": [
+            100
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "ContainedAnomalyMaintenanceDefault",
+          "p1": [
+            100
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "StartWorldPanic",
+          "p1": [],
+          "p2": [
+            0.0
+          ],
+          "p3": []
+        },
+        {
+          "key": "WorldPanicFailThreshold",
+          "p1": [
+            100
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "ContainReliefFixed",
+          "p1": [
+            20
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "WorldPanicDecayPerSafeNodePerDay",
+          "p1": [],
+          "p2": [
+            0.5
+          ],
+          "p3": []
+        },
+        {
+          "key": "ClampWorldPanicMin",
+          "p1": [
+            0
+          ],
+          "p2": [],
+          "p3": []
+        },
+        {
+          "key": "ClampMoneyMin",
+          "p1": [
+            0
+          ],
+          "p2": [],
+          "p3": []
+        }
+      ]
+    },
+    "Nodes": {
+      "idField": "nodeId",
+      "columns": [
+        {
+          "name": "nodeId",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "startPopulation",
+          "type": "int"
+        },
+        {
+          "name": "unlocked",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "nodeId": "N1",
+          "name": "节点1",
+          "startPopulation": 10000,
+          "unlocked": 1
+        },
+        {
+          "nodeId": "N2",
+          "name": "节点2",
+          "startPopulation": 20000,
+          "unlocked": 1
+        },
+        {
+          "nodeId": "N3",
+          "name": "节点3",
+          "startPopulation": 5000,
+          "unlocked": 1
+        },
+        {
+          "nodeId": "N4",
+          "name": "节点4",
+          "startPopulation": 100000,
+          "unlocked": 0
+        },
+        {
+          "nodeId": "N5",
+          "name": "节点5",
+          "startPopulation": 2000,
+          "unlocked": 0
+        },
+        {
+          "nodeId": "N6",
+          "name": "节点6",
+          "startPopulation": 3000,
+          "unlocked": 0
+        },
+        {
+          "nodeId": "N7",
+          "name": "节点7",
+          "startPopulation": 500,
+          "unlocked": 0
+        },
+        {
+          "nodeId": "N8",
+          "name": "节点8",
+          "startPopulation": 100,
+          "unlocked": 0
+        }
+      ]
+    },
+    "Anomalies": {
+      "idField": "anomalyId",
+      "columns": [
+        {
+          "name": "anomalyId",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "class",
+          "type": "string"
+        },
+        {
+          "name": "worldPanicPerDayUncontained",
+          "type": "float"
+        },
+        {
+          "name": "baseDays",
+          "type": "int"
+        },
+        {
+          "name": "maintenanceCostPerDay",
+          "type": "int"
+        },
+        {
+          "name": "actPeopleKill",
+          "type": "int"
+        },
+        {
+          "name": "invReq",
+          "type": "int[]"
+        },
+        {
+          "name": "conReq",
+          "type": "int[]"
+        },
+        {
+          "name": "manReq",
+          "type": "int[]"
+        },
+        {
+          "name": "invhpDmg",
+          "type": "int"
+        },
+        {
+          "name": "invsanDmg",
+          "type": "int"
+        },
+        {
+          "name": "conhpDmg",
+          "type": "int"
+        },
+        {
+          "name": "consanDmg",
+          "type": "int"
+        },
+        {
+          "name": "manhpDmg",
+          "type": "int"
+        },
+        {
+          "name": "mansanDmg",
+          "type": "int"
+        },
+        {
+          "name": "invExp",
+          "type": "int"
+        },
+        {
+          "name": "conExp",
+          "type": "int"
+        },
+        {
+          "name": "manExpPerDay",
+          "type": "int"
+        },
+        {
+          "name": "manNegentropy PerDay",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "anomalyId": "AN_001",
+          "name": "镜面渗漏",
+          "class": "Safe",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 3,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 1,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "invhpDmg": 0,
+          "invsanDmg": 1,
+          "conhpDmg": 3,
+          "consanDmg": 2,
+          "manhpDmg": 0,
+          "mansanDmg": 1,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_002",
+          "name": "失声合唱",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 10,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 2,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 2,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_003",
+          "name": "嗜盐水雾",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 8,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 3,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_004",
+          "name": "空白日记",
+          "class": "Thaumiel",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 12,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 1000,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 5,
+          "consanDmg": 12,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_005",
+          "name": "逆向楼梯间",
+          "class": "Apollyon",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 15,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 1000,
+          "invReq": [
+            10,
+            9,
+            0,
+            0
+          ],
+          "conReq": [
+            7,
+            10,
+            0,
+            9
+          ],
+          "manReq": [
+            6,
+            10,
+            9,
+            4
+          ],
+          "invhpDmg": 30,
+          "invsanDmg": 30,
+          "conhpDmg": 15,
+          "consanDmg": 15,
+          "manhpDmg": 0,
+          "mansanDmg": 8,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_006",
+          "name": "自复原蜡像",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_007",
+          "name": "午夜电台",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_008",
+          "name": "低语菌落",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "invhpDmg": 0,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_009",
+          "name": "无影灯",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            6,
+            5,
+            0,
+            0
+          ],
+          "conReq": [
+            4,
+            6,
+            0,
+            4
+          ],
+          "manReq": [
+            3,
+            6,
+            5,
+            0
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 3,
+          "consanDmg": 4,
+          "manhpDmg": 0,
+          "mansanDmg": 4,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_010",
+          "name": "恒温灰尘",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 4,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_011",
+          "name": "回声邮筒",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            6,
+            5,
+            0,
+            0
+          ],
+          "conReq": [
+            4,
+            6,
+            0,
+            4
+          ],
+          "manReq": [
+            3,
+            6,
+            5,
+            0
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 3,
+          "consanDmg": 4,
+          "manhpDmg": 0,
+          "mansanDmg": 4,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_012",
+          "name": "镜中幼体",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_013",
+          "name": "祈香残火",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            7,
+            6,
+            0,
+            0
+          ],
+          "conReq": [
+            5,
+            7,
+            0,
+            5
+          ],
+          "manReq": [
+            4,
+            7,
+            6,
+            0
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 4,
+          "consanDmg": 5,
+          "manhpDmg": 0,
+          "mansanDmg": 5,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_014",
+          "name": "符箓回路",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "invhpDmg": 2,
+          "invsanDmg": 2,
+          "conhpDmg": 5,
+          "consanDmg": 6,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_015",
+          "name": "五行失衡井",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_016",
+          "name": "洞天影门",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_017",
+          "name": "天人回响",
+          "class": "Thaumiel",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 12,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            11,
+            10,
+            0,
+            0
+          ],
+          "conReq": [
+            8,
+            11,
+            0,
+            10
+          ],
+          "manReq": [
+            7,
+            11,
+            10,
+            5
+          ],
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 9,
+          "consanDmg": 10,
+          "manhpDmg": 0,
+          "mansanDmg": 10,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_018",
+          "name": "业火余烬",
+          "class": "Keter",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 8,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            12,
+            11,
+            0,
+            0
+          ],
+          "conReq": [
+            9,
+            12,
+            0,
+            11
+          ],
+          "manReq": [
+            8,
+            12,
+            11,
+            6
+          ],
+          "invhpDmg": 4,
+          "invsanDmg": 4,
+          "conhpDmg": 12,
+          "consanDmg": 13,
+          "manhpDmg": 0,
+          "mansanDmg": 13,
+          "invExp": 5,
+          "conExp": 5,
+          "manExpPerDay": 30,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_019",
+          "name": "戒律钟摆",
+          "class": "Apollyon",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 15,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            9,
+            8,
+            0,
+            0
+          ],
+          "conReq": [
+            7,
+            9,
+            0,
+            7
+          ],
+          "manReq": [
+            6,
+            9,
+            8,
+            0
+          ],
+          "invhpDmg": 10,
+          "invsanDmg": 10,
+          "conhpDmg": 5,
+          "consanDmg": 12,
+          "manhpDmg": 0,
+          "mansanDmg": 7,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        },
+        {
+          "anomalyId": "AN_020",
+          "name": "丹砂雾化",
+          "class": "Euclid",
+          "worldPanicPerDayUncontained": 0.1,
+          "baseDays": 5,
+          "maintenanceCostPerDay": 100,
+          "actPeopleKill": 100,
+          "invReq": [
+            8,
+            7,
+            0,
+            0
+          ],
+          "conReq": [
+            6,
+            8,
+            0,
+            6
+          ],
+          "manReq": [
+            5,
+            8,
+            7,
+            0
+          ],
+          "invhpDmg": 30,
+          "invsanDmg": 30,
+          "conhpDmg": 15,
+          "consanDmg": 15,
+          "manhpDmg": 0,
+          "mansanDmg": 6,
+          "invExp": 2,
+          "conExp": 2,
+          "manExpPerDay": 10,
+          "manNegentropy PerDay": 10
+        }
+      ]
+    },
+    "AnomaliesGen": {
+      "idField": "day",
+      "columns": [
+        {
+          "name": "day",
+          "type": "int"
+        },
+        {
+          "name": "AnomaliesGenNum",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "day": 1,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 2,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 3,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 4,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 5,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 6,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 7,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 8,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 9,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 10,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 11,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 12,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 13,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 14,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 15,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 16,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 17,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 18,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 19,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 20,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 21,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 22,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 23,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 24,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 25,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 26,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 27,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 28,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 29,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 30,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 31,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 32,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 33,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 34,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 35,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 36,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 37,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 38,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 39,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 40,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 41,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 42,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 43,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 44,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 45,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 46,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 47,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 48,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 49,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 50,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 51,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 52,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 53,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 54,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 55,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 56,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 57,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 58,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 59,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 60,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 61,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 62,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 63,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 64,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 65,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 66,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 67,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 68,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 69,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 70,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 71,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 72,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 73,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 74,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 75,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 76,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 77,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 78,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 79,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 80,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 81,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 82,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 83,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 84,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 85,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 86,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 87,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 88,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 89,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 90,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 91,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 92,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 93,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 94,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 95,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 96,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 97,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 98,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 99,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 100,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 101,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 102,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 103,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 104,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 105,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 106,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 107,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 108,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 109,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 110,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 111,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 112,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 113,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 114,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 115,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 116,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 117,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 118,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 119,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 120,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 121,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 122,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 123,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 124,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 125,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 126,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 127,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 128,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 129,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 130,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 131,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 132,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 133,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 134,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 135,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 136,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 137,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 138,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 139,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 140,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 141,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 142,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 143,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 144,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 145,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 146,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 147,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 148,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 149,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 150,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 151,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 152,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 153,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 154,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 155,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 156,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 157,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 158,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 159,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 160,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 161,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 162,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 163,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 164,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 165,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 166,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 167,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 168,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 169,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 170,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 171,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 172,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 173,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 174,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 175,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 176,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 177,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 178,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 179,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 180,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 181,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 182,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 183,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 184,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 185,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 186,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 187,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 188,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 189,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 190,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 191,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 192,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 193,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 194,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 195,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 196,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 197,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 198,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 199,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 200,
+          "AnomaliesGenNum": 1
+        },
+        {
+          "day": 201,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 202,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 203,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 204,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 205,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 206,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 207,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 208,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 209,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 210,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 211,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 212,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 213,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 214,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 215,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 216,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 217,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 218,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 219,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 220,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 221,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 222,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 223,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 224,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 225,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 226,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 227,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 228,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 229,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 230,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 231,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 232,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 233,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 234,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 235,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 236,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 237,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 238,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 239,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 240,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 241,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 242,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 243,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 244,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 245,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 246,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 247,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 248,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 249,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 250,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 251,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 252,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 253,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 254,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 255,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 256,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 257,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 258,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 259,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 260,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 261,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 262,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 263,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 264,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 265,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 266,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 267,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 268,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 269,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 270,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 271,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 272,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 273,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 274,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 275,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 276,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 277,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 278,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 279,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 280,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 281,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 282,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 283,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 284,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 285,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 286,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 287,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 288,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 289,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 290,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 291,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 292,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 293,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 294,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 295,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 296,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 297,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 298,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 299,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 300,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 301,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 302,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 303,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 304,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 305,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 306,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 307,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 308,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 309,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 310,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 311,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 312,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 313,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 314,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 315,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 316,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 317,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 318,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 319,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 320,
+          "AnomaliesGenNum": 2
+        },
+        {
+          "day": 321,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 322,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 323,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 324,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 325,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 326,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 327,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 328,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 329,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 330,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 331,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 332,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 333,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 334,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 335,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 336,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 337,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 338,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 339,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 340,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 341,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 342,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 343,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 344,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 345,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 346,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 347,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 348,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 349,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 350,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 351,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 352,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 353,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 354,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 355,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 356,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 357,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 358,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 359,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 360,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 361,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 362,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 363,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 364,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 365,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 366,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 367,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 368,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 369,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 370,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 371,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 372,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 373,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 374,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 375,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 376,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 377,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 378,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 379,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 380,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 381,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 382,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 383,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 384,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 385,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 386,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 387,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 388,
+          "AnomaliesGenNum": 7
+        },
+        {
+          "day": 389,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 390,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 391,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 392,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 393,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 394,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 395,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 396,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 397,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 398,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 399,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 400,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 401,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 402,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 403,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 404,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 405,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 406,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 407,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 408,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 409,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 410,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 411,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 412,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 413,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 414,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 415,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 416,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 417,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 418,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 419,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 420,
+          "AnomaliesGenNum": 3
+        },
+        {
+          "day": 421,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 422,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 423,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 424,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 425,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 426,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 427,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 428,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 429,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 430,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 431,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 432,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 433,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 434,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 435,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 436,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 437,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 438,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 439,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 440,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 441,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 442,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 443,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 444,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 445,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 446,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 447,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 448,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 449,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 450,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 451,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 452,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 453,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 454,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 455,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 456,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 457,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 458,
+          "AnomaliesGenNum": 8
+        },
+        {
+          "day": 459,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 460,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 461,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 462,
+          "AnomaliesGenNum": 0
+        },
+        {
+          "day": 463,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 464,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 465,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 466,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 467,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 468,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 469,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 470,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 471,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 472,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 473,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 474,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 475,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 476,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 477,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 478,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 479,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 480,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 481,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 482,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 483,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 484,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 485,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 486,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 487,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 488,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 489,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 490,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 491,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 492,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 493,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 494,
+          "AnomaliesGenNum": 6
+        },
+        {
+          "day": 495,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 496,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 497,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 498,
+          "AnomaliesGenNum": 5
+        },
+        {
+          "day": 499,
+          "AnomaliesGenNum": 4
+        },
+        {
+          "day": 500,
+          "AnomaliesGenNum": 4
+        }
+      ]
+    },
+    "NewsDefs": {
+      "idField": "newsDefId",
+      "columns": [
+        {
+          "name": "newsDefId",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "requiresNodeId",
+          "type": "string"
+        },
+        {
+          "name": "requiresAnomalyId",
+          "type": "string"
+        },
+        {
+          "name": "weight",
+          "type": "int"
+        },
+        {
+          "name": "p",
+          "type": "float"
+        },
+        {
+          "name": "minDay",
+          "type": "int"
+        },
+        {
+          "name": "maxDay",
+          "type": "int"
+        },
+        {
+          "name": "CD",
+          "type": "int"
+        },
+        {
+          "name": "limitNum",
+          "type": "int"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "desc",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "newsDefId": "NEWS_BOOTSTRAP_GLOBAL",
+          "source": "Bootstrap",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 1,
+          "maxDay": 1,
+          "CD": 0,
+          "limitNum": 1,
+          "title": "O5通告：站点网络进入一级响应",
+          "desc": "过去48小时异常目击上升。各站点提升警戒，优先处理“可快速验证”的线索，避免无谓暴露。"
+        },
+        {
+          "newsDefId": "NEWS_BOOTSTRAP_NODE",
+          "source": "Bootstrap",
+          "requiresNodeId": "START",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 1,
+          "maxDay": 1,
+          "CD": 0,
+          "limitNum": 1,
+          "title": "站点简报：N1辖区出现不明活动",
+          "desc": "本地渠道报告多起“异常传闻”与人员失踪。建议先派遣小队调查，确认是否存在可收容目标。"
+        },
+        {
+          "newsDefId": "NEWS_BOOTSTRAP_RUMOR",
+          "source": "Bootstrap",
+          "requiresNodeId": "ANY",
+          "requiresAnomalyId": "ANY",
+          "weight": 1,
+          "p": 1.0,
+          "minDay": 1,
+          "maxDay": 1,
+          "CD": 0,
+          "limitNum": 1,
+          "title": "都市传闻：黑暗中有人“点名”你的名字",
+          "desc": "多名目击者称在夜间听到低语与重复的编号。真实性未知，但具备异常特征——可作为低成本调查线索。"
+        }
+      ]
+    },
+    "TaskDefs": {
+      "idField": "taskDefId",
+      "columns": [
+        {
+          "name": "taskDefId",
+          "type": "string"
+        },
+        {
+          "name": "taskType",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "agentSlotsMin",
+          "type": "int"
+        },
+        {
+          "name": "agentSlotsMax",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "taskDefId": "TASK_INVESTIGATE",
+          "taskType": "Investigate",
+          "name": "调查",
+          "agentSlotsMin": 1,
+          "agentSlotsMax": 5
+        },
+        {
+          "taskDefId": "TASK_CONTAIN",
+          "taskType": "Contain",
+          "name": "收容",
+          "agentSlotsMin": 1,
+          "agentSlotsMax": 5
+        },
+        {
+          "taskDefId": "TASK_MANAGE",
+          "taskType": "Manage",
+          "name": "管理",
+          "agentSlotsMin": 1,
+          "agentSlotsMax": 5
+        }
+      ]
+    },
+    "Events": {
+      "idField": "eventDefId",
+      "columns": [
+        {
+          "name": "eventDefId",
+          "type": "string"
+        },
+        {
+          "name": "requiresAnomalyId",
+          "type": "string"
+        },
+        {
+          "name": "requiresNodeId",
+          "type": "string"
+        },
+        {
+          "name": "requiresTaskType",
+          "type": "string"
+        },
+        {
+          "name": "source",
+          "type": "string"
+        },
+        {
+          "name": "weight",
+          "type": "int"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "desc",
+          "type": "string"
+        },
+        {
+          "name": "blockPolicy",
+          "type": "string"
+        },
+        {
+          "name": "defaultAffects",
+          "type": "string[]"
+        },
+        {
+          "name": "autoResolveAfterDays",
+          "type": "int"
+        },
+        {
+          "name": "ignoreApplyMode",
+          "type": "string"
+        },
+        {
+          "name": "ignoreEffectId",
+          "type": "string"
+        },
+        {
+          "name": "p",
+          "type": "float"
+        },
+        {
+          "name": "minDay",
+          "type": "int"
+        },
+        {
+          "name": "maxDay",
+          "type": "int"
+        },
+        {
+          "name": "CD",
+          "type": "int"
+        },
+        {
+          "name": "limitNum",
+          "type": "int"
+        }
+      ],
+      "rows": [
+        {
+          "eventDefId": "EVT_INVESTIGATE_SPOTTED",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
+          "weight": 10,
+          "title": "调查暴露",
+          "desc": "调查行动被目击，必须立即回应。",
+          "blockPolicy": "BlockOriginTask",
+          "defaultAffects": [
+            "OriginTask",
+            "Node"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_INV",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_SHORTAGE",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 6,
+          "title": "补给短缺",
+          "desc": "供应链出现波动，需要做出取舍。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Node"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyOnceThenRemove",
+          "ignoreEffectId": "EFF_IGNORE_RANDOM",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
+          "weight": 8,
+          "title": "证据遗失",
+          "desc": "关键物证在转运中丢失，调查线索可能断裂。",
+          "blockPolicy": "BlockOriginTask",
+          "defaultAffects": [
+            "OriginTask",
+            "Node"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_INV_EVIDENCE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
+          "weight": 7,
+          "title": "认知污染",
+          "desc": "调查员疑似遭受认知污染，需立即处置。",
+          "blockPolicy": "BlockOriginTask",
+          "defaultAffects": [
+            "OriginTask",
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_INV_MEMETIC",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "TaskInvestigate",
+          "source": "RandomDaily",
+          "weight": 6,
+          "title": "封口要价",
+          "desc": "当地关键人物索要好处以保持沉默。",
+          "blockPolicy": "BlockOriginTask",
+          "defaultAffects": [
+            "OriginTask",
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyOnceThenRemove",
+          "ignoreEffectId": "EFF_IGNORE_INV_BRIBERY",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_BLACKOUT",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 7,
+          "title": "区域停电",
+          "desc": "区域性停电导致监控失效与安防薄弱。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_BLACKOUT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_AUDIT",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 5,
+          "title": "总部审计",
+          "desc": "总部派出审计组，要求检查报表与日志。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyOnceThenRemove",
+          "ignoreEffectId": "EFF_IGNORE_AUDIT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_LEAK",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 6,
+          "title": "信息外泄",
+          "desc": "内部消息疑似外泄，媒体开始追问。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Global",
+            "Node"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_LEAK",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 6,
+          "title": "教团活动",
+          "desc": "可疑教团在附近活动，疑似与异常相关。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_CULT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 4,
+          "title": "员工罢工",
+          "desc": "后勤与安保提出待遇要求，工作效率下降。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Global",
+            "Node"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_STRIKE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 5,
+          "title": "收容漂移",
+          "desc": "收容措施出现偏移迹象，需立即校准。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyDailyKeep",
+          "ignoreEffectId": "EFF_IGNORE_DRIFT",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        },
+        {
+          "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+          "requiresAnomalyId": "ANY",
+          "requiresNodeId": "ANY",
+          "requiresTaskType": "ANY",
+          "source": "RandomDaily",
+          "weight": 5,
+          "title": "物资扣押",
+          "desc": "地方机关临时扣押物资，项目补给受阻。",
+          "blockPolicy": "None",
+          "defaultAffects": [
+            "Node",
+            "Global"
+          ],
+          "autoResolveAfterDays": 1,
+          "ignoreApplyMode": "ApplyOnceThenRemove",
+          "ignoreEffectId": "EFF_IGNORE_SEIZURE",
+          "p": 0.1,
+          "minDay": 1,
+          "maxDay": 99,
+          "CD": 20,
+          "limitNum": 1
+        }
+      ]
+    },
+    "EventOptions": {
+      "idField": "key",
+      "columns": [
+        {
+          "name": "key",
+          "type": "int"
+        },
+        {
+          "name": "eventDefId",
+          "type": "string"
+        },
+        {
+          "name": "optionId",
+          "type": "string"
+        },
+        {
+          "name": "text",
+          "type": "string"
+        },
+        {
+          "name": "resultText",
+          "type": "string"
+        },
+        {
+          "name": "affects",
+          "type": "string[]"
+        },
+        {
+          "name": "effectId",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "key": 1,
+          "eventDefId": "EVT_INVESTIGATE_SPOTTED",
+          "optionId": "O1",
+          "text": "安抚目击者",
+          "resultText": "舆情暂时稳定。",
+          "affects": [
+            "Node"
+          ],
+          "effectId": "EFF_OPTION_CALM"
+        },
+        {
+          "key": 2,
+          "eventDefId": "EVT_INVESTIGATE_SPOTTED",
+          "optionId": "O2",
+          "text": "加速推进任务",
+          "resultText": "调查小队冒险推进，压力上升。",
+          "affects": [
+            "OriginTask",
+            "Global"
+          ],
+          "effectId": "EFF_OPTION_PUSH"
+        },
+        {
+          "key": 3,
+          "eventDefId": "EVT_RANDOM_SHORTAGE",
+          "optionId": "O1",
+          "text": "优先保障民生",
+          "resultText": "民众情绪稳定，但经费吃紧。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPTION_RELIEF"
+        },
+        {
+          "key": 4,
+          "eventDefId": "EVT_RANDOM_SHORTAGE",
+          "optionId": "O2",
+          "text": "保障项目推进",
+          "resultText": "项目得到资源，人口受到影响。",
+          "affects": [
+            "Node",
+            "TaskType:Contain"
+          ],
+          "effectId": "EFF_OPTION_PROJECT"
+        },
+        {
+          "key": 5,
+          "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+          "optionId": "O1",
+          "text": "封锁现场并回溯",
+          "resultText": "线索回收，进度回补，但引发关注。",
+          "affects": [
+            "OriginTask",
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"
+        },
+        {
+          "key": 6,
+          "eventDefId": "EVT_INVESTIGATE_EVIDENCE_LOST",
+          "optionId": "O2",
+          "text": "放弃物证，改走旁证",
+          "resultText": "进度受损，但不惊动外界。",
+          "affects": [
+            "OriginTask",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"
+        },
+        {
+          "key": 7,
+          "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+          "optionId": "O1",
+          "text": "隔离并执行反制协议",
+          "resultText": "行动延缓，污染被压制。",
+          "affects": [
+            "OriginTask",
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"
+        },
+        {
+          "key": 8,
+          "eventDefId": "EVT_INVESTIGATE_MEMETIC_EXPOSURE",
+          "optionId": "O2",
+          "text": "继续行动，押注稳定",
+          "resultText": "小队冒险推进，外部风险上升。",
+          "affects": [
+            "OriginTask",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_MEMETIC_PUSH"
+        },
+        {
+          "key": 9,
+          "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+          "optionId": "O1",
+          "text": "支付封口费",
+          "resultText": "对方保持沉默，舆情回落。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_BRIBE_PAY"
+        },
+        {
+          "key": 10,
+          "eventDefId": "EVT_INVESTIGATE_BRIBERY",
+          "optionId": "O2",
+          "text": "施压/威慑",
+          "resultText": "对方退让，但反弹风险增加。",
+          "affects": [
+            "OriginTask",
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"
+        },
+        {
+          "key": 11,
+          "eventDefId": "EVT_RANDOM_BLACKOUT",
+          "optionId": "O1",
+          "text": "启用备用电源",
+          "resultText": "维持安防与监控，消耗经费。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_BLACKOUT_BACKUP"
+        },
+        {
+          "key": 12,
+          "eventDefId": "EVT_RANDOM_BLACKOUT",
+          "optionId": "O2",
+          "text": "切换到低功耗模式",
+          "resultText": "节省资源，但收容压力上升。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"
+        },
+        {
+          "key": 13,
+          "eventDefId": "EVT_RANDOM_AUDIT",
+          "optionId": "O1",
+          "text": "全力配合",
+          "resultText": "合规风险下降，但需要投入成本。",
+          "affects": [
+            "Global"
+          ],
+          "effectId": "EFF_OPT_AUDIT_COOP"
+        },
+        {
+          "key": 14,
+          "eventDefId": "EVT_RANDOM_AUDIT",
+          "optionId": "O2",
+          "text": "拖延并整理",
+          "resultText": "短期省钱，但可能引发追责。",
+          "affects": [
+            "Global"
+          ],
+          "effectId": "EFF_OPT_AUDIT_DELAY"
+        },
+        {
+          "key": 15,
+          "eventDefId": "EVT_RANDOM_LEAK",
+          "optionId": "O1",
+          "text": "启动舆情引导",
+          "resultText": "舆论被压制，成本较高。",
+          "affects": [
+            "Global",
+            "Node"
+          ],
+          "effectId": "EFF_OPT_LEAK_PR"
+        },
+        {
+          "key": 16,
+          "eventDefId": "EVT_RANDOM_LEAK",
+          "optionId": "O2",
+          "text": "封禁渠道，追查内鬼",
+          "resultText": "找到线索，但外部压力上升。",
+          "affects": [
+            "Global"
+          ],
+          "effectId": "EFF_OPT_LEAK_HUNT"
+        },
+        {
+          "key": 17,
+          "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+          "optionId": "O1",
+          "text": "秘密监控",
+          "resultText": "获得情报，但民间焦虑上升。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_CULT_SURVEIL"
+        },
+        {
+          "key": 18,
+          "eventDefId": "EVT_RANDOM_CULT_ACTIVITY",
+          "optionId": "O2",
+          "text": "直接清剿",
+          "resultText": "短期平息，但引发更大关注。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_CULT_RAID"
+        },
+        {
+          "key": 19,
+          "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+          "optionId": "O1",
+          "text": "临时加薪",
+          "resultText": "秩序恢复，但资金承压。",
+          "affects": [
+            "Global"
+          ],
+          "effectId": "EFF_OPT_STRIKE_RAISE"
+        },
+        {
+          "key": 20,
+          "eventDefId": "EVT_RANDOM_STAFF_STRIKE",
+          "optionId": "O2",
+          "text": "强制复岗",
+          "resultText": "成本降低，但士气与风险恶化。",
+          "affects": [
+            "Global",
+            "Node"
+          ],
+          "effectId": "EFF_OPT_STRIKE_FORCE"
+        },
+        {
+          "key": 21,
+          "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+          "optionId": "O1",
+          "text": "追加安防与校准",
+          "resultText": "风险下降，但需要经费。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_DRIFT_REINFORCE"
+        },
+        {
+          "key": 22,
+          "eventDefId": "EVT_RANDOM_CONTAINMENT_DRIFT",
+          "optionId": "O2",
+          "text": "转移收容物",
+          "resultText": "暂时止损，但任务与舆情受损。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_DRIFT_TRANSFER"
+        },
+        {
+          "key": 23,
+          "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+          "optionId": "O1",
+          "text": "走官方渠道疏通",
+          "resultText": "成本可控，恢复供给。",
+          "affects": [
+            "Node",
+            "Global"
+          ],
+          "effectId": "EFF_OPT_SEIZURE_OFFICIAL"
+        },
+        {
+          "key": 24,
+          "eventDefId": "EVT_RANDOM_SUPPLY_SEIZURE",
+          "optionId": "O2",
+          "text": "走黑市替代",
+          "resultText": "供给恢复，但后患增加。",
+          "affects": [
+            "Global",
+            "Node"
+          ],
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"
+        }
+      ]
+    },
+    "Effects": {
+      "idField": "key",
+      "columns": [
+        {
+          "name": "key",
+          "type": "int"
+        },
+        {
+          "name": "effectId",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "key": 1,
+          "effectId": "EFF_IGNORE_INV"
+        },
+        {
+          "key": 2,
+          "effectId": "EFF_OPTION_CALM"
+        },
+        {
+          "key": 3,
+          "effectId": "EFF_OPTION_PUSH"
+        },
+        {
+          "key": 4,
+          "effectId": "EFF_IGNORE_RANDOM"
+        },
+        {
+          "key": 5,
+          "effectId": "EFF_OPTION_RELIEF"
+        },
+        {
+          "key": 6,
+          "effectId": "EFF_OPTION_PROJECT"
+        },
+        {
+          "key": 7,
+          "effectId": "EFF_IGNORE_INV_EVIDENCE"
+        },
+        {
+          "key": 8,
+          "effectId": "EFF_IGNORE_INV_MEMETIC"
+        },
+        {
+          "key": 9,
+          "effectId": "EFF_IGNORE_INV_BRIBERY"
+        },
+        {
+          "key": 10,
+          "effectId": "EFF_IGNORE_BLACKOUT"
+        },
+        {
+          "key": 11,
+          "effectId": "EFF_IGNORE_AUDIT"
+        },
+        {
+          "key": 12,
+          "effectId": "EFF_IGNORE_LEAK"
+        },
+        {
+          "key": 13,
+          "effectId": "EFF_IGNORE_CULT"
+        },
+        {
+          "key": 14,
+          "effectId": "EFF_IGNORE_STRIKE"
+        },
+        {
+          "key": 15,
+          "effectId": "EFF_IGNORE_DRIFT"
+        },
+        {
+          "key": 16,
+          "effectId": "EFF_IGNORE_SEIZURE"
+        },
+        {
+          "key": 17,
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK"
+        },
+        {
+          "key": 18,
+          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT"
+        },
+        {
+          "key": 19,
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE"
+        },
+        {
+          "key": 20,
+          "effectId": "EFF_OPT_INV_MEMETIC_PUSH"
+        },
+        {
+          "key": 21,
+          "effectId": "EFF_OPT_INV_BRIBE_PAY"
+        },
+        {
+          "key": 22,
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE"
+        },
+        {
+          "key": 23,
+          "effectId": "EFF_OPT_BLACKOUT_BACKUP"
+        },
+        {
+          "key": 24,
+          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER"
+        },
+        {
+          "key": 25,
+          "effectId": "EFF_OPT_AUDIT_COOP"
+        },
+        {
+          "key": 26,
+          "effectId": "EFF_OPT_AUDIT_DELAY"
+        },
+        {
+          "key": 27,
+          "effectId": "EFF_OPT_LEAK_PR"
+        },
+        {
+          "key": 28,
+          "effectId": "EFF_OPT_LEAK_HUNT"
+        },
+        {
+          "key": 29,
+          "effectId": "EFF_OPT_CULT_SURVEIL"
+        },
+        {
+          "key": 30,
+          "effectId": "EFF_OPT_CULT_RAID"
+        },
+        {
+          "key": 31,
+          "effectId": "EFF_OPT_STRIKE_RAISE"
+        },
+        {
+          "key": 32,
+          "effectId": "EFF_OPT_STRIKE_FORCE"
+        },
+        {
+          "key": 33,
+          "effectId": "EFF_OPT_DRIFT_REINFORCE"
+        },
+        {
+          "key": 34,
+          "effectId": "EFF_OPT_DRIFT_TRANSFER"
+        },
+        {
+          "key": 35,
+          "effectId": "EFF_OPT_SEIZURE_OFFICIAL"
+        },
+        {
+          "key": 36,
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET"
+        }
+      ]
+    },
+    "EffectOps": {
+      "idField": "key",
+      "columns": [
+        {
+          "name": "key",
+          "type": "int"
+        },
+        {
+          "name": "effectId",
+          "type": "string"
+        },
+        {
+          "name": "scope",
+          "type": "string"
+        },
+        {
+          "name": "statKey",
+          "type": "string"
+        },
+        {
+          "name": "op",
+          "type": "string"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        },
+        {
+          "name": "min",
+          "type": "float"
+        },
+        {
+          "name": "max",
+          "type": "float"
+        }
+      ],
+      "rows": [
+        {
+          "key": 1,
+          "effectId": "EFF_IGNORE_INV",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.2,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 2,
+          "effectId": "EFF_IGNORE_INV",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 3,
+          "effectId": "EFF_OPTION_CALM",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 4,
+          "effectId": "EFF_OPTION_PUSH",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": 0.15,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 5,
+          "effectId": "EFF_OPTION_PUSH",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 6,
+          "effectId": "EFF_IGNORE_RANDOM",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 7,
+          "effectId": "EFF_OPTION_RELIEF",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 8,
+          "effectId": "EFF_OPTION_RELIEF",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -80.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 9,
+          "effectId": "EFF_OPTION_PROJECT",
+          "scope": "Node",
+          "statKey": "Population",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 10,
+          "effectId": "EFF_OPTION_PROJECT",
+          "scope": "TaskType:Contain",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": 0.1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 11,
+          "effectId": "EFF_IGNORE_INV_EVIDENCE",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.15,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 12,
+          "effectId": "EFF_IGNORE_INV_EVIDENCE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 13,
+          "effectId": "EFF_IGNORE_INV_EVIDENCE",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 14,
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": 0.1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 15,
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 16,
+          "effectId": "EFF_OPT_INV_EVIDENCE_LOCK",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 17,
+          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.05,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 18,
+          "effectId": "EFF_OPT_INV_EVIDENCE_PIVOT",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 19,
+          "effectId": "EFF_IGNORE_INV_MEMETIC",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 20,
+          "effectId": "EFF_IGNORE_INV_MEMETIC",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 21,
+          "effectId": "EFF_IGNORE_INV_MEMETIC",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 22,
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.05,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 23,
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 24,
+          "effectId": "EFF_OPT_INV_MEMETIC_ISOLATE",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 25,
+          "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": 0.15,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 26,
+          "effectId": "EFF_OPT_INV_MEMETIC_PUSH",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 27,
+          "effectId": "EFF_IGNORE_INV_BRIBERY",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 28,
+          "effectId": "EFF_IGNORE_INV_BRIBERY",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 29,
+          "effectId": "EFF_OPT_INV_BRIBE_PAY",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -50.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 30,
+          "effectId": "EFF_OPT_INV_BRIBE_PAY",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 31,
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+          "scope": "OriginTask",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": 0.05,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 32,
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 33,
+          "effectId": "EFF_OPT_INV_BRIBE_PRESSURE",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 34,
+          "effectId": "EFF_IGNORE_BLACKOUT",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 35,
+          "effectId": "EFF_IGNORE_BLACKOUT",
+          "scope": "TaskType:Contain",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.05,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 36,
+          "effectId": "EFF_OPT_BLACKOUT_BACKUP",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -60.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 37,
+          "effectId": "EFF_OPT_BLACKOUT_BACKUP",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 38,
+          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -10.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 39,
+          "effectId": "EFF_OPT_BLACKOUT_LOWPOWER",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 40,
+          "effectId": "EFF_IGNORE_AUDIT",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 41,
+          "effectId": "EFF_IGNORE_AUDIT",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -20.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 42,
+          "effectId": "EFF_OPT_AUDIT_COOP",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -30.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 43,
+          "effectId": "EFF_OPT_AUDIT_COOP",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 44,
+          "effectId": "EFF_OPT_AUDIT_COOP",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 45,
+          "effectId": "EFF_OPT_AUDIT_DELAY",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 46,
+          "effectId": "EFF_OPT_AUDIT_DELAY",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 47,
+          "effectId": "EFF_IGNORE_LEAK",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 48,
+          "effectId": "EFF_OPT_LEAK_PR",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -50.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 49,
+          "effectId": "EFF_OPT_LEAK_PR",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 50,
+          "effectId": "EFF_OPT_LEAK_PR",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 51,
+          "effectId": "EFF_OPT_LEAK_HUNT",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -20.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 52,
+          "effectId": "EFF_OPT_LEAK_HUNT",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 53,
+          "effectId": "EFF_OPT_LEAK_HUNT",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 54,
+          "effectId": "EFF_IGNORE_CULT",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 55,
+          "effectId": "EFF_IGNORE_CULT",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 56,
+          "effectId": "EFF_OPT_CULT_SURVEIL",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 57,
+          "effectId": "EFF_OPT_CULT_SURVEIL",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 58,
+          "effectId": "EFF_OPT_CULT_RAID",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 59,
+          "effectId": "EFF_OPT_CULT_RAID",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 60,
+          "effectId": "EFF_OPT_CULT_RAID",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 61,
+          "effectId": "EFF_IGNORE_STRIKE",
+          "scope": "TaskType:Manage",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 62,
+          "effectId": "EFF_IGNORE_STRIKE",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 63,
+          "effectId": "EFF_OPT_STRIKE_RAISE",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -80.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 64,
+          "effectId": "EFF_OPT_STRIKE_RAISE",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 65,
+          "effectId": "EFF_OPT_STRIKE_FORCE",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 66,
+          "effectId": "EFF_OPT_STRIKE_FORCE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 67,
+          "effectId": "EFF_IGNORE_DRIFT",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 2.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 68,
+          "effectId": "EFF_IGNORE_DRIFT",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 69,
+          "effectId": "EFF_OPT_DRIFT_REINFORCE",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -70.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 70,
+          "effectId": "EFF_OPT_DRIFT_REINFORCE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 71,
+          "effectId": "EFF_OPT_DRIFT_TRANSFER",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 72,
+          "effectId": "EFF_OPT_DRIFT_TRANSFER",
+          "scope": "TaskType:Contain",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.1,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 73,
+          "effectId": "EFF_OPT_DRIFT_TRANSFER",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 74,
+          "effectId": "EFF_IGNORE_SEIZURE",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 75,
+          "effectId": "EFF_IGNORE_SEIZURE",
+          "scope": "TaskType:Contain",
+          "statKey": "TaskProgressDelta",
+          "op": "Add",
+          "value": -0.05,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 76,
+          "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -40.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 77,
+          "effectId": "EFF_OPT_SEIZURE_OFFICIAL",
+          "scope": "Node",
+          "statKey": "LocalPanic",
+          "op": "Add",
+          "value": -1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 78,
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+          "scope": "Global",
+          "statKey": "Money",
+          "op": "Add",
+          "value": -60.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 79,
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+          "scope": "Global",
+          "statKey": "Intel",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        },
+        {
+          "key": 80,
+          "effectId": "EFF_OPT_SEIZURE_BLACKMARKET",
+          "scope": "Global",
+          "statKey": "WorldPanic",
+          "op": "Add",
+          "value": 1.0,
+          "min": null,
+          "max": null
+        }
+      ]
+    }
+  }
+}
