@@ -212,8 +212,20 @@ namespace Core
             // 3) RandomDaily 事件生成
             GenerateRandomDailyEvents(s, rng, registry);
 
-            // 3.5) RandomDaily 新闻生成
-            GenerateRandomDailyNews(s, rng, registry);
+            // 3.5) News Generation - Prioritize Fact-based, then RandomDaily
+            int factNewsGenerated = FactNewsGenerator.GenerateNewsFromFacts(s, registry, maxCount: 3);
+            Debug.Log($"[NewsGen] day={s.Day} factNewsGenerated={factNewsGenerated}");
+            
+            // Supplement with RandomDaily news if fact-based news is insufficient
+            int minNewsPerDay = registry.GetBalanceIntWithWarn("MinNewsPerDay", 1);
+            if (factNewsGenerated < minNewsPerDay)
+            {
+                GenerateRandomDailyNews(s, rng, registry);
+            }
+            else
+            {
+                Debug.Log($"[NewsGen] day={s.Day} skipRandomDaily reason=SufficientFactNews count={factNewsGenerated}");
+            }
 
             // 4) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
