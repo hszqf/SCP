@@ -93,25 +93,32 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install openpyxl
-        run: |
-          pip install openpyxl
-
       - name: Validate game data
         run: |
-          python tools/xlsx_to_json.py --validate-only --xlsx "GameData/Local/game_data.xlsx"
+          python3 -m pip install openpyxl
+          python3 tools/xlsx_to_json.py --validate-only --xlsx "GameData/Local/game_data.xlsx"
 
-      - name: Export game data to StreamingAssets
-        run: |
-          python tools/xlsx_to_json.py --xlsx "GameData/Local/game_data.xlsx" --out "Assets/StreamingAssets/game_data.json"
+      # WebGL uses RemoteGameDataUrl to fetch Published JSON at runtime.
+      # No need to export to Assets/StreamingAssets/ - keep repo clean for unity-builder.
 
-      - name: Debug dirty status (after export)
+      - name: Diagnostic - Check working tree status
         run: |
-          echo "=== git status --porcelain ==="
-          git status --porcelain || true
-          echo "=== git diff --name-only ==="
-          git diff --name-only || true
-          echo "=== Note: StreamingAssets changes are expected and will be included in build ==="
+          echo "=== git status (porcelain) ==="
+          git status --porcelain=v1
+          echo "=== git diff (name-status) ==="
+          git diff --name-status
+          echo "=== git diff (stat) ==="
+          git diff --stat
+          echo "=== modified tracked files ==="
+          git ls-files -m || true
+
+      - name: Assert clean working tree before unity-builder
+        run: |
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "ERROR: working tree is dirty before unity-builder"
+            git status --porcelain=v1
+            exit 1
+          fi
 
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
@@ -123,6 +130,9 @@ jobs:
           targetPlatform: WebGL
           buildsPath: build
           buildName: WebGL
+          # If Unity generates files during build (e.g., Library changes), uncomment below as emergency fallback:
+          # allowDirtyBuild: true
+          # However, diagnostic steps above should help identify root cause first.
 
       - name: Locate WebGL root (folder containing index.html)
         id: webglroot

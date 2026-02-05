@@ -49,6 +49,14 @@ jobs:
             exit 1
           fi
 
+      - name: Diagnostic - Check changes after export
+        run: |
+          echo "=== git status (porcelain) ==="
+          git status --porcelain=v1
+          echo "=== git diff (name-status) ==="
+          git diff --name-status
+          echo "=== Expected: Only GameData/Published/game_data.json should be modified ==="
+
       - name: Commit exported game_data.json (if changed)
         run: |
           set -e
@@ -58,6 +66,7 @@ jobs:
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
+            # Only add the Published JSON file
             git add "$FILE"
             git commit -m "chore(data): export game_data.json [skip ci]"
             git push
