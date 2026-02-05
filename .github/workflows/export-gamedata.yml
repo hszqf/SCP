@@ -7,6 +7,7 @@ on:
       - 'GameData/Local/game_data.xlsx'
       - 'tools/xlsx_to_json.py'
       - '.github/workflows/export-gamedata.yml'
+      - '!GameData/Published/**'
 
 permissions:
   contents: write
@@ -15,6 +16,12 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
+      - name: Prevent bot loop
+        if: github.actor == 'github-actions[bot]'
+        run: |
+          echo "Skip: triggered by bot commit"
+          exit 0
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -52,7 +59,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add "$FILE"
-            git commit -m "chore(data): export game_data.json"
+            git commit -m "chore(data): export game_data.json [skip ci]"
             git push
           fi
           echo "=== git status after commit ==="
