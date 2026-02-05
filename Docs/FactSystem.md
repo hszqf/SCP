@@ -167,7 +167,7 @@ public static int GenerateNewsFromFacts(GameState state, DataRegistry registry, 
 The system follows this priority order:
 
 1. **Fact-based News** (Priority 1)
-   - Generate up to 3 news articles from unreported facts
+   - Generate up to 5 news articles from unreported facts
    - Order by: Severity (high to low), then Day (recent first)
    - Mark facts as reported after conversion
 
@@ -321,7 +321,7 @@ Tests cover:
 ## Performance Considerations
 
 - Facts are pruned daily (O(n) where n = fact count)
-- News generation processes at most `maxCount` facts per day (default: 3)
+- News generation processes at most `maxCount` facts per day (default: 5)
 - Recommended max facts per day: ~10-20 to avoid memory bloat
 
 ## Debugging
