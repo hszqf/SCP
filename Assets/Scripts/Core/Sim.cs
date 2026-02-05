@@ -213,13 +213,15 @@ namespace Core
             GenerateRandomDailyEvents(s, rng, registry);
 
             // 3.5) News Generation - Prioritize Fact-based, then RandomDaily
-            int factNewsGenerated = FactNewsGenerator.GenerateNewsFromFacts(s, registry, maxCount: 3);
+            int factNewsGenerated = FactNewsGenerator.GenerateNewsFromFacts(s, registry, maxCount: 5);
             Debug.Log($"[NewsGen] day={s.Day} factNewsGenerated={factNewsGenerated}");
             
-            // Supplement with RandomDaily news if fact-based news is insufficient
+            // Always generate some RandomDaily news to ensure variety
+            // Fact-based news is prioritized but RandomDaily adds diversity
             int minNewsPerDay = registry.GetBalanceIntWithWarn("MinNewsPerDay", 1);
             if (factNewsGenerated < minNewsPerDay)
             {
+                Debug.Log($"[NewsGen] day={s.Day} addingRandomDaily reason=InsufficientFactNews factCount={factNewsGenerated} min={minNewsPerDay}");
                 GenerateRandomDailyNews(s, rng, registry);
             }
             else
@@ -1062,7 +1064,7 @@ namespace Core
                         type: "InvestigateCompleted",
                         nodeId: node.Id,
                         anomalyId: anomalyId,
-                        severity: Math.Min(5, Math.Max(1, level / 2)),
+                        severity: CalculateSeverityFromThreatLevel(level),
                         tags: new List<string> { "task", "investigate", "completed" },
                         payload: new Dictionary<string, object>
                         {
@@ -1143,7 +1145,7 @@ namespace Core
                     type: "ContainCompleted",
                     nodeId: node.Id,
                     anomalyId: anomalyId,
-                    severity: Math.Min(5, Math.Max(2, level / 2)),
+                    severity: Math.Max(2, CalculateSeverityFromThreatLevel(level)),
                     tags: new List<string> { "task", "contain", "completed", "success" },
                     payload: new Dictionary<string, object>
                     {
@@ -1811,7 +1813,7 @@ namespace Core
 
                 // Emit fact for anomaly spawn
                 var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyId);
-                int severity = anomalyDef != null ? Math.Min(5, Math.Max(1, anomalyDef.baseThreat / 2)) : 3;
+                int severity = anomalyDef != null ? CalculateSeverityFromThreatLevel(anomalyDef.baseThreat) : 3;
                 EmitFact(
                     s,
                     type: "AnomalySpawned",
@@ -1967,6 +1969,16 @@ namespace Core
         // =====================
         // Fact System
         // =====================
+
+        /// <summary>
+        /// Calculate fact severity from anomaly threat level.
+        /// Severity is clamped to 1-5 range.
+        /// </summary>
+        private static int CalculateSeverityFromThreatLevel(int threatLevel)
+        {
+            int severity = threatLevel / 2;
+            return Math.Min(5, Math.Max(1, severity));
+        }
 
         /// <summary>
         /// Emit a fact into the game state's fact system.

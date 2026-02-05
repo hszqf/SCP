@@ -18,6 +18,10 @@ namespace Core
         public string CauseType;
         public int AgeDays;
         public int Day; // The day this news was created
+        
+        // Generated content for fact-based news
+        public string Title;
+        public string Description;
     }
 
     public static class NewsInstanceFactory

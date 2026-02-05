@@ -75,7 +75,9 @@ namespace Core
                 SourceAnomalyId = fact.AnomalyId,
                 CauseType = "FactTriggered",
                 AgeDays = 0,
-                Day = state.Day
+                Day = state.Day,
+                Title = title,
+                Description = desc
             };
 
             // Store the generated content in the legacy News list for display

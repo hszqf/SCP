@@ -98,7 +98,7 @@ namespace Tests
             {
                 state.FactSystem.Facts.Add(FactInstanceFactory.Create(
                     type: "OldFact",
-                    day: 30, // 70 days ago
+                    day: 30, // Created on day 30, which is 70 days before current day 100
                     severity: 1
                 ));
             }
@@ -108,7 +108,7 @@ namespace Tests
             {
                 state.FactSystem.Facts.Add(FactInstanceFactory.Create(
                     type: "RecentFact",
-                    day: 95, // 5 days ago
+                    day: 95, // Created on day 95, which is 5 days before current day 100
                     severity: 1
                 ));
             }
