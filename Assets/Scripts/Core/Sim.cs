@@ -2000,6 +2000,16 @@ namespace Core
                 return;
             }
 
+            // Validate fact type against FactTypes table
+            var registry = Data.DataRegistry.Instance;
+            if (registry?.FactTypesById != null && !string.IsNullOrEmpty(type))
+            {
+                if (!registry.FactTypesById.ContainsKey(type))
+                {
+                    Debug.LogWarning($"[Fact] Unknown factType='{type}' not in FactTypes table. This may cause issues with news generation. Consider adding to FactTypes table in Excel.");
+                }
+            }
+
             var fact = FactInstanceFactory.Create(
                 type: type,
                 day: state.Day,
