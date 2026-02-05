@@ -192,6 +192,59 @@ namespace Core
         public List<DecisionOption> Options = new();
     }
 
+    // ===== Fact System =====
+    // FactInstance: Runtime structure for game events/facts that can be converted to news
+    [Serializable]
+    public class FactInstance
+    {
+        public string FactId;
+        public int Day;
+        public string Type; // e.g., "AnomalySpawned", "TaskCompleted", "EventTriggered"
+        public string NodeId;
+        public string AnomalyId;
+        public int Severity; // 1-5
+        public List<string> Tags = new();
+        public Dictionary<string, object> Payload = new(); // Flexible data storage
+        public string Source; // Optional: describes the origin of this fact
+        public bool Reported; // Whether this fact has been used to generate news
+    }
+
+    // FactState: Container for all facts with retention management
+    [Serializable]
+    public class FactState
+    {
+        public List<FactInstance> Facts = new();
+        public int RetentionDays = 60; // Keep facts for 60 days
+    }
+
+    public static class FactInstanceFactory
+    {
+        public static FactInstance Create(
+            string type,
+            int day,
+            string nodeId = null,
+            string anomalyId = null,
+            int severity = 1,
+            List<string> tags = null,
+            Dictionary<string, object> payload = null,
+            string source = null)
+        {
+            return new FactInstance
+            {
+                FactId = $"FACT_{Guid.NewGuid():N}",
+                Type = type,
+                Day = day,
+                NodeId = nodeId,
+                AnomalyId = anomalyId,
+                Severity = severity,
+                Tags = tags ?? new List<string>(),
+                Payload = payload ?? new Dictionary<string, object>(),
+                Source = source,
+                Reported = false
+            };
+        }
+    }
+
     [Serializable]
     public class GameState
     {
@@ -222,6 +275,9 @@ namespace Core
         public Dictionary<string, int> NewsLastFiredDay = new();
 
         public RecruitPoolState RecruitPool = new RecruitPoolState();
+
+        // Fact system: stores game facts for news generation
+        public FactState FactSystem = new FactState();
     }
 }
 // </EXPORT_BLOCK>

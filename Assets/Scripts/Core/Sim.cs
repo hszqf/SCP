@@ -80,6 +80,9 @@ namespace Core
             }
             s.News.Add($"Day {s.Day}: 日结算开始");
 
+            // Prune old facts (keep last 60 days)
+            PruneFacts(s);
+
             // 0) 异常生成（按 AnomaliesGen 表调度）
             GenerateScheduledAnomalies(s, rng, registry, s.Day);
 
@@ -209,8 +212,22 @@ namespace Core
             // 3) RandomDaily 事件生成
             GenerateRandomDailyEvents(s, rng, registry);
 
-            // 3.5) RandomDaily 新闻生成
-            GenerateRandomDailyNews(s, rng, registry);
+            // 3.5) News Generation - Prioritize Fact-based, then RandomDaily
+            int factNewsGenerated = FactNewsGenerator.GenerateNewsFromFacts(s, registry, maxCount: 5);
+            Debug.Log($"[NewsGen] day={s.Day} factNewsGenerated={factNewsGenerated}");
+            
+            // Always generate some RandomDaily news to ensure variety
+            // Fact-based news is prioritized but RandomDaily adds diversity
+            int minNewsPerDay = registry.GetBalanceIntWithWarn("MinNewsPerDay", 1);
+            if (factNewsGenerated < minNewsPerDay)
+            {
+                Debug.Log($"[NewsGen] day={s.Day} addingRandomDaily reason=InsufficientFactNews factCount={factNewsGenerated} min={minNewsPerDay}");
+                GenerateRandomDailyNews(s, rng, registry);
+            }
+            else
+            {
+                Debug.Log($"[NewsGen] day={s.Day} skipRandomDaily reason=SufficientFactNews count={factNewsGenerated}");
+            }
 
             // 4) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
@@ -1040,10 +1057,43 @@ namespace Core
                     s.News.Add($"- {node.Name} 调查完成：发现异常 {anomalyId}");
                     bool added = AddKnown(node, task.SourceAnomalyId);
                     Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={task.SourceAnomalyId} via=InvestigateTarget added={(added ? 1 : 0)}");
+
+                    // Emit fact for investigation completion
+                    EmitFact(
+                        s,
+                        type: "InvestigateCompleted",
+                        nodeId: node.Id,
+                        anomalyId: anomalyId,
+                        severity: CalculateSeverityFromThreatLevel(level),
+                        tags: new List<string> { "task", "investigate", "completed" },
+                        payload: new Dictionary<string, object>
+                        {
+                            { "nodeName", node.Name },
+                            { "anomalyClass", anomaly?.@class ?? "Unknown" },
+                            { "taskId", task.Id }
+                        },
+                        source: "CompleteTask"
+                    );
                 }
                 else
                 {
                     s.News.Add($"- {node.Name} 调查完成：未发现异常");
+
+                    // Emit fact for no-result investigation
+                    EmitFact(
+                        s,
+                        type: "InvestigateNoResult",
+                        nodeId: node.Id,
+                        anomalyId: null,
+                        severity: 1,
+                        tags: new List<string> { "task", "investigate", "completed", "no-result" },
+                        payload: new Dictionary<string, object>
+                        {
+                            { "nodeName", node.Name },
+                            { "taskId", task.Id }
+                        },
+                        source: "CompleteTask"
+                    );
                 }
 
                 // ===== EXP Reward for Investigate =====
@@ -1088,6 +1138,25 @@ namespace Core
                 s.News.Add($"- {node.Name} 收容成功（+$ {reward}, WorldPanic -{relief}）");
                 // 收容成功：将该 anomalyId 加入“已收藏异常”（用于后续管理）。
                 EnsureManagedAnomalyRecorded(node, anomalyId, anomaly);
+
+                // Emit fact for containment completion
+                EmitFact(
+                    s,
+                    type: "ContainCompleted",
+                    nodeId: node.Id,
+                    anomalyId: anomalyId,
+                    severity: Math.Max(2, CalculateSeverityFromThreatLevel(level)),
+                    tags: new List<string> { "task", "contain", "completed", "success" },
+                    payload: new Dictionary<string, object>
+                    {
+                        { "nodeName", node.Name },
+                        { "anomalyClass", anomaly?.@class ?? "Unknown" },
+                        { "reward", reward },
+                        { "panicRelief", relief },
+                        { "taskId", task.Id }
+                    },
+                    source: "CompleteTask"
+                );
 
                 // 若无进行中的收容任务，则节点可视为“清空异常”。
                 bool hasActiveContainTask = node.Tasks != null && node.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain);
@@ -1741,6 +1810,24 @@ namespace Core
                 EnsureActiveAnomaly(node, anomalyId, registry);
                 s.News.Add($"- {node.Name} 出现异常迹象：{anomalyId}");
                 spawned++;
+
+                // Emit fact for anomaly spawn
+                var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyId);
+                int severity = anomalyDef != null ? CalculateSeverityFromThreatLevel(anomalyDef.baseThreat) : 3;
+                EmitFact(
+                    s,
+                    type: "AnomalySpawned",
+                    nodeId: node.Id,
+                    anomalyId: anomalyId,
+                    severity: severity,
+                    tags: new List<string> { "anomaly", "spawn" },
+                    payload: new Dictionary<string, object>
+                    {
+                        { "nodeName", node.Name },
+                        { "anomalyClass", anomalyDef?.@class ?? "Unknown" }
+                    },
+                    source: "GenerateScheduledAnomalies"
+                );
             }
 
             if (spawned < genNum)
@@ -1877,6 +1964,83 @@ namespace Core
 
             // Agent not found in any active task - idle
             return string.Empty;
+        }
+
+        // =====================
+        // Fact System
+        // =====================
+
+        /// <summary>
+        /// Calculate fact severity from anomaly threat level.
+        /// Severity is clamped to 1-5 range.
+        /// </summary>
+        private static int CalculateSeverityFromThreatLevel(int threatLevel)
+        {
+            int severity = threatLevel / 2;
+            return Math.Min(5, Math.Max(1, severity));
+        }
+
+        /// <summary>
+        /// Emit a fact into the game state's fact system.
+        /// Facts are stored for 60 days and can be converted to news.
+        /// </summary>
+        public static void EmitFact(
+            GameState state,
+            string type,
+            string nodeId = null,
+            string anomalyId = null,
+            int severity = 1,
+            List<string> tags = null,
+            Dictionary<string, object> payload = null,
+            string source = null)
+        {
+            if (state?.FactSystem == null)
+            {
+                Debug.LogWarning("[Fact] Cannot emit fact: FactSystem is null");
+                return;
+            }
+
+            var fact = FactInstanceFactory.Create(
+                type: type,
+                day: state.Day,
+                nodeId: nodeId,
+                anomalyId: anomalyId,
+                severity: severity,
+                tags: tags,
+                payload: payload,
+                source: source
+            );
+
+            state.FactSystem.Facts.Add(fact);
+
+            // Log fact emission
+            string tagsStr = tags != null && tags.Count > 0 ? string.Join(",", tags) : "none";
+            string payloadStr = payload != null && payload.Count > 0 
+                ? string.Join(",", payload.Select(kv => $"{kv.Key}={kv.Value}")) 
+                : "none";
+            
+            Debug.Log($"[Fact] EMIT day={state.Day} factId={fact.FactId} type={type} nodeId={nodeId ?? "none"} anomalyId={anomalyId ?? "none"} severity={severity} tags=[{tagsStr}] payload=[{payloadStr}] source={source ?? "none"}");
+        }
+
+        /// <summary>
+        /// Clean up old facts beyond retention period (default 60 days).
+        /// Call this at the start of each day.
+        /// </summary>
+        public static void PruneFacts(GameState state)
+        {
+            if (state?.FactSystem?.Facts == null) return;
+
+            int retentionDays = state.FactSystem.RetentionDays;
+            int cutoffDay = state.Day - retentionDays;
+
+            int beforeCount = state.FactSystem.Facts.Count;
+            state.FactSystem.Facts.RemoveAll(f => f != null && f.Day < cutoffDay);
+            int afterCount = state.FactSystem.Facts.Count;
+
+            if (beforeCount != afterCount)
+            {
+                Debug.Log($"[Fact] PRUNE day={state.Day} cutoffDay={cutoffDay} removed={beforeCount - afterCount} remaining={afterCount}");
+            }
         }
 
         // =====================
