@@ -13,6 +13,8 @@ namespace UI
         [SerializeField] private Button dimmerButton;
 
         private bool _wired;
+        // IMPORTANT: This must match the default tab (Paper1 = FORMAL per NewsConstants.AllMediaProfiles[0])
+        private string _currentMediaProfileId = Core.NewsConstants.MediaProfileFormal; // Track current media selection
 
         public void Show()
         {
@@ -31,18 +33,25 @@ namespace UI
 
         public void Render()
         {
+            Render(_currentMediaProfileId); // Use current media selection
+        }
+        
+        public void Render(string mediaProfileId)
+        {
+            _currentMediaProfileId = mediaProfileId; // Update current selection
+            
             var state = GameController.I?.State;
             var data = DataRegistry.Instance;
             if (state == null || data == null) return;
 
             Core.NewsGenerator.EnsureBootstrapNews(state, data);
             
-            // Filter news to only show current day's news and build pool directly
+            // Filter news by current day AND media profile
             var pool = state.NewsLog?
-                .Where(n => n != null && n.Day == state.Day)
+                .Where(n => n != null && n.Day == state.Day && n.mediaProfileId == mediaProfileId)
                 .ToList() ?? new List<Core.NewsInstance>();
             
-            Debug.Log($"[NewsUI] Open day={state.Day} totalNews={state.NewsLog?.Count ?? 0} currentDayNews={pool.Count}");
+            Debug.Log($"[NewsUI] day={state.Day} media={mediaProfileId} count={pool.Count} first={pool.FirstOrDefault()?.Id ?? "none"}");
 
             var titleTmp = FindTMP("Window/Header/TitleTMP");
             if (titleTmp != null) titleTmp.text = "基金会晨报";
@@ -190,6 +199,12 @@ namespace UI
         private string GetTitle(Core.NewsInstance news, DataRegistry data)
         {
             if (news == null) return null;
+            
+            // For fact-based news, use the generated Title directly
+            if (!string.IsNullOrEmpty(news.Title))
+                return news.Title;
+            
+            // For legacy news, fallback to NewsDef lookup
             var def = data.GetNewsDefById(news.NewsDefId);
             if (def == null)
             {
@@ -203,6 +218,12 @@ namespace UI
         private string GetDesc(Core.NewsInstance news, DataRegistry data)
         {
             if (news == null) return null;
+            
+            // For fact-based news, use the generated Description directly
+            if (!string.IsNullOrEmpty(news.Description))
+                return news.Description;
+            
+            // For legacy news, fallback to NewsDef lookup
             var def = data.GetNewsDefById(news.NewsDefId);
             if (def == null)
             {

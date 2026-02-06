@@ -19,6 +19,10 @@ namespace Core
         public int AgeDays;
         public int Day; // The day this news was created
         
+        // Media profile for news separation (FORMAL/SENSATIONAL/INVESTIGATIVE)
+        // Default to FORMAL for backward compatibility
+        public string mediaProfileId = "FORMAL";
+        
         // Generated content for fact-based news
         public string Title;
         public string Description;
