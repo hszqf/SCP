@@ -17,6 +17,10 @@ public class LogOverlay : MonoBehaviour
     private const int MaxLogCount = 100;
     private const int FontSize = 18;
     private const int ButtonHeight = 30;
+    private const int MaxMessageLength = 500;
+    private const int MaxStackTraceLineLength = 300;
+    private const int MaxExportLength = 20480; // 20KB
+    private const int MaxCallsPerFrame = 200;
     
     private readonly Dictionary<string, LogEntry> _logDict = new Dictionary<string, LogEntry>();
     private readonly List<string> _logKeys = new List<string>(); // Ordered keys for display
@@ -33,6 +37,11 @@ public class LogOverlay : MonoBehaviour
     private string _exportText = "";
     private string _copyMessage = "";
     private float _copyMessageEndTime = 0f;
+    
+    // Re-entrancy and frame protection
+    private static bool _inLogHandler = false;
+    private static int _logHandlerCallsThisFrame = 0;
+    private static int _lastFrameCount = -1;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [System.Runtime.InteropServices.DllImport("__Internal")]
@@ -64,7 +73,7 @@ public class LogOverlay : MonoBehaviour
             _isVisible = IsDebugModeEnabled();
         }
         
-        Debug.Log("[LogOverlay] Enabled - use on-screen buttons to toggle display");
+        // No Debug.Log here to avoid recursion
     }
 
     private void OnDisable()
@@ -74,12 +83,20 @@ public class LogOverlay : MonoBehaviour
 
     private void Update()
     {
+        // Reset frame counter at frame boundary
+        int currentFrame = Time.frameCount;
+        if (currentFrame != _lastFrameCount)
+        {
+            _lastFrameCount = currentFrame;
+            _logHandlerCallsThisFrame = 0;
+        }
+        
 #if ENABLE_INPUT_SYSTEM
         // Optional keyboard toggle using Input System (only when available)
         if (Keyboard.current != null && Keyboard.current.backquoteKey.wasPressedThisFrame)
         {
             _isVisible = !_isVisible;
-            Debug.Log($"[LogOverlay] Display {(_isVisible ? "enabled" : "disabled")}");
+            // No Debug.Log to avoid recursion
         }
 #endif
         // Keyboard input requires Input System package to be enabled
@@ -93,75 +110,116 @@ public class LogOverlay : MonoBehaviour
 
     private void HandleLog(string message, string stackTrace, LogType type)
     {
-        // Filter: only show logs containing [Boot], [DataRegistry], [News], or Exception
-        bool shouldShow = message.Contains("[Boot]") || 
-                         message.Contains("[DataRegistry]") || 
-                         message.Contains("[News]") ||
-                         message.Contains("Exception") ||
-                         type == LogType.Exception;
-
-        if (!shouldShow)
+        // Re-entrancy guard: prevent recursion
+        if (_inLogHandler)
             return;
-
-        // Strip non-ASCII characters to diagnose WebGL tofu issue
-        message = StripNonAscii(message);
-        stackTrace = StripNonAscii(stackTrace);
-
-        // Extract first line of stack trace for deduplication key
-        string stackFirstLine = "";
-        string[] stackLines = null;
-        if ((type == LogType.Exception || type == LogType.Error) && !string.IsNullOrEmpty(stackTrace))
-        {
-            string[] allLines = stackTrace.Split('\n');
-            if (allLines.Length > 0)
-            {
-                stackFirstLine = allLines[0].Trim();
-            }
-            
-            // Store max 2 lines for display
-            int maxLines = Mathf.Min(allLines.Length, 2);
-            stackLines = new string[maxLines];
-            for (int i = 0; i < maxLines; i++)
-            {
-                stackLines[i] = allLines[i];
-            }
-        }
-
-        // Generate deduplication key: LogType + message + first stack trace line
-        string key = $"{type}|{message}|{stackFirstLine}";
         
-        string timestamp = DateTime.Now.ToString("HH:mm:ss");
+        // Frame-based protection: prevent stack overflow from excessive calls
+        if (_logHandlerCallsThisFrame >= MaxCallsPerFrame)
+            return;
+        
+        _inLogHandler = true;
+        _logHandlerCallsThisFrame++;
+        
+        try
+        {
+            // Safe string handling: null checks and truncation
+            if (message == null)
+                message = "";
+            if (message.Length > MaxMessageLength)
+                message = message.Substring(0, MaxMessageLength);
+            
+            // Filter: only show logs containing [Boot], [DataRegistry], [News], or Exception
+            bool shouldShow = message.Contains("[Boot]") || 
+                             message.Contains("[DataRegistry]") || 
+                             message.Contains("[News]") ||
+                             message.Contains("Exception") ||
+                             type == LogType.Exception;
 
-        if (_logDict.TryGetValue(key, out var existingEntry))
-        {
-            // Update existing entry
-            existingEntry.Count++;
-            existingEntry.LastTimestamp = timestamp;
-            // Stack trace lines remain the same
-        }
-        else
-        {
-            // Create new entry
-            var entry = new LogEntry
-            {
-                Message = message,
-                StackTraceLines = stackLines,
-                Type = type,
-                Count = 1,
-                FirstTimestamp = timestamp,
-                LastTimestamp = timestamp
-            };
+            if (!shouldShow)
+                return;
+
+            // Strip non-ASCII characters to diagnose WebGL tofu issue
+            message = StripNonAscii(message);
             
-            _logDict[key] = entry;
-            _logKeys.Add(key);
-            
-            // Ring buffer: remove oldest if at capacity
-            if (_logKeys.Count > MaxLogCount)
+            // Safe stackTrace handling
+            if (stackTrace != null)
             {
-                string oldestKey = _logKeys[0];
-                _logKeys.RemoveAt(0);
-                _logDict.Remove(oldestKey);
+                stackTrace = StripNonAscii(stackTrace);
             }
+
+            // Extract first line of stack trace for deduplication key
+            string stackFirstLine = "";
+            string[] stackLines = null;
+            if ((type == LogType.Exception || type == LogType.Error) && !string.IsNullOrEmpty(stackTrace))
+            {
+                string[] allLines = stackTrace.Split('\n');
+                if (allLines != null && allLines.Length > 0)
+                {
+                    stackFirstLine = allLines[0].Trim();
+                    if (stackFirstLine.Length > MaxStackTraceLineLength)
+                        stackFirstLine = stackFirstLine.Substring(0, MaxStackTraceLineLength);
+                }
+                
+                // Store max 2 lines for display
+                if (allLines != null)
+                {
+                    int maxLines = Mathf.Min(allLines.Length, 2);
+                    stackLines = new string[maxLines];
+                    for (int i = 0; i < maxLines; i++)
+                    {
+                        string line = allLines[i];
+                        if (line != null && line.Length > MaxStackTraceLineLength)
+                            line = line.Substring(0, MaxStackTraceLineLength);
+                        stackLines[i] = line;
+                    }
+                }
+            }
+
+            // Generate deduplication key: LogType + message + first stack trace line
+            string key = $"{type}|{message}|{stackFirstLine}";
+            
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+
+            if (_logDict.TryGetValue(key, out var existingEntry))
+            {
+                // Update existing entry
+                existingEntry.Count++;
+                existingEntry.LastTimestamp = timestamp;
+                // Stack trace lines remain the same
+            }
+            else
+            {
+                // Create new entry
+                var entry = new LogEntry
+                {
+                    Message = message,
+                    StackTraceLines = stackLines,
+                    Type = type,
+                    Count = 1,
+                    FirstTimestamp = timestamp,
+                    LastTimestamp = timestamp
+                };
+                
+                _logDict[key] = entry;
+                _logKeys.Add(key);
+                
+                // Ring buffer: remove oldest if at capacity
+                if (_logKeys.Count > MaxLogCount)
+                {
+                    string oldestKey = _logKeys[0];
+                    _logKeys.RemoveAt(0);
+                    _logDict.Remove(oldestKey);
+                }
+            }
+        }
+        catch
+        {
+            // Swallow exceptions - DO NOT log here to avoid recursion
+        }
+        finally
+        {
+            _inLogHandler = false;
         }
     }
 
@@ -222,7 +280,7 @@ public class LogOverlay : MonoBehaviour
         if (GUILayout.Button(_isVisible ? "Hide" : "Show", _buttonStyle, GUILayout.Height(ButtonHeight)))
         {
             _isVisible = !_isVisible;
-            Debug.Log($"[LogOverlay] Display {(_isVisible ? "enabled" : "disabled")}");
+            // No Debug.Log to avoid recursion
         }
         
         // Copy logs button
@@ -339,48 +397,93 @@ public class LogOverlay : MonoBehaviour
 
     /// <summary>
     /// Copy all current logs to clipboard as plain text
+    /// Pure local operation - no logging to prevent recursion
     /// </summary>
     private void CopyLogsToClipboard()
     {
         if (_logKeys.Count == 0)
         {
-            Debug.Log("[LogOverlay] No logs to copy");
-            return;
+            return; // Silently fail - no logging
         }
 
-        string text = GenerateAggregatedLogText();
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-        // WebGL: use JS clipboard bridge
         try
         {
+            string text = ExportText();
+            
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // WebGL: use JS clipboard bridge
             int result = SCP_CopyToClipboard(text);
             if (result == 1)
             {
                 _copyMessage = "Copied!";
                 _copyMessageEndTime = Time.time + 1.5f;
-                Debug.Log($"[LogOverlay] Copied {_logKeys.Count} log entries via WebGL clipboard");
             }
             else
             {
                 _copyMessage = "Copy failed, use Export";
                 _copyMessageEndTime = Time.time + 1.5f;
-                Debug.LogWarning("[LogOverlay] WebGL clipboard failed, user should use Export");
             }
+#else
+            // Non-WebGL: use system clipboard
+            GUIUtility.systemCopyBuffer = text;
+            _copyMessage = "Copied!";
+            _copyMessageEndTime = Time.time + 1.5f;
+#endif
         }
-        catch (Exception ex)
+        catch
         {
+            // Silently fail - no logging to prevent recursion
             _copyMessage = "Copy failed, use Export";
             _copyMessageEndTime = Time.time + 1.5f;
-            Debug.LogWarning($"[LogOverlay] WebGL clipboard exception: {ex.Message}");
         }
-#else
-        // Non-WebGL: use system clipboard
-        GUIUtility.systemCopyBuffer = text;
-        _copyMessage = "Copied!";
-        _copyMessageEndTime = Time.time + 1.5f;
-        Debug.Log($"[LogOverlay] Copied {_logKeys.Count} log entries to clipboard");
-#endif
+    }
+    
+    /// <summary>
+    /// Generate aggregated log text for export/copy
+    /// No logging - safe for recursion prevention
+    /// </summary>
+    private string ExportText()
+    {
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("=== LogOverlay Export ===");
+            sb.AppendLine($"Exported at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Total unique logs: {_logKeys.Count}");
+            sb.AppendLine();
+
+            foreach (string key in _logKeys)
+            {
+                if (!_logDict.TryGetValue(key, out var entry))
+                    continue;
+
+                string countInfo = entry.Count > 1 ? $" (x{entry.Count})" : "";
+                sb.AppendLine($"[{entry.LastTimestamp}] {entry.Type}: {entry.Message}{countInfo}");
+
+                if (entry.StackTraceLines != null)
+                {
+                    foreach (string line in entry.StackTraceLines)
+                    {
+                        sb.AppendLine($"  {line}");
+                    }
+                }
+                sb.AppendLine();
+                
+                // Check length limit
+                if (sb.Length > MaxExportLength)
+                {
+                    sb.AppendLine("...(truncated)");
+                    break;
+                }
+            }
+
+            return sb.ToString();
+        }
+        catch
+        {
+            // Silently fail - return minimal text
+            return "Export failed";
+        }
     }
     
     /// <summary>
@@ -388,31 +491,7 @@ public class LogOverlay : MonoBehaviour
     /// </summary>
     private string GenerateAggregatedLogText()
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("=== LogOverlay Export ===");
-        sb.AppendLine($"Exported at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"Total unique logs: {_logKeys.Count}");
-        sb.AppendLine();
-
-        foreach (string key in _logKeys)
-        {
-            if (!_logDict.TryGetValue(key, out var entry))
-                continue;
-
-            string countInfo = entry.Count > 1 ? $" (x{entry.Count})" : "";
-            sb.AppendLine($"[{entry.LastTimestamp}] {entry.Type}: {entry.Message}{countInfo}");
-
-            if (entry.StackTraceLines != null)
-            {
-                foreach (string line in entry.StackTraceLines)
-                {
-                    sb.AppendLine($"  {line}");
-                }
-            }
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
+        return ExportText();
     }
     
     /// <summary>
