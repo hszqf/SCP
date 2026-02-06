@@ -51,12 +51,18 @@ namespace Core
                     return 0;
                 }
 
-                // Pre-calculate current news count per media for efficiency
+                // Pre-calculate current news count per media for efficiency (single pass over NewsLog)
                 var newsCountByMedia = new Dictionary<string, int>();
                 foreach (var profile in mediaProfiles)
                 {
-                    int count = state.NewsLog.Count(n => n != null && n.Day == state.Day && n.mediaProfileId == profile.profileId);
-                    newsCountByMedia[profile.profileId] = count;
+                    newsCountByMedia[profile.profileId] = 0;
+                }
+                foreach (var news in state.NewsLog)
+                {
+                    if (news != null && news.Day == state.Day && newsCountByMedia.ContainsKey(news.mediaProfileId))
+                    {
+                        newsCountByMedia[news.mediaProfileId]++;
+                    }
                 }
 
                 // Get unreported facts ordered by severity (high to low) and day (recent first)
@@ -253,45 +259,45 @@ namespace Core
                 case "AnomalySpawned":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"基金会通报：{nodeName}出现异常活动",
-                        "SENSATIONAL" => $"怪事爆发！{nodeName}疑现"异象"",
-                        "INVESTIGATIVE" => $"调查线索：{nodeName}异常事件的共同点",
+                        NewsConstants.MediaProfileFormal => $"基金会通报：{nodeName}出现异常活动",
+                        NewsConstants.MediaProfileSensational => $"怪事爆发！{nodeName}疑现"异象"",
+                        NewsConstants.MediaProfileInvestigative => $"调查线索：{nodeName}异常事件的共同点",
                         _ => $"{nodeName}发现异常现象"
                     };
 
                 case "InvestigateCompleted":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【官方】{nodeName}调查工作完成",
-                        "SENSATIONAL" => $"【独家】{nodeName}惊人真相曝光！",
-                        "INVESTIGATIVE" => $"【深度】{nodeName}异常真相揭秘",
+                        NewsConstants.MediaProfileFormal => $"【官方】{nodeName}调查工作完成",
+                        NewsConstants.MediaProfileSensational => $"【独家】{nodeName}惊人真相曝光！",
+                        NewsConstants.MediaProfileInvestigative => $"【深度】{nodeName}异常真相揭秘",
                         _ => $"{nodeName}调查完成"
                     };
 
                 case "InvestigateNoResult":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【通报】{nodeName}调查暂无结果",
-                        "SENSATIONAL" => $"【疑云】{nodeName}谜团仍未解开！",
-                        "INVESTIGATIVE" => $"【追踪】{nodeName}案件调查持续中",
+                        NewsConstants.MediaProfileFormal => $"【通报】{nodeName}调查暂无结果",
+                        NewsConstants.MediaProfileSensational => $"【疑云】{nodeName}谜团仍未解开！",
+                        NewsConstants.MediaProfileInvestigative => $"【追踪】{nodeName}案件调查持续中",
                         _ => $"{nodeName}调查未发现异常"
                     };
 
                 case "ContainCompleted":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【成功】{nodeName}异常收容完成",
-                        "SENSATIONAL" => $"【胜利】{nodeName}危机解除！民众欢呼",
-                        "INVESTIGATIVE" => $"【跟进】{nodeName}异常处置行动结束",
+                        NewsConstants.MediaProfileFormal => $"【成功】{nodeName}异常收容完成",
+                        NewsConstants.MediaProfileSensational => $"【胜利】{nodeName}危机解除！民众欢呼",
+                        NewsConstants.MediaProfileInvestigative => $"【跟进】{nodeName}异常处置行动结束",
                         _ => $"{nodeName}收容成功"
                     };
                 
                 case "ContainmentSuccess":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【成功】{nodeName}收容行动成功",
-                        "SENSATIONAL" => $"【大捷】{nodeName}威胁已被控制！",
-                        "INVESTIGATIVE" => $"【分析】{nodeName}收容行动全程回顾",
+                        NewsConstants.MediaProfileFormal => $"【成功】{nodeName}收容行动成功",
+                        NewsConstants.MediaProfileSensational => $"【大捷】{nodeName}威胁已被控制！",
+                        NewsConstants.MediaProfileInvestigative => $"【分析】{nodeName}收容行动全程回顾",
                         _ => $"{nodeName}收容成功"
                     };
                 
@@ -299,9 +305,9 @@ namespace Core
                 case "ContainmentBreach":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【警报】{nodeName}收容失败",
-                        "SENSATIONAL" => $"【危机】{nodeName}形势失控！",
-                        "INVESTIGATIVE" => $"【检讨】{nodeName}收容失败原因分析",
+                        NewsConstants.MediaProfileFormal => $"【警报】{nodeName}收容失败",
+                        NewsConstants.MediaProfileSensational => $"【危机】{nodeName}形势失控！",
+                        NewsConstants.MediaProfileInvestigative => $"【检讨】{nodeName}收容失败原因分析",
                         _ => $"{nodeName}收容失败"
                     };
 
@@ -309,9 +315,9 @@ namespace Core
                     // Generic fallback for unknown fact types
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"【通报】{nodeName}发生事件",
-                        "SENSATIONAL" => $"【突发】{nodeName}情况异常！",
-                        "INVESTIGATIVE" => $"【关注】{nodeName}事件追踪",
+                        NewsConstants.MediaProfileFormal => $"【通报】{nodeName}发生事件",
+                        NewsConstants.MediaProfileSensational => $"【突发】{nodeName}情况异常！",
+                        NewsConstants.MediaProfileInvestigative => $"【关注】{nodeName}事件追踪",
                         _ => $"{nodeName}相关事件"
                     };
             }
@@ -336,27 +342,27 @@ namespace Core
                     string threat = severity >= 4 ? "极高威胁" : severity >= 3 ? "高度警戒" : "需要关注";
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"基金会已启动标准收容流程。{nodeName}地区出现异常现象，等级：{anomalyClass}。建议公众遵循当地指引，避免传播未经证实信息。",
-                        "SENSATIONAL" => $"目击者称现场出现无法解释现象。街头传言四起，相关区域疑似被迅速封锁。{nodeName}情况{threat}！",
-                        "INVESTIGATIVE" => $"我们整理了过去记录与本次迹象的重合项。封锁范围与行动节奏与以往案例一致。{nodeName}异常等级：{anomalyClass}。",
+                        NewsConstants.MediaProfileFormal => $"基金会已启动标准收容流程。{nodeName}地区出现异常现象，等级：{anomalyClass}。建议公众遵循当地指引，避免传播未经证实信息。",
+                        NewsConstants.MediaProfileSensational => $"目击者称现场出现无法解释现象。街头传言四起，相关区域疑似被迅速封锁。{nodeName}情况{threat}！",
+                        NewsConstants.MediaProfileInvestigative => $"我们整理了过去记录与本次迹象的重合项。封锁范围与行动节奏与以往案例一致。{nodeName}异常等级：{anomalyClass}。",
                         _ => $"{nodeName}出现异常活动，等级：{anomalyClass}。"
                     };
 
                 case "InvestigateCompleted":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"经过深入调查，{nodeName}异常事件已确认为{anomalyClass}类型。调查组已完成现场取证工作，相关信息将依规公开。",
-                        "SENSATIONAL" => $"独家！{nodeName}真相大白！原来是{anomalyClass}在作祟！知情人士透露更多惊人内幕，事态比预想严重！",
-                        "INVESTIGATIVE" => $"经本报调查核实，{nodeName}事件确认为{anomalyClass}异常。深度分析显示，此类事件具有典型特征，可能与此前案例相关。",
+                        NewsConstants.MediaProfileFormal => $"经过深入调查，{nodeName}异常事件已确认为{anomalyClass}类型。调查组已完成现场取证工作，相关信息将依规公开。",
+                        NewsConstants.MediaProfileSensational => $"独家！{nodeName}真相大白！原来是{anomalyClass}在作祟！知情人士透露更多惊人内幕，事态比预想严重！",
+                        NewsConstants.MediaProfileInvestigative => $"经本报调查核实，{nodeName}事件确认为{anomalyClass}异常。深度分析显示，此类事件具有典型特征，可能与此前案例相关。",
                         _ => $"{nodeName}调查完成，发现{anomalyClass}异常。"
                     };
 
                 case "InvestigateNoResult":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"{nodeName}的调查工作已告一段落，暂未发现明确异常迹象。相关部门将继续保持关注，必要时重新启动调查。",
-                        "SENSATIONAL" => $"谜团重重！{nodeName}调查无果，真相依然扑朔迷离！是否有人刻意隐瞒？民众质疑声四起。",
-                        "INVESTIGATIVE" => $"本报跟踪报道：{nodeName}调查尚无定论。专家认为可能需要更多时间和资源深入研究，不排除重新开展调查的可能。",
+                        NewsConstants.MediaProfileFormal => $"{nodeName}的调查工作已告一段落，暂未发现明确异常迹象。相关部门将继续保持关注，必要时重新启动调查。",
+                        NewsConstants.MediaProfileSensational => $"谜团重重！{nodeName}调查无果，真相依然扑朔迷离！是否有人刻意隐瞒？民众质疑声四起。",
+                        NewsConstants.MediaProfileInvestigative => $"本报跟踪报道：{nodeName}调查尚无定论。专家认为可能需要更多时间和资源深入研究，不排除重新开展调查的可能。",
                         _ => $"{nodeName}调查暂无结果。"
                     };
 
@@ -365,18 +371,18 @@ namespace Core
                     object relief = fact.Payload?.GetValueOrDefault("panicRelief", 0);
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"{nodeName}异常已成功收容，{anomalyClass}级威胁得到控制。行动获得资金奖励{reward}，社会恐慌指数下降{relief}点。",
-                        "SENSATIONAL" => $"大胜利！{nodeName}危机解除！英雄们成功收容{anomalyClass}，民众终于可以安心了！街头庆祝活动持续到深夜。",
-                        "INVESTIGATIVE" => $"收容行动详情：{nodeName}的{anomalyClass}异常已被妥善处置。此次行动展现了专业团队的应对能力，值得深入分析。",
+                        NewsConstants.MediaProfileFormal => $"{nodeName}异常已成功收容，{anomalyClass}级威胁得到控制。行动获得资金奖励{reward}，社会恐慌指数下降{relief}点。",
+                        NewsConstants.MediaProfileSensational => $"大胜利！{nodeName}危机解除！英雄们成功收容{anomalyClass}，民众终于可以安心了！街头庆祝活动持续到深夜。",
+                        NewsConstants.MediaProfileInvestigative => $"收容行动详情：{nodeName}的{anomalyClass}异常已被妥善处置。此次行动展现了专业团队的应对能力，值得深入分析。",
                         _ => $"{nodeName}异常收容成功，{anomalyClass}得到控制。"
                     };
                 
                 case "ContainmentSuccess":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"{nodeName}收容行动成功，异常已被妥善处置。专业团队展现了高水平的应对能力。",
-                        "SENSATIONAL" => $"{nodeName}大捷！威胁已被彻底控制，民众可以安心了！现场一片欢腾。",
-                        "INVESTIGATIVE" => $"本报全程跟踪{nodeName}收容行动，从部署到执行展现了专业水准，为类似行动提供了宝贵经验。",
+                        NewsConstants.MediaProfileFormal => $"{nodeName}收容行动成功，异常已被妥善处置。专业团队展现了高水平的应对能力。",
+                        NewsConstants.MediaProfileSensational => $"{nodeName}大捷！威胁已被彻底控制，民众可以安心了！现场一片欢腾。",
+                        NewsConstants.MediaProfileInvestigative => $"本报全程跟踪{nodeName}收容行动，从部署到执行展现了专业水准，为类似行动提供了宝贵经验。",
                         _ => $"{nodeName}收容成功。"
                     };
                 
@@ -384,9 +390,9 @@ namespace Core
                 case "ContainmentBreach":
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"{nodeName}收容行动未能成功，异常仍处于活跃状态。相关部门正在制定新的应对方案。",
-                        "SENSATIONAL" => $"警报！{nodeName}形势失控，收容失败！民众恐慌情绪急剧升温，当局紧急应对！",
-                        "INVESTIGATIVE" => $"深度分析：{nodeName}收容失败的原因可能包括资源不足、情报偏差等因素。我们将持续追踪后续进展。",
+                        NewsConstants.MediaProfileFormal => $"{nodeName}收容行动未能成功，异常仍处于活跃状态。相关部门正在制定新的应对方案。",
+                        NewsConstants.MediaProfileSensational => $"警报！{nodeName}形势失控，收容失败！民众恐慌情绪急剧升温，当局紧急应对！",
+                        NewsConstants.MediaProfileInvestigative => $"深度分析：{nodeName}收容失败的原因可能包括资源不足、情报偏差等因素。我们将持续追踪后续进展。",
                         _ => $"{nodeName}收容失败。"
                     };
 
@@ -394,9 +400,9 @@ namespace Core
                     // Generic fallback for unknown fact types
                     return profile?.profileId switch
                     {
-                        "FORMAL" => $"{nodeName}发生相关事件，具体情况正在核实中。官方将及时通报进展。",
-                        "SENSATIONAL" => $"{nodeName}情况异常！现场目击者称事态不明，民众密切关注事态发展！",
-                        "INVESTIGATIVE" => $"本报关注{nodeName}事件进展。我们正在收集更多信息，以便为读者提供全面分析。",
+                        NewsConstants.MediaProfileFormal => $"{nodeName}发生相关事件，具体情况正在核实中。官方将及时通报进展。",
+                        NewsConstants.MediaProfileSensational => $"{nodeName}情况异常！现场目击者称事态不明，民众密切关注事态发展！",
+                        NewsConstants.MediaProfileInvestigative => $"本报关注{nodeName}事件进展。我们正在收集更多信息，以便为读者提供全面分析。",
                         _ => $"{nodeName}发生事件：{fact.Type}"
                     };
             }

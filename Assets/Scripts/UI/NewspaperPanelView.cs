@@ -13,6 +13,7 @@ namespace UI
         [SerializeField] private Button dimmerButton;
 
         private bool _wired;
+        // IMPORTANT: This must match the default tab (Paper1 = FORMAL per NewsConstants.AllMediaProfiles[0])
         private string _currentMediaProfileId = Core.NewsConstants.MediaProfileFormal; // Track current media selection
 
         public void Show()

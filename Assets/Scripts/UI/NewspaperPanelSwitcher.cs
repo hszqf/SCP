@@ -8,6 +8,9 @@ public class NewspaperPanelSwitcher : MonoBehaviour
     
     // Reference to the NewspaperPanelView to call Render
     private UI.NewspaperPanelView _panelView;
+    
+    // IMPORTANT: Tab order must match Core.NewsConstants.AllMediaProfiles array
+    // Tab 0 (Paper1) = FORMAL, Tab 1 (Paper2) = SENSATIONAL, Tab 2 (Paper3) = INVESTIGATIVE
 
     private void Awake()
     {
@@ -58,13 +61,20 @@ public class NewspaperPanelSwitcher : MonoBehaviour
         }
         
         // Refresh content with the appropriate media profile
-        if (_panelView != null && index < Core.NewsConstants.AllMediaProfiles.Length)
+        if (_panelView != null)
         {
-            string mediaProfileId = Core.NewsConstants.AllMediaProfiles[index];
-            Debug.Log($"[NewsUI] SwitchTab index={index} media={mediaProfileId}");
-            _panelView.Render(mediaProfileId);
+            if (index >= 0 && index < Core.NewsConstants.AllMediaProfiles.Length)
+            {
+                string mediaProfileId = Core.NewsConstants.AllMediaProfiles[index];
+                Debug.Log($"[NewsUI] SwitchTab index={index} media={mediaProfileId}");
+                _panelView.Render(mediaProfileId);
+            }
+            else
+            {
+                Debug.LogWarning($"[NewsUI] Invalid tab index {index}, expected 0-{Core.NewsConstants.AllMediaProfiles.Length - 1}");
+            }
         }
-        else if (_panelView == null)
+        else
         {
             Debug.LogWarning("[NewsUI] NewspaperPanelView not found - tabs will show pages but not filter content");
         }
