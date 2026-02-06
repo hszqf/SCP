@@ -2051,6 +2051,9 @@ namespace Core
             {
                 Debug.Log($"[Fact] PRUNE day={state.Day} cutoffDay={cutoffDay} removed={beforeCount - afterCount} remaining={afterCount}");
             }
+            
+            // Clean up tracking data for pruned facts
+            FactNewsGenerator.CleanupPrunedFactTracking(state);
         }
 
         // =====================

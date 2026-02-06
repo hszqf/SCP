@@ -392,6 +392,46 @@ namespace Core
         }
 
         /// <summary>
+        /// Clean up tracking data for pruned facts.
+        /// Should be called after PruneFacts to prevent memory leaks.
+        /// </summary>
+        public static void CleanupPrunedFactTracking(GameState state)
+        {
+            if (state?.FactSystem?.Facts == null)
+                return;
+            
+            // Get current fact IDs
+            var currentFactIds = new HashSet<string>();
+            foreach (var fact in state.FactSystem.Facts)
+            {
+                if (fact != null && !string.IsNullOrEmpty(fact.FactId))
+                {
+                    currentFactIds.Add(fact.FactId);
+                }
+            }
+            
+            // Remove tracking for facts that no longer exist
+            var keysToRemove = new List<string>();
+            foreach (var key in _reportedByMedia.Keys)
+            {
+                if (!currentFactIds.Contains(key))
+                {
+                    keysToRemove.Add(key);
+                }
+            }
+            
+            foreach (var key in keysToRemove)
+            {
+                _reportedByMedia.Remove(key);
+            }
+            
+            if (keysToRemove.Count > 0)
+            {
+                Debug.Log($"[FactNews] Cleaned up {keysToRemove.Count} pruned fact tracking entries");
+            }
+        }
+        
+        /// <summary>
         /// Get node name from state, with fallback.
         /// </summary>
         private static string GetNodeName(GameState state, string nodeId)

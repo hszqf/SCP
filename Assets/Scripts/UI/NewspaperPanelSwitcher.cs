@@ -15,12 +15,24 @@ public class NewspaperPanelSwitcher : MonoBehaviour
     private void Awake()
     {
         _panelView = GetComponentInParent<UI.NewspaperPanelView>();
+        if (_panelView == null)
+        {
+            // Try GetComponent for same object, or find in scene
+            _panelView = GetComponent<UI.NewspaperPanelView>();
+        }
         ShowPaper(DefaultIndex);
     }
 
     private void OnEnable()
     {
-        _panelView = GetComponentInParent<UI.NewspaperPanelView>();
+        if (_panelView == null)
+        {
+            _panelView = GetComponentInParent<UI.NewspaperPanelView>();
+            if (_panelView == null)
+            {
+                _panelView = GetComponent<UI.NewspaperPanelView>();
+            }
+        }
         ShowPaper(DefaultIndex);
     }
 
@@ -50,6 +62,10 @@ public class NewspaperPanelSwitcher : MonoBehaviour
             string mediaProfileId = MediaProfileIds[index];
             Debug.Log($"[NewsUI] SwitchTab index={index} media={mediaProfileId}");
             _panelView.Render(mediaProfileId);
+        }
+        else if (_panelView == null)
+        {
+            Debug.LogWarning("[NewsUI] NewspaperPanelView not found - tabs will show pages but not filter content");
         }
     }
 
