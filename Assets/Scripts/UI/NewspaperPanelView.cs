@@ -148,23 +148,46 @@ namespace UI
         
         private void RenderLegacySlots(DataRegistry data)
         {
-            // Legacy rendering using 3 fixed slots
-            var global = FindByKeyword(_currentNewsList, "GLOBAL");
-            var node = FindByKeyword(_currentNewsList, "NODE");
-            var rumor = FindByKeyword(_currentNewsList, "RUMOR");
-
-            var coreSet = new List<Core.NewsInstance> { global, node, rumor };
-            var extra = new List<Core.NewsInstance>();
-            for (int i = 0; i < _currentNewsList.Count; i++)
+            // Legacy rendering using 3 fixed slots per page
+            // Each page corresponds to a media type, but we filter by current media
+            // So we render the current media's news into all visible slots
+            
+            // Take top 3 items from sorted list
+            var items = _currentNewsList.Take(DefaultDisplayCount).ToList();
+            
+            // Pad with nulls if less than 3
+            while (items.Count < 3) items.Add(null);
+            
+            // Find the current active page based on media profile
+            string pagePath = GetPagePathForMedia(_currentMediaProfileId);
+            
+            if (string.IsNullOrEmpty(pagePath))
             {
-                if (_currentNewsList[i] == null) continue;
-                if (coreSet.Contains(_currentNewsList[i])) continue;
-                extra.Add(_currentNewsList[i]);
+                Debug.LogWarning($"[NewsUI] No page path for media {_currentMediaProfileId}");
+                return;
             }
-
-            ApplyPage("Window/PaperPages/Paper1", global, coreSet, extra, data);
-            ApplyPage("Window/PaperPages/Paper2", node, coreSet, extra, data);
-            ApplyPage("Window/PaperPages/Paper3", rumor, coreSet, extra, data);
+            
+            // Apply to slots: Headline, BlockA, BlockB
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineTitleTMP"), GetTitle(items[0], data));
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineDeckTMP"), GetDesc(items[0], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockATitleTMP"), GetTitle(items[1], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockABodyTMP"), GetDesc(items[1], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBTitleTMP"), GetTitle(items[2], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBBodyTMP"), GetDesc(items[2], data));
+        }
+        
+        private string GetPagePathForMedia(string mediaProfileId)
+        {
+            // Map media profile to page index (must match NewspaperPanelSwitcher tab order)
+            for (int i = 0; i < Core.NewsConstants.AllMediaProfiles.Length; i++)
+            {
+                if (Core.NewsConstants.AllMediaProfiles[i] == mediaProfileId)
+                {
+                    return $"Window/PaperPages/Paper{i + 1}";
+                }
+            }
+            
+            return "Window/PaperPages/Paper1"; // Default to Paper1 (FORMAL)
         }
         
         private void UpdateShowMoreButton()
