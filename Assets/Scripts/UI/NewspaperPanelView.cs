@@ -13,6 +13,7 @@ namespace UI
         [SerializeField] private Button dimmerButton;
 
         private bool _wired;
+        private string _currentMediaProfileId = "FORMAL"; // Track current media selection
 
         public void Show()
         {
@@ -31,11 +32,13 @@ namespace UI
 
         public void Render()
         {
-            Render("FORMAL"); // Default to FORMAL media
+            Render(_currentMediaProfileId); // Use current media selection
         }
         
         public void Render(string mediaProfileId)
         {
+            _currentMediaProfileId = mediaProfileId; // Update current selection
+            
             var state = GameController.I?.State;
             var data = DataRegistry.Instance;
             if (state == null || data == null) return;
