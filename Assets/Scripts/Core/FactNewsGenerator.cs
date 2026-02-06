@@ -260,7 +260,7 @@ namespace Core
                     return profile?.profileId switch
                     {
                         NewsConstants.MediaProfileFormal => $"基金会通报：{nodeName}出现异常活动",
-                        NewsConstants.MediaProfileSensational => $"怪事爆发！{nodeName}疑现"异象"",
+                        NewsConstants.MediaProfileSensational => $"怪事爆发！{nodeName}疑现\"异象\"",
                         NewsConstants.MediaProfileInvestigative => $"调查线索：{nodeName}异常事件的共同点",
                         _ => $"{nodeName}发现异常现象"
                     };
