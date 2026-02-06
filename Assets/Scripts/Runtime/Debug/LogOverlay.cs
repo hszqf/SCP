@@ -39,6 +39,9 @@ public class LogOverlay : MonoBehaviour
     private float _copyMessageEndTime = 0f;
     
     // Re-entrancy and frame protection
+    // Note: Static fields are safe here because Unity's Application.logMessageReceived
+    // is always called on the main thread. Multiple LogOverlay instances would share
+    // the same guard, which is acceptable since we want global recursion prevention.
     private static bool _inLogHandler = false;
     private static int _logHandlerCallsThisFrame = 0;
     private static int _lastFrameCount = -1;
@@ -130,6 +133,7 @@ public class LogOverlay : MonoBehaviour
                 message = message.Substring(0, MaxMessageLength);
             
             // Filter: only show logs containing [Boot], [DataRegistry], [News], or Exception
+            // Check BEFORE setting guard to avoid blocking all logs after first filtered log
             bool shouldShow = message.Contains("[Boot]") || 
                              message.Contains("[DataRegistry]") || 
                              message.Contains("[News]") ||
@@ -137,7 +141,7 @@ public class LogOverlay : MonoBehaviour
                              type == LogType.Exception;
 
             if (!shouldShow)
-                return;
+                return; // Will execute finally block to reset guard
 
             // Strip non-ASCII characters to diagnose WebGL tofu issue
             message = StripNonAscii(message);
@@ -154,7 +158,7 @@ public class LogOverlay : MonoBehaviour
             if ((type == LogType.Exception || type == LogType.Error) && !string.IsNullOrEmpty(stackTrace))
             {
                 string[] allLines = stackTrace.Split('\n');
-                if (allLines != null && allLines.Length > 0)
+                if (allLines.Length > 0)
                 {
                     stackFirstLine = allLines[0].Trim();
                     if (stackFirstLine.Length > MaxStackTraceLineLength)
@@ -162,17 +166,14 @@ public class LogOverlay : MonoBehaviour
                 }
                 
                 // Store max 2 lines for display
-                if (allLines != null)
+                int maxLines = Mathf.Min(allLines.Length, 2);
+                stackLines = new string[maxLines];
+                for (int i = 0; i < maxLines; i++)
                 {
-                    int maxLines = Mathf.Min(allLines.Length, 2);
-                    stackLines = new string[maxLines];
-                    for (int i = 0; i < maxLines; i++)
-                    {
-                        string line = allLines[i];
-                        if (line != null && line.Length > MaxStackTraceLineLength)
-                            line = line.Substring(0, MaxStackTraceLineLength);
-                        stackLines[i] = line;
-                    }
+                    string line = allLines[i];
+                    if (line != null && line.Length > MaxStackTraceLineLength)
+                        line = line.Substring(0, MaxStackTraceLineLength);
+                    stackLines[i] = line;
                 }
             }
 
@@ -487,19 +488,11 @@ public class LogOverlay : MonoBehaviour
     }
     
     /// <summary>
-    /// Generate aggregated log text for export/copy
-    /// </summary>
-    private string GenerateAggregatedLogText()
-    {
-        return ExportText();
-    }
-    
-    /// <summary>
     /// Generate text for export panel
     /// </summary>
     private void GenerateExportText()
     {
-        _exportText = GenerateAggregatedLogText();
+        _exportText = ExportText();
     }
 
     /// <summary>
