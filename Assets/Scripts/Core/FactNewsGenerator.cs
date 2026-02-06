@@ -19,6 +19,8 @@ namespace Core
         private static bool _isGeneratingNews = false;
         
         // Track which facts have been reported by which media
+        // Note: Persists across game sessions. CleanupPrunedFactTracking() handles cleanup
+        // when facts are pruned. Call Reset() to clear between game sessions if needed.
         private static readonly Dictionary<string, HashSet<string>> _reportedByMedia = new();
         
         /// <summary>
@@ -49,6 +51,14 @@ namespace Core
                     return 0;
                 }
 
+                // Pre-calculate current news count per media for efficiency
+                var newsCountByMedia = new Dictionary<string, int>();
+                foreach (var profile in mediaProfiles)
+                {
+                    int count = state.NewsLog.Count(n => n != null && n.Day == state.Day && n.mediaProfileId == profile.profileId);
+                    newsCountByMedia[profile.profileId] = count;
+                }
+
                 // Get unreported facts ordered by severity (high to low) and day (recent first)
                 var unreportedFacts = state.FactSystem.Facts
                     .Where(f => f != null && !IsFullyReported(f, mediaProfiles))
@@ -67,11 +77,8 @@ namespace Core
                         if (IsReportedByMedia(fact, profile.profileId))
                             continue;
                         
-                        // Check limit per media per day
-                        int currentMediaCount = state.NewsLog
-                            .Count(n => n != null && n.Day == state.Day && n.mediaProfileId == profile.profileId);
-                        
-                        if (currentMediaCount >= MaxFactNewsPerDayPerMedia)
+                        // Check limit per media per day (using pre-calculated count)
+                        if (newsCountByMedia[profile.profileId] >= MaxFactNewsPerDayPerMedia)
                             continue;
 
                         var newsInstance = GenerateNewsFromFact(state, fact, registry, profile);
@@ -79,6 +86,7 @@ namespace Core
                         {
                             state.NewsLog.Add(newsInstance);
                             MarkReportedByMedia(fact, profile.profileId);
+                            newsCountByMedia[profile.profileId]++; // Increment count
                             generated++;
                             
                             Debug.Log($"[FactNews] day={state.Day} factId={fact.FactId} media={profile.profileId} type={fact.Type} newsId={newsInstance.Id} severity={fact.Severity}");
@@ -206,21 +214,21 @@ namespace Core
             {
                 new MediaProfileDef
                 {
-                    profileId = "FORMAL",
+                    profileId = NewsConstants.MediaProfileFormal,
                     name = "正式报道",
                     tone = "neutral",
                     weight = 1
                 },
                 new MediaProfileDef
                 {
-                    profileId = "SENSATIONAL",
+                    profileId = NewsConstants.MediaProfileSensational,
                     name = "耸人听闻",
                     tone = "alarmist",
                     weight = 1
                 },
                 new MediaProfileDef
                 {
-                    profileId = "INVESTIGATIVE",
+                    profileId = NewsConstants.MediaProfileInvestigative,
                     name = "调查报道",
                     tone = "analytical",
                     weight = 1
@@ -395,6 +403,16 @@ namespace Core
         }
 
         /// <summary>
+        /// Reset tracking state. Call this when starting a new game or loading a save.
+        /// </summary>
+        public static void Reset()
+        {
+            _reportedByMedia.Clear();
+            _isGeneratingNews = false;
+            Debug.Log("[FactNews] Tracking state reset");
+        }
+        
+        /// <summary>
         /// Clean up tracking data for pruned facts.
         /// Should be called after PruneFacts to prevent memory leaks.
         /// </summary>
@@ -403,15 +421,12 @@ namespace Core
             if (state?.FactSystem?.Facts == null)
                 return;
             
-            // Get current fact IDs
-            var currentFactIds = new HashSet<string>();
-            foreach (var fact in state.FactSystem.Facts)
-            {
-                if (fact != null && !string.IsNullOrEmpty(fact.FactId))
-                {
-                    currentFactIds.Add(fact.FactId);
-                }
-            }
+            // Get current fact IDs (simplified with LINQ)
+            var currentFactIds = new HashSet<string>(
+                state.FactSystem.Facts
+                    .Where(f => f != null && !string.IsNullOrEmpty(f.FactId))
+                    .Select(f => f.FactId)
+            );
             
             // Remove tracking for facts that no longer exist (single pass with LINQ)
             var keysToRemove = _reportedByMedia.Keys

@@ -8,9 +8,6 @@ public class NewspaperPanelSwitcher : MonoBehaviour
     
     // Reference to the NewspaperPanelView to call Render
     private UI.NewspaperPanelView _panelView;
-    
-    // Mapping of page index to media profile
-    private static readonly string[] MediaProfileIds = { "FORMAL", "SENSATIONAL", "INVESTIGATIVE" };
 
     private void Awake()
     {
@@ -61,9 +58,9 @@ public class NewspaperPanelSwitcher : MonoBehaviour
         }
         
         // Refresh content with the appropriate media profile
-        if (_panelView != null && index < MediaProfileIds.Length)
+        if (_panelView != null && index < Core.NewsConstants.AllMediaProfiles.Length)
         {
-            string mediaProfileId = MediaProfileIds[index];
+            string mediaProfileId = Core.NewsConstants.AllMediaProfiles[index];
             Debug.Log($"[NewsUI] SwitchTab index={index} media={mediaProfileId}");
             _panelView.Render(mediaProfileId);
         }

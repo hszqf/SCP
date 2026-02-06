@@ -13,7 +13,7 @@ namespace UI
         [SerializeField] private Button dimmerButton;
 
         private bool _wired;
-        private string _currentMediaProfileId = "FORMAL"; // Track current media selection
+        private string _currentMediaProfileId = Core.NewsConstants.MediaProfileFormal; // Track current media selection
 
         public void Show()
         {
