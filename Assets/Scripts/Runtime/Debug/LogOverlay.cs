@@ -93,10 +93,13 @@ public class LogOverlay : MonoBehaviour
 
     private void HandleLog(string message, string stackTrace, LogType type)
     {
-        // Filter: only show logs containing [Boot], [DataRegistry], [News], or Exception
+        // Filter: only show logs containing [Boot], [DataRegistry], [News], [Fact], [FactNews], [NewsUI], or Exception
         bool shouldShow = message.Contains("[Boot]") || 
                          message.Contains("[DataRegistry]") || 
                          message.Contains("[News]") ||
+                         message.Contains("[Fact]") ||
+                         message.Contains("[FactNews]") ||
+                         message.Contains("[NewsUI]") ||
                          message.Contains("Exception") ||
                          type == LogType.Exception;
 
