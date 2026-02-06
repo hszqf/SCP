@@ -12,6 +12,9 @@ namespace Core
     /// </summary>
     public static class FactNewsGenerator
     {
+        // Constants
+        private const int MaxFactNewsPerDayPerMedia = 5;
+        
         // Recursion guard to prevent WebGL stack overflow
         private static bool _isGeneratingNews = false;
         
@@ -68,7 +71,7 @@ namespace Core
                         int currentMediaCount = state.NewsLog
                             .Count(n => n != null && n.Day == state.Day && n.mediaProfileId == profile.profileId);
                         
-                        if (currentMediaCount >= 5) // MaxFactNewsPerDayPerMedia
+                        if (currentMediaCount >= MaxFactNewsPerDayPerMedia)
                             continue;
 
                         var newsInstance = GenerateNewsFromFact(state, fact, registry, profile);
@@ -410,15 +413,10 @@ namespace Core
                 }
             }
             
-            // Remove tracking for facts that no longer exist
-            var keysToRemove = new List<string>();
-            foreach (var key in _reportedByMedia.Keys)
-            {
-                if (!currentFactIds.Contains(key))
-                {
-                    keysToRemove.Add(key);
-                }
-            }
+            // Remove tracking for facts that no longer exist (single pass with LINQ)
+            var keysToRemove = _reportedByMedia.Keys
+                .Where(key => !currentFactIds.Contains(key))
+                .ToList();
             
             foreach (var key in keysToRemove)
             {

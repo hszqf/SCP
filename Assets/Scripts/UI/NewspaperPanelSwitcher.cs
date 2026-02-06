@@ -14,16 +14,21 @@ public class NewspaperPanelSwitcher : MonoBehaviour
 
     private void Awake()
     {
-        _panelView = GetComponentInParent<UI.NewspaperPanelView>();
-        if (_panelView == null)
-        {
-            // Try GetComponent for same object, or find in scene
-            _panelView = GetComponent<UI.NewspaperPanelView>();
-        }
+        EnsurePanelViewReference();
         ShowPaper(DefaultIndex);
     }
 
     private void OnEnable()
+    {
+        EnsurePanelViewReference();
+        ShowPaper(DefaultIndex);
+    }
+    
+    /// <summary>
+    /// Ensure we have a reference to the NewspaperPanelView component.
+    /// Try GetComponentInParent first, then GetComponent as fallback.
+    /// </summary>
+    private void EnsurePanelViewReference()
     {
         if (_panelView == null)
         {
@@ -33,7 +38,6 @@ public class NewspaperPanelSwitcher : MonoBehaviour
                 _panelView = GetComponent<UI.NewspaperPanelView>();
             }
         }
-        ShowPaper(DefaultIndex);
     }
 
     public void ShowPaper(int index)
