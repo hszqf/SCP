@@ -9,12 +9,28 @@ namespace UI
 {
     public class NewspaperPanelView : MonoBehaviour, IModalClosable
     {
+        [Header("UI References")]
         [SerializeField] private Button closeButton;
         [SerializeField] private Button dimmerButton;
-
+        
+        [Header("Scrollable List (New)")]
+        [SerializeField] private GameObject newsItemPrefab;
+        [SerializeField] private Transform newsContentRoot; // ScrollView content
+        [SerializeField] private Button showMoreButton;
+        [SerializeField] private TMP_Text showMoreButtonText;
+        
+        [Header("Legacy Slots (Fallback)")]
+        [SerializeField] private bool useLegacySlots = true; // Toggle in inspector
+        
         private bool _wired;
         // IMPORTANT: This must match the default tab (Paper1 = FORMAL per NewsConstants.AllMediaProfiles[0])
         private string _currentMediaProfileId = Core.NewsConstants.MediaProfileFormal; // Track current media selection
+        
+        private bool _isExpanded = false;
+        private const int DefaultDisplayCount = 3;
+        private const int MaxRenderCount = 30;
+        
+        private List<Core.NewsInstance> _currentNewsList = new List<Core.NewsInstance>();
 
         public void Show()
         {
@@ -51,7 +67,18 @@ namespace UI
                 .Where(n => n != null && n.Day == state.Day && n.mediaProfileId == mediaProfileId)
                 .ToList() ?? new List<Core.NewsInstance>();
             
-            Debug.Log($"[NewsUI] day={state.Day} media={mediaProfileId} count={pool.Count} first={pool.FirstOrDefault()?.Id ?? "none"}");
+            // Sort by newest first: day desc, severity desc
+            _currentNewsList = pool
+                .OrderByDescending(n => n.Day)
+                .ThenByDescending(n => GetSeverity(n, data))
+                .ToList();
+            
+            // Determine display mode
+            string mode = _isExpanded ? "Expanded" : "Collapsed";
+            int showCount = _isExpanded ? Mathf.Min(_currentNewsList.Count, MaxRenderCount) : Mathf.Min(_currentNewsList.Count, DefaultDisplayCount);
+            
+            // Log once per refresh (not spammy)
+            Debug.Log($"[NewsUI] day={state.Day} media={mediaProfileId} total={_currentNewsList.Count} show={showCount} mode={mode}");
 
             var titleTmp = FindTMP("Window/Header/TitleTMP");
             if (titleTmp != null) titleTmp.text = "基金会晨报";
@@ -59,22 +86,172 @@ namespace UI
             var dayTmp = FindTMP("Window/Header/DayTMP");
             if (dayTmp != null) dayTmp.text = $"Day{state.Day}";
 
-            var global = FindByKeyword(pool, "GLOBAL");
-            var node = FindByKeyword(pool, "NODE");
-            var rumor = FindByKeyword(pool, "RUMOR");
-
-            var coreSet = new List<Core.NewsInstance> { global, node, rumor };
-            var extra = new List<Core.NewsInstance>();
-            for (int i = 0; i < pool.Count; i++)
+            // Choose rendering mode
+            if (!useLegacySlots && newsContentRoot != null && newsItemPrefab != null)
             {
-                if (pool[i] == null) continue;
-                if (coreSet.Contains(pool[i])) continue;
-                extra.Add(pool[i]);
+                RenderScrollableList(showCount, data);
             }
+            else
+            {
+                RenderLegacySlots(data);
+            }
+        }
 
-            ApplyPage("Window/PaperPages/Paper1", global, coreSet, extra, data);
-            ApplyPage("Window/PaperPages/Paper2", node, coreSet, extra, data);
-            ApplyPage("Window/PaperPages/Paper3", rumor, coreSet, extra, data);
+        private void RenderScrollableList(int showCount, DataRegistry data)
+        {
+            // Clear existing items
+            if (newsContentRoot != null)
+            {
+                foreach (Transform child in newsContentRoot)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+            
+            // Handle empty state
+            if (_currentNewsList.Count == 0)
+            {
+                // Create a single placeholder item
+                var placeholderItem = Instantiate(newsItemPrefab, newsContentRoot);
+                var itemView = placeholderItem.GetComponent<NewsItemView>();
+                if (itemView != null)
+                {
+                    itemView.SetContent("暂无报道", "今日无新闻事件");
+                }
+                
+                // Hide show-more button when no news
+                if (showMoreButton != null)
+                {
+                    showMoreButton.gameObject.SetActive(false);
+                }
+                return;
+            }
+            
+            // Render news items
+            for (int i = 0; i < showCount; i++)
+            {
+                var news = _currentNewsList[i];
+                var newsItem = Instantiate(newsItemPrefab, newsContentRoot);
+                var itemView = newsItem.GetComponent<NewsItemView>();
+                
+                if (itemView != null)
+                {
+                    string title = GetTitle(news, data);
+                    string body = GetDesc(news, data);
+                    itemView.SetContent(title, body);
+                }
+            }
+            
+            // Update show-more button
+            UpdateShowMoreButton();
+        }
+        
+        private void RenderLegacySlots(DataRegistry data)
+        {
+            // Legacy rendering using 3 fixed slots per page
+            // Each page corresponds to a media type, but we filter by current media
+            // So we render the current media's news into all visible slots
+            
+            // Take top 3 items from sorted list
+            var items = _currentNewsList.Take(DefaultDisplayCount).ToList();
+            
+            // Pad with nulls if less than 3
+            while (items.Count < 3) items.Add(null);
+            
+            // Find the current active page based on media profile
+            string pagePath = GetPagePathForMedia(_currentMediaProfileId);
+            
+            if (string.IsNullOrEmpty(pagePath))
+            {
+                Debug.LogWarning($"[NewsUI] No page path for media {_currentMediaProfileId}");
+                return;
+            }
+            
+            // Apply to slots: Headline, BlockA, BlockB
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineTitleTMP"), GetTitle(items[0], data));
+            SetText(FindTMP($"{pagePath}/Slot_Headline/HeadlineDeckTMP"), GetDesc(items[0], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockATitleTMP"), GetTitle(items[1], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockA/BlockABodyTMP"), GetDesc(items[1], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBTitleTMP"), GetTitle(items[2], data));
+            SetText(FindTMP($"{pagePath}/Slot_BlockB/BlockBBodyTMP"), GetDesc(items[2], data));
+        }
+        
+        private string GetPagePathForMedia(string mediaProfileId)
+        {
+            // Map media profile to page index (must match NewspaperPanelSwitcher tab order)
+            for (int i = 0; i < Core.NewsConstants.AllMediaProfiles.Length; i++)
+            {
+                if (Core.NewsConstants.AllMediaProfiles[i] == mediaProfileId)
+                {
+                    return $"Window/PaperPages/Paper{i + 1}";
+                }
+            }
+            
+            return "Window/PaperPages/Paper1"; // Default to Paper1 (FORMAL)
+        }
+        
+        private void UpdateShowMoreButton()
+        {
+            if (showMoreButton == null)
+            {
+                return;
+            }
+            
+            // Show button only if there are more than DefaultDisplayCount items
+            bool hasMore = _currentNewsList.Count > DefaultDisplayCount;
+            showMoreButton.gameObject.SetActive(hasMore);
+            
+            if (!hasMore)
+            {
+                return;
+            }
+            
+            // Update button text
+            if (showMoreButtonText != null)
+            {
+                if (_isExpanded)
+                {
+                    showMoreButtonText.text = "收起";
+                }
+                else
+                {
+                    int remainingCount = _currentNewsList.Count - DefaultDisplayCount;
+                    showMoreButtonText.text = $"显示全部 ({remainingCount}条更多)";
+                }
+            }
+            
+            // Show overflow warning if needed
+            if (_isExpanded && _currentNewsList.Count > MaxRenderCount)
+            {
+                // Could add a warning text here if desired
+                Debug.Log($"[NewsUI] Showing {MaxRenderCount} of {_currentNewsList.Count} news items");
+            }
+        }
+        
+        public void ToggleShowMore()
+        {
+            _isExpanded = !_isExpanded;
+            
+            var state = GameController.I?.State;
+            if (state != null)
+            {
+                string mode = _isExpanded ? "Expanded" : "Collapsed";
+                int showCount = _isExpanded ? Mathf.Min(_currentNewsList.Count, MaxRenderCount) : DefaultDisplayCount;
+                Debug.Log($"[NewsUI] day={state.Day} media={_currentMediaProfileId} total={_currentNewsList.Count} show={showCount} mode={mode}");
+            }
+            
+            Render(_currentMediaProfileId);
+        }
+        
+        private int GetSeverity(Core.NewsInstance news, DataRegistry data)
+        {
+            // Try to get severity from the news source (anomaly level, etc.)
+            // For now, return a default value; can be enhanced later
+            if (news == null) return 0;
+            
+            // Could look up severity from anomaly or event definition
+            // For now, all news have equal priority
+            return 0;
         }
 
         private void Awake()
@@ -89,6 +266,8 @@ namespace UI
             {
                 GameController.I.OnStateChanged += OnGameStateChanged;
             }
+            // Reset expanded state when panel is shown
+            _isExpanded = false;
             // Render when panel is shown
             Render();
         }
@@ -132,6 +311,12 @@ namespace UI
             {
                 dimmerButton.onClick.RemoveAllListeners();
                 dimmerButton.onClick.AddListener(() => UIPanelRoot.I?.CloseTopModal("dimmer"));
+            }
+            
+            if (showMoreButton != null)
+            {
+                showMoreButton.onClick.RemoveAllListeners();
+                showMoreButton.onClick.AddListener(ToggleShowMore);
             }
 
             _wired = true;
