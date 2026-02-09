@@ -52,6 +52,12 @@ namespace UI.Map
             UpdateVisuals();
         }
 
+        // Pin state icons - using symbols with emoji/text fallbacks for compatibility
+        private const string ICON_UNKNOWN = "?";      // Question mark
+        private const string ICON_DISCOVERED = "⚠";   // Warning or "!"
+        private const string ICON_CONTAINED = "🔒";   // Lock or "C"
+        private const string ICON_MANAGED = "⚡";     // Lightning or "M"
+
         private void UpdateVisuals()
         {
             string icon;
@@ -60,23 +66,23 @@ namespace UI.Map
             switch (_state)
             {
                 case AnomalyPinState.Unknown:
-                    icon = "?";
+                    icon = ICON_UNKNOWN;
                     color = unknownColor;
                     break;
                 case AnomalyPinState.Discovered:
-                    icon = "⚠";
+                    icon = ICON_DISCOVERED;
                     color = discoveredColor;
                     break;
                 case AnomalyPinState.Contained:
-                    icon = "🔒";
+                    icon = ICON_CONTAINED;
                     color = containedColor;
                     break;
                 case AnomalyPinState.Managed:
-                    icon = "⚡";
+                    icon = ICON_MANAGED;
                     color = managedColor;
                     break;
                 default:
-                    icon = "?";
+                    icon = ICON_UNKNOWN;
                     color = unknownColor;
                     break;
             }

@@ -287,18 +287,24 @@ namespace UI.Map
                 Destroy(iconObj);
         }
 
+        // Task type icons - using simple text as fallback for emoji compatibility
+        private const string ICON_INVESTIGATE = "🔍"; // Magnifying glass or "I"
+        private const string ICON_CONTAIN = "📦";     // Box or "C"
+        private const string ICON_MANAGE = "💧";      // Droplet or "M"
+        private const string ICON_DEFAULT = "●";      // Circle
+
         private string GetTaskTypeIcon(TaskType taskType)
         {
             switch (taskType)
             {
                 case TaskType.Investigate:
-                    return "🔍";
+                    return ICON_INVESTIGATE;
                 case TaskType.Contain:
-                    return "📦";
+                    return ICON_CONTAIN;
                 case TaskType.Manage:
-                    return "💧";
+                    return ICON_MANAGE;
                 default:
-                    return "●";
+                    return ICON_DEFAULT;
             }
         }
 

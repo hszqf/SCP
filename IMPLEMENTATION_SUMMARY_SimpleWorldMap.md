@@ -185,12 +185,12 @@ DispatchLineFX.CheckForTaskStateChanges()
    - 菜单：Tools > SCP > Generate Simple Map Prefabs
 
 ### 文档
-9. **README_SimpleWorldMap.md** (315行)
+9. **README_SimpleWorldMap.md**
    - 系统概述
    - 快速开始
    - 自定义指南
 
-10. **Docs/SimpleWorldMapSetup.md** (250行)
+10. **Docs/SimpleWorldMapSetup.md**
     - Unity Editor 详细步骤
     - Prefab 创建指南
     - 故障排除
