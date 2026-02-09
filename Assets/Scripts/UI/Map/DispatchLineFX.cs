@@ -183,8 +183,8 @@ namespace UI.Map
                 var iconImage = iconObj.AddComponent<Image>();
                 iconImage.color = Color.white;
                 
-                var iconRT = iconObj.GetComponent<RectTransform>();
-                iconRT.sizeDelta = new Vector2(30, 30);
+                var tmpIconRT = iconObj.GetComponent<RectTransform>();
+                tmpIconRT.sizeDelta = new Vector2(30, 30);
                 
                 // Add text label for task type
                 var textObj = new GameObject("Label");

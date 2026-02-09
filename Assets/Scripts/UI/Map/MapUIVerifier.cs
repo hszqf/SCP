@@ -33,7 +33,7 @@ namespace Editor
             bool hasIssues = false;
 
             // Check for SimpleWorldMapPanel
-            var mapPanel = Object.FindObjectOfType<SimpleWorldMapPanel>();
+            var mapPanel = Object.FindAnyObjectByType<SimpleWorldMapPanel>();
             if (mapPanel == null)
             {
                 Debug.LogWarning("[MapUI Verifier] SimpleWorldMapPanel not found in scene. Map will not be visible.");
@@ -70,7 +70,7 @@ namespace Editor
             }
 
             // Check for DispatchLineFX
-            var dispatchFX = Object.FindObjectOfType<DispatchLineFX>();
+            var dispatchFX = Object.FindAnyObjectByType<DispatchLineFX>();
             if (dispatchFX == null)
             {
                 Debug.LogWarning("[MapUI Verifier] DispatchLineFX not found. Animations will not play.");
@@ -82,7 +82,7 @@ namespace Editor
             }
 
             // Check for MapSystemManager (optional)
-            var mapManager = Object.FindObjectOfType<MapSystemManager>();
+            var mapManager = Object.FindAnyObjectByType<MapSystemManager>();
             if (mapManager != null)
             {
                 Debug.Log("[MapUI Verifier] ✓ MapSystemManager found (old map toggle available)");
@@ -147,7 +147,7 @@ public class MapUIRuntimeVerifier : MonoBehaviour
         int errors = 0;
 
         // Check SimpleWorldMapPanel
-        var mapPanel = FindObjectOfType<SimpleWorldMapPanel>();
+        var mapPanel = FindAnyObjectByType<SimpleWorldMapPanel>();
         if (mapPanel == null)
         {
             Debug.LogError("[MapUI] SimpleWorldMapPanel not found in scene!");
@@ -159,7 +159,7 @@ public class MapUIRuntimeVerifier : MonoBehaviour
         }
 
         // Check DispatchLineFX
-        var dispatchFX = FindObjectOfType<DispatchLineFX>();
+        var dispatchFX = FindAnyObjectByType<DispatchLineFX>();
         if (dispatchFX == null)
         {
             Debug.LogWarning("[MapUI] DispatchLineFX not found - animations disabled");

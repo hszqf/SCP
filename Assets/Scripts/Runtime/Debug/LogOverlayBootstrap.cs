@@ -11,7 +11,7 @@ public static class LogOverlayBootstrap
     private static void Initialize()
     {
         // Check if LogOverlay already exists to prevent duplicates
-        var existing = Object.FindObjectOfType<LogOverlay>();
+        var existing = Object.FindAnyObjectByType<LogOverlay>();
         if (existing != null)
         {
             Debug.Log("[LogOverlayBootstrap] LogOverlay already exists, skipping creation");
