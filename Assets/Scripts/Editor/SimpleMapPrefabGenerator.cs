@@ -13,7 +13,7 @@ using System.IO;
 
 namespace Editor
 {
-    public class SimpleMapPrefabGenerator : EditorWindow
+    public partial class SimpleMapPrefabGenerator : EditorWindow
     {
         [MenuItem("Tools/SCP/Generate Simple Map Prefabs")]
         public static void ShowWindow()
