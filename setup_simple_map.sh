@@ -11,11 +11,19 @@ echo "=========================================="
 
 # Check if Unity is available
 UNITY_PATH=""
-if [ -f "/Applications/Unity/Hub/Editor/*/Unity.app/Contents/MacOS/Unity" ]; then
-    UNITY_PATH=$(ls -t /Applications/Unity/Hub/Editor/*/Unity.app/Contents/MacOS/Unity | head -n 1)
-elif command -v unity-editor &> /dev/null; then
+
+# Try to find Unity on macOS (Unity Hub installations)
+if [ -d "/Applications/Unity/Hub/Editor" ]; then
+    UNITY_PATH=$(find /Applications/Unity/Hub/Editor -name "Unity" -path "*/Contents/MacOS/Unity" -type f 2>/dev/null | sort -r | head -n 1)
+fi
+
+# Try common Linux paths
+if [ -z "$UNITY_PATH" ] && command -v unity-editor &> /dev/null; then
     UNITY_PATH=$(which unity-editor)
-elif [ -f "/opt/unity/Editor/Unity" ]; then
+fi
+
+# Try /opt/unity
+if [ -z "$UNITY_PATH" ] && [ -f "/opt/unity/Editor/Unity" ]; then
     UNITY_PATH="/opt/unity/Editor/Unity"
 fi
 
