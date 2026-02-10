@@ -73,7 +73,8 @@ namespace UI.Map
             // Check old map status
             GameObject oldMapRoot = GameObject.Find("MapRoot");
             bool oldMapActive = oldMapRoot != null && oldMapRoot.activeSelf;
-            Debug.Log($"[MapUI] Verify oldMap={oldMapRoot != null}(active={oldMapActive})");
+            string oldMapStatus = oldMapRoot != null ? "FOUND" : "NOT_FOUND";
+            Debug.Log($"[MapUI] Verify oldMap={oldMapStatus}(active={oldMapActive})");
 
             // Create NewMapRoot structure
             CreateNewMapRoot(canvas.transform);
@@ -272,7 +273,7 @@ namespace UI.Map
 
             Image dotImage = dot.AddComponent<Image>();
             dotImage.color = nodeDotColor;
-            // Make it circular (requires a circular sprite, but we'll use square for now)
+            // Note: Using square shape as circular sprites require additional resources
 
             // Create Name Text
             GameObject nameObj = new GameObject("Name");
@@ -357,11 +358,12 @@ namespace UI.Map
             }
         }
 
-        // Public method for refreshing node states (can be called when GameState changes)
+        // Public method for refreshing node states (future enhancement)
+        // TODO: Subscribe to GameController.OnStateChanged and update node visuals
+        // (task bars, event badges, anomaly icons) based on current GameState
         public void RefreshNodes()
         {
-            // TODO: Update node visuals based on current GameState
-            Debug.Log("[MapUI] RefreshNodes called");
+            Debug.Log("[MapUI] RefreshNodes called (implementation deferred)");
         }
     }
 }
