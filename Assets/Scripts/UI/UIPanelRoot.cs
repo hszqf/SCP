@@ -148,8 +148,7 @@ public class UIPanelRoot : MonoBehaviour
         if (_nodePanel) return;
         if (!nodePanelPrefab) 
         { 
-            Debug.LogError("[MapUI] NodePanelPrefabMissing");
-            Debug.LogError("NodePanelPrefab 未配置！"); 
+            Debug.LogError("[MapUI] NodePanelPrefabMissing (NodePanelPrefab 未配置！)");
             return; 
         }
 

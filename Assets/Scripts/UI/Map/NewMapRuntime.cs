@@ -366,21 +366,13 @@ namespace UI.Map
             {
                 var uiRoot = UIPanelRoot.I;
                 Debug.Log($"[MapUI] UIPanelRoot alive=true name={uiRoot.gameObject.name} active={uiRoot.gameObject.activeInHierarchy}");
-            }
-            else
-            {
-                Debug.LogWarning("[MapUI] UIPanelRootMissing (cannot open node panel)");
-            }
-
-            // Use UIPanelRoot to open the node panel
-            if (UIPanelRoot.I != null)
-            {
+                
                 // Primary path: open the existing NodePanelView
                 UIPanelRoot.I.OpenNode(nodeId);
             }
             else
             {
-                Debug.LogWarning("[MapUI] UIPanelRoot.I is null, cannot open node panel");
+                Debug.LogWarning("[MapUI] UIPanelRootMissing (cannot open node panel)");
             }
         }
 
