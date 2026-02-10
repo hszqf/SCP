@@ -278,7 +278,8 @@ namespace UI.Map
             iconText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             // TODO: Show icon when node has unknown anomaly or pending events
-            // Implementation: Check node.Anomalies for unidentified items or node.PendingEvents.Count > 0
+            // Implementation: var node = GameController.I?.GetNode(nodeId);
+            //                 if (node?.Anomalies.Any(unidentified) || node?.PendingEvents.Count > 0) { SetActive(true); }
             // Hide by default to avoid misleading placeholder
             unknownIcon.SetActive(false);
 
