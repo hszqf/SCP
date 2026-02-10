@@ -19,12 +19,11 @@ namespace UI.Map
 
         [Header("Settings")]
         [SerializeField] private Color backgroundColor = new Color(0.12f, 0.12f, 0.18f, 1f);
-        [SerializeField] private Color nodeDotColor = new Color(0.3f, 0.7f, 1f, 1f);
-        [SerializeField] private Color nodeTextColor = Color.white;
+        [SerializeField] private NodeMarkerView nodeMarkerPrefab;
 
         private GameObject _newMapRoot;
         private GameObject _nodesRoot;
-        private Dictionary<string, GameObject> _nodeWidgets = new Dictionary<string, GameObject>();
+        private Dictionary<string, NodeMarkerView> _nodeViews = new Dictionary<string, NodeMarkerView>();
 
         // Fixed node positions (relative to screen, using anchors)
         private readonly Dictionary<string, Vector2> _nodePositions = new Dictionary<string, Vector2>
@@ -44,6 +43,12 @@ namespace UI.Map
         {
             if (Instance == this)
                 Instance = null;
+
+            // Unsubscribe from state changes
+            if (GameController.I != null)
+            {
+                GameController.I.OnStateChanged -= OnGameStateChanged;
+            }
         }
 
         private void Start()
@@ -92,6 +97,13 @@ namespace UI.Map
             string oldMapStatus = oldMapRoot != null ? "FOUND" : "NOT_FOUND";
             Debug.Log($"[MapUI] Verify oldMap={oldMapStatus}(active={oldMapActive})");
 
+            // Validate prefab reference
+            if (nodeMarkerPrefab == null)
+            {
+                Debug.LogError("[MapUI] NodeMarkerPrefab is not assigned! Please assign it in the Inspector.");
+                return;
+            }
+
             // Create NewMapRoot structure
             CreateNewMapRoot(canvas.transform);
 
@@ -100,6 +112,13 @@ namespace UI.Map
 
             // Create node widgets
             CreateNodeWidgets(nodeIds);
+
+            // Subscribe to state changes
+            if (GameController.I != null)
+            {
+                GameController.I.OnStateChanged += OnGameStateChanged;
+                Debug.Log("[MapUI] Subscribed to GameController.OnStateChanged");
+            }
 
             // A. DIAGNOSTIC LOGS - Check EventSystem AFTER UI creation
             eventSystem = FindFirstObjectByType<EventSystem>();
@@ -140,7 +159,7 @@ namespace UI.Map
             }
 
             // Log verification
-            Debug.Log($"[MapUI] Verify oldMap={(oldMapRoot != null ? "FOUND" : "NOT_FOUND")}(active={oldMapActive}) newMap={(_newMapRoot != null ? "CREATED" : "FAILED")} nodes={_nodeWidgets.Count}");
+            Debug.Log($"[MapUI] Verify oldMap={(oldMapRoot != null ? "FOUND" : "NOT_FOUND")}(active={oldMapActive}) newMap={(_newMapRoot != null ? "CREATED" : "FAILED")} nodes={_nodeViews.Count}");
         }
 
         private void CreateNewMapRoot(Transform canvasTransform)
@@ -218,136 +237,65 @@ namespace UI.Map
                 CreateNodeWidget(nodeId);
             }
 
-            Debug.Log($"[MapUI] Created {_nodeWidgets.Count} node widgets");
-        }
-
-        private string GetNodeDisplayName(string nodeId)
-        {
-            // Try to get node.Name from GameState, fallback to nodeId
-            if (GameController.I != null)
-            {
-                var node = GameController.I.GetNode(nodeId);
-                if (node != null && !string.IsNullOrEmpty(node.Name))
-                {
-                    return node.Name;
-                }
-            }
-            return nodeId;
+            Debug.Log($"[MapUI] Created {_nodeViews.Count} node widgets");
         }
 
         private void CreateNodeWidget(string nodeId)
         {
-            // Create NodeWidget container
-            GameObject nodeWidget = new GameObject($"NodeWidget_{nodeId}");
-            nodeWidget.transform.SetParent(_nodesRoot.transform, false);
-
-            RectTransform widgetRect = nodeWidget.AddComponent<RectTransform>();
-            widgetRect.anchorMin = new Vector2(0.5f, 0.5f);
-            widgetRect.anchorMax = new Vector2(0.5f, 0.5f);
-            widgetRect.sizeDelta = new Vector2(100, 100);
-
-            // Position based on nodeId
-            if (_nodePositions.ContainsKey(nodeId))
+            if (nodeMarkerPrefab == null)
             {
-                Vector2 relativePos = _nodePositions[nodeId];
-                widgetRect.anchoredPosition = new Vector2(relativePos.x * 400, relativePos.y * 300);
+                Debug.LogError($"[MapUI] Cannot create node widget: nodeMarkerPrefab is null");
+                return;
             }
 
-            // Add Button component for click handling
-            Image widgetImage = nodeWidget.AddComponent<Image>();
-            widgetImage.color = new Color(0, 0, 0, 0); // Transparent
-            widgetImage.raycastTarget = true; // Ensure raycasts are enabled
-
-            Button widgetButton = nodeWidget.AddComponent<Button>();
-            widgetButton.onClick.AddListener(() => OnNodeClick(nodeId));
+            // Instantiate prefab
+            NodeMarkerView view = Instantiate(nodeMarkerPrefab, _nodesRoot.transform);
             
-            Debug.Log($"[MapUI] NodeWidget created for nodeId={nodeId} button={widgetButton != null} raycastTarget={widgetImage.raycastTarget}");
+            // Setup RectTransform position
+            RectTransform viewRect = view.GetComponent<RectTransform>();
+            if (viewRect != null && _nodePositions.ContainsKey(nodeId))
+            {
+                Vector2 relativePos = _nodePositions[nodeId];
+                viewRect.anchoredPosition = new Vector2(relativePos.x * 400, relativePos.y * 300);
+            }
 
-            // Create Dot (circle)
-            GameObject dot = new GameObject("Dot");
-            dot.transform.SetParent(nodeWidget.transform, false);
+            // Bind view
+            view.Bind(nodeId, OnNodeClick);
 
-            RectTransform dotRect = dot.AddComponent<RectTransform>();
-            dotRect.anchorMin = new Vector2(0.5f, 0.5f);
-            dotRect.anchorMax = new Vector2(0.5f, 0.5f);
-            dotRect.sizeDelta = new Vector2(40, 40);
-            dotRect.anchoredPosition = Vector2.zero;
+            // Initial refresh
+            if (GameController.I != null)
+            {
+                var node = GameController.I.GetNode(nodeId);
+                if (node != null)
+                {
+                    view.Refresh(node);
+                }
+            }
 
-            Image dotImage = dot.AddComponent<Image>();
-            dotImage.color = nodeDotColor;
-            dotImage.raycastTarget = false; // Don't intercept clicks
-            // Note: Using square shape as circular sprites require additional resources
+            _nodeViews[nodeId] = view;
+            
+            Debug.Log($"[MapUI] NodeWidget created for nodeId={nodeId}");
+        }
 
-            // Create Name Text
-            GameObject nameObj = new GameObject("Name");
-            nameObj.transform.SetParent(nodeWidget.transform, false);
+        private void OnGameStateChanged()
+        {
+            // Refresh all node views when state changes
+            if (GameController.I == null) return;
 
-            RectTransform nameRect = nameObj.AddComponent<RectTransform>();
-            nameRect.anchorMin = new Vector2(0.5f, 0);
-            nameRect.anchorMax = new Vector2(0.5f, 0);
-            nameRect.sizeDelta = new Vector2(100, 30);
-            nameRect.anchoredPosition = new Vector2(0, -35);
-
-            Text nameText = nameObj.AddComponent<Text>();
-            nameText.text = GetNodeDisplayName(nodeId);
-            nameText.color = nodeTextColor;
-            nameText.alignment = TextAnchor.MiddleCenter;
-            nameText.fontSize = 14;
-            nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            nameText.raycastTarget = false; // Don't intercept clicks
-
-            // Create TaskBarRoot (placeholder container)
-            GameObject taskBarRoot = new GameObject("TaskBarRoot");
-            taskBarRoot.transform.SetParent(nodeWidget.transform, false);
-
-            RectTransform taskBarRect = taskBarRoot.AddComponent<RectTransform>();
-            taskBarRect.anchorMin = new Vector2(0.5f, 0);
-            taskBarRect.anchorMax = new Vector2(0.5f, 0);
-            taskBarRect.sizeDelta = new Vector2(80, 10);
-            taskBarRect.anchoredPosition = new Vector2(0, -55);
-
-            // Create EventBadge (placeholder, hidden by default)
-            GameObject eventBadge = new GameObject("EventBadge");
-            eventBadge.transform.SetParent(nodeWidget.transform, false);
-
-            RectTransform badgeRect = eventBadge.AddComponent<RectTransform>();
-            badgeRect.anchorMin = new Vector2(1, 1);
-            badgeRect.anchorMax = new Vector2(1, 1);
-            badgeRect.sizeDelta = new Vector2(20, 20);
-            badgeRect.anchoredPosition = new Vector2(0, 0);
-
-            Image badgeImage = eventBadge.AddComponent<Image>();
-            badgeImage.color = new Color(1f, 0.5f, 0f, 1f);
-            badgeImage.raycastTarget = false; // Don't intercept clicks
-
-            eventBadge.SetActive(false); // Hidden by default
-
-            // Create UnknownAnomIcon (placeholder)
-            GameObject unknownIcon = new GameObject("UnknownAnomIcon");
-            unknownIcon.transform.SetParent(nodeWidget.transform, false);
-
-            RectTransform iconRect = unknownIcon.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.5f, 1);
-            iconRect.anchorMax = new Vector2(0.5f, 1);
-            iconRect.sizeDelta = new Vector2(30, 30);
-            iconRect.anchoredPosition = new Vector2(0, 10);
-
-            Text iconText = unknownIcon.AddComponent<Text>();
-            iconText.text = "?";
-            iconText.color = Color.yellow;
-            iconText.alignment = TextAnchor.MiddleCenter;
-            iconText.fontSize = 20;
-            iconText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            iconText.raycastTarget = false; // Don't intercept clicks
-
-            // TODO: Show icon when node has unknown anomaly or pending events
-            // Implementation example: var node = GameController.I?.GetNode(nodeId);
-            //                        if (node?.Anomalies.Any(a => !a.IsIdentified) || node?.PendingEvents.Count > 0) 
-            //                            unknownIcon.SetActive(true);
-            // Hide by default to avoid misleading placeholder
-            unknownIcon.SetActive(false);
-
-            _nodeWidgets[nodeId] = nodeWidget;
+            foreach (var kvp in _nodeViews)
+            {
+                string nodeId = kvp.Key;
+                NodeMarkerView view = kvp.Value;
+                
+                if (view != null)
+                {
+                    var node = GameController.I.GetNode(nodeId);
+                    if (node != null)
+                    {
+                        view.Refresh(node);
+                    }
+                }
+            }
         }
 
         private void OnNodeClick(string nodeId)
@@ -376,12 +324,14 @@ namespace UI.Map
             }
         }
 
-        // Public method for refreshing node states (future enhancement)
-        // TODO: Subscribe to GameController.OnStateChanged and update node visuals
-        // (task bars, event badges, anomaly icons) based on current GameState
+        /// <summary>
+        /// Public method for manually refreshing all node views.
+        /// Also called automatically via GameController.OnStateChanged subscription.
+        /// </summary>
         public void RefreshNodes()
         {
-            Debug.Log("[MapUI] RefreshNodes called (implementation deferred)");
+            Debug.Log("[MapUI] RefreshNodes called");
+            OnGameStateChanged();
         }
     }
 }
