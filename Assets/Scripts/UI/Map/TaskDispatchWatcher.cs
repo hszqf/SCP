@@ -59,7 +59,7 @@ namespace UI.Map
                             (currentState == TaskState.Completed || currentState == TaskState.Cancelled))
                         {
                             Debug.Log($"[TaskWatcher] Task completed: {taskKey} state={currentState} node={node.Id}");
-                            TriggerReturnAnimation(node.Id, task.AssignedAgentIds);
+                            TriggerReturnAnimation(node.Id, task.AssignedAgentIds, task.Type);
                         }
 
                         // Update state
@@ -77,7 +77,7 @@ namespace UI.Map
             CleanupOldTaskStates();
         }
 
-        private void TriggerReturnAnimation(string fromNodeId, List<string> agentIds)
+        private void TriggerReturnAnimation(string fromNodeId, List<string> agentIds, TaskType taskType)
         {
             if (string.IsNullOrEmpty(fromNodeId))
                 return;
@@ -86,8 +86,8 @@ namespace UI.Map
             if (dispatchFX != null)
             {
                 // Play return animation from node back to BASE/HQ
-                dispatchFX.PlayDispatchAnimation(fromNodeId, "BASE", TaskType.Investigate);
-                Debug.Log($"[TaskWatcher] Return animation triggered: from={fromNodeId} to=BASE agents={string.Join(",", agentIds ?? new List<string>())}");
+                dispatchFX.PlayDispatchAnimation(fromNodeId, "BASE", taskType);
+                Debug.Log($"[TaskWatcher] Return animation triggered: from={fromNodeId} to=BASE type={taskType} agents={string.Join(",", agentIds ?? new List<string>())}");
             }
             else
             {

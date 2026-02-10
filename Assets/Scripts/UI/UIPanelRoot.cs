@@ -296,7 +296,7 @@ public class UIPanelRoot : MonoBehaviour
                 // Close node panel to hide buttons during dispatch
                 CloseNode();
                 
-                // Note: Dispatch animation is automatically triggered by DispatchLineFX when it detects the task
+                // Note: Dispatch animation is automatically triggered by DispatchLineFX when it detects the task state change to Active
                 
                 RefreshNodePanel();
             },
@@ -389,7 +389,7 @@ public class UIPanelRoot : MonoBehaviour
                 // Close node panel to hide buttons during dispatch
                 CloseNode();
                 
-                // Note: Dispatch animation is automatically triggered by DispatchLineFX when it detects the task
+                // Note: Dispatch animation is automatically triggered by DispatchLineFX when it detects the task state change to Active
                 
                 RefreshNodePanel();
             },
