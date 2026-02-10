@@ -26,37 +26,77 @@ public static class SimpleWorldMapBootstrap
             return;
         }
 
-        // Find Canvas to attach to
-        var canvas = Object.FindAnyObjectByType<Canvas>();
-        if (canvas == null)
+        // Create a MonoBehaviour to run the coroutine
+        var bootstrapObj = new GameObject("SimpleWorldMapBootstrap_Runner");
+        var runner = bootstrapObj.AddComponent<BootstrapRunner>();
+        Object.DontDestroyOnLoad(bootstrapObj);
+    }
+
+    private class BootstrapRunner : MonoBehaviour
+    {
+        private void Start()
         {
-            Debug.LogError("[MapBootstrap] Cannot find Canvas to attach SimpleWorldMapPanel");
-            return;
+            StartCoroutine(InitializeWhenReady());
         }
 
-        Debug.Log("[MapBootstrap] Creating SimpleWorldMapPanel programmatically...");
-
-        // Disable old NewMapRuntime system if present
-        var oldMapBootstrap = GameObject.Find("MapBootstrap");
-        if (oldMapBootstrap != null)
+        private System.Collections.IEnumerator InitializeWhenReady()
         {
-            var newMapRuntime = oldMapBootstrap.GetComponent<UI.Map.NewMapRuntime>();
-            if (newMapRuntime != null)
+            Debug.Log("[MapUI] MapBootstrap waiting for GameController initialization...");
+
+            // Wait until GameController is ready with nodes
+            yield return new WaitUntil(() => 
+                GameController.I != null && 
+                GameController.I.State != null && 
+                GameController.I.State.Nodes != null && 
+                GameController.I.State.Nodes.Count > 0
+            );
+
+            int nodeCount = GameController.I.State.Nodes.Count;
+            Debug.Log($"[MapUI] MapBootstrap nodesReady count={nodeCount}");
+
+            // Find Canvas to attach to
+            var canvas = Object.FindAnyObjectByType<Canvas>();
+            if (canvas == null)
             {
-                Debug.Log("[MapBootstrap] Disabling old NewMapRuntime system");
-                oldMapBootstrap.SetActive(false);
+                Debug.LogError("[MapUI] MapBootstrap: Cannot find Canvas to attach SimpleWorldMapPanel");
+                yield break;
             }
-        }
 
-        // Create SimpleWorldMapPanel
-        var panelObj = CreateSimpleWorldMapPanel(canvas.transform);
-        if (panelObj != null)
-        {
-            Debug.Log("[MapBootstrap] ✅ SimpleWorldMapPanel created successfully");
-        }
-        else
-        {
-            Debug.LogError("[MapBootstrap] ❌ Failed to create SimpleWorldMapPanel");
+            Debug.Log("[MapUI] MapBootstrap creating SimpleWorldMapPanel programmatically...");
+
+            // Disable old NewMapRuntime system if present
+            var oldMapBootstrap = GameObject.Find("MapBootstrap");
+            if (oldMapBootstrap != null)
+            {
+                var newMapRuntime = oldMapBootstrap.GetComponent<UI.Map.NewMapRuntime>();
+                if (newMapRuntime != null)
+                {
+                    Debug.Log("[MapUI] MapBootstrap disabling old NewMapRuntime system");
+                    oldMapBootstrap.SetActive(false);
+                }
+            }
+
+            // Create SimpleWorldMapPanel
+            var panelObj = CreateSimpleWorldMapPanel(canvas.transform);
+            if (panelObj != null)
+            {
+                Debug.Log("[MapUI] MapBootstrap ✅ SimpleWorldMapPanel created successfully");
+                
+                // Trigger initial spawn and refresh
+                var mapPanel = panelObj.GetComponent<SimpleWorldMapPanel>();
+                if (mapPanel != null)
+                {
+                    // The Start() method will be called by Unity, but we can log the node spawning
+                    Debug.Log($"[MapUI] MapBootstrap will spawn markers for {nodeCount} nodes");
+                }
+            }
+            else
+            {
+                Debug.LogError("[MapUI] MapBootstrap ❌ Failed to create SimpleWorldMapPanel");
+            }
+
+            // Destroy the runner after initialization
+            Destroy(gameObject);
         }
     }
 
