@@ -84,6 +84,7 @@ namespace UI.Map
             }
 
             // Spawn HQ marker
+            bool hqSpawned = false;
             if (hqMarkerPrefab != null && _hqMarker == null)
             {
                 _hqMarker = Instantiate(hqMarkerPrefab, mapContainer);
@@ -91,9 +92,11 @@ namespace UI.Map
                 if (rt != null)
                     rt.anchoredPosition = _nodePositions["HQ"];
                 Debug.Log("[MapUI] Spawned HQ marker");
+                hqSpawned = true;
             }
 
             // Spawn city markers
+            int spawnedCount = 0;
             if (nodeMarkerPrefab != null && GameController.I != null)
             {
                 foreach (var node in GameController.I.State.Nodes)
@@ -117,11 +120,16 @@ namespace UI.Map
                     {
                         markerView.Bind(node.Id, OnNodeClick);
                         _nodeMarkers[node.Id] = markerView;
+                        spawnedCount++;
                     }
 
                     Debug.Log($"[MapUI] Spawned marker for node {node.Id}");
                 }
             }
+
+            // Summary log
+            string nodeList = string.Join(", ", _nodeMarkers.Keys);
+            Debug.Log($"[MapUI] SpawnMarkers complete: HQ={hqSpawned}, CityNodes={spawnedCount} [{nodeList}]");
         }
 
         public void RefreshMap()
