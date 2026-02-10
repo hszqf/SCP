@@ -111,6 +111,22 @@ namespace UI.Map
             else
             {
                 Debug.LogWarning("[MapUI] EventSystem is missing! UI clicks will not work without EventSystem.");
+                Debug.LogWarning("[MapUI] Creating EventSystem automatically...");
+                
+                // Create EventSystem GameObject
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                eventSystem = eventSystemObj.AddComponent<EventSystem>();
+                eventSystemObj.AddComponent<StandaloneInputModule>();
+                
+                Debug.Log($"[MapUI] EventSystem created and configured");
+            }
+            
+            // Ensure Canvas has GraphicRaycaster (required for UI clicks)
+            if (raycaster == null)
+            {
+                Debug.LogWarning($"[MapUI] Canvas {canvas.gameObject.name} missing GraphicRaycaster! Adding it now...");
+                raycaster = canvas.gameObject.AddComponent<GraphicRaycaster>();
+                Debug.Log($"[MapUI] GraphicRaycaster added to Canvas");
             }
 
             // Check NewMapRoot raycast settings
