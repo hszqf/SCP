@@ -120,10 +120,9 @@ namespace UI.Map
                     {
                         markerView.Bind(node.Id, OnNodeClick);
                         _nodeMarkers[node.Id] = markerView;
+                        Debug.Log($"[MapUI] Spawned marker for node {node.Id}");
                         spawnedCount++;
                     }
-
-                    Debug.Log($"[MapUI] Spawned marker for node {node.Id}");
                 }
             }
 

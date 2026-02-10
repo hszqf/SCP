@@ -58,7 +58,7 @@ public static class SimpleWorldMapBootstrap
             var canvas = Object.FindAnyObjectByType<Canvas>();
             if (canvas == null)
             {
-                Debug.LogError("[MapUI] MapBootstrap ERROR: Cannot find Canvas to attach SimpleWorldMapPanel");
+                Debug.LogError("[MapUI] MapBootstrap: Cannot find Canvas to attach SimpleWorldMapPanel");
                 yield break;
             }
 
