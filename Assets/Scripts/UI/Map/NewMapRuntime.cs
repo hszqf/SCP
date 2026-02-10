@@ -361,6 +361,17 @@ namespace UI.Map
                 return;
             }
 
+            // Diagnostic: Check UIPanelRoot status before calling OpenNode
+            if (UIPanelRoot.I != null)
+            {
+                var uiRoot = UIPanelRoot.I;
+                Debug.Log($"[MapUI] UIPanelRoot alive=true name={uiRoot.gameObject.name} active={uiRoot.gameObject.activeInHierarchy}");
+            }
+            else
+            {
+                Debug.LogWarning("[MapUI] UIPanelRootMissing (cannot open node panel)");
+            }
+
             // Use UIPanelRoot to open the node panel
             if (UIPanelRoot.I != null)
             {
