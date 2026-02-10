@@ -219,14 +219,14 @@ namespace UI.Map
 
                 if (nodeIds.Count > 0)
                 {
-                    Debug.Log($"[MapUI] Nodes = {string.Join(",", nodeIds)} source=GameState");
+                    Debug.Log($"[MapUI] NodeSource=GameState nodeIds=[{string.Join(",", nodeIds)}] count={nodeIds.Count}");
                     return nodeIds;
                 }
             }
 
             // Fallback to hardcoded
             nodeIds.AddRange(new[] { "BASE", "N1", "N2", "N3" });
-            Debug.Log($"[MapUI] Nodes = {string.Join(",", nodeIds)} source=Hardcoded");
+            Debug.Log($"[MapUI] NodeSource=Hardcoded nodeIds=[{string.Join(",", nodeIds)}] count={nodeIds.Count}");
             return nodeIds;
         }
 
