@@ -172,14 +172,104 @@ namespace UI.Map
             if (avatarsContainer == null || avatarTemplate == null)
                 return;
 
-            int agentCount = task.AssignedAgentIds?.Count ?? 0;
+            var agentIds = task.AssignedAgentIds;
+            int agentCount = agentIds?.Count ?? 0;
             
-            // Create avatar placeholders
+            // Create avatar for each assigned agent (up to 4)
             for (int i = 0; i < agentCount && i < 4; i++)
             {
                 var avatarObj = Instantiate(avatarTemplate.gameObject, avatarsContainer);
                 avatarObj.SetActive(true);
                 _avatarInstances.Add(avatarObj);
+                
+                // Get agent data
+                string agentId = agentIds[i];
+                var agentState = GameController.I?.GetAgent(agentId);
+                
+                // Add/update HP and SAN text components for this specific avatar
+                CreateOrUpdateAvatarStats(avatarObj, agentState);
+            }
+        }
+        
+        private void CreateOrUpdateAvatarStats(GameObject avatarObj, AgentState agentState)
+        {
+            if (avatarObj == null)
+                return;
+            
+            // Find or create stats container
+            Transform statsContainer = avatarObj.transform.Find("Stats");
+            if (statsContainer == null)
+            {
+                GameObject statsObj = new GameObject("Stats");
+                statsObj.transform.SetParent(avatarObj.transform, false);
+                statsContainer = statsObj.transform;
+                
+                RectTransform statsRT = statsObj.AddComponent<RectTransform>();
+                statsRT.anchorMin = new Vector2(0, 0);
+                statsRT.anchorMax = new Vector2(1, 0);
+                statsRT.pivot = new Vector2(0.5f, 1);
+                statsRT.anchoredPosition = new Vector2(0, -2);
+                statsRT.sizeDelta = new Vector2(0, 20);
+            }
+            
+            // Find or create HP text
+            Transform hpTransform = statsContainer.Find("HPText");
+            Text hpText;
+            if (hpTransform == null)
+            {
+                GameObject hpObj = new GameObject("HPText");
+                hpObj.transform.SetParent(statsContainer, false);
+                hpText = hpObj.AddComponent<Text>();
+                hpText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                hpText.fontSize = 10;
+                hpText.alignment = TextAnchor.MiddleCenter;
+                hpText.color = Color.green;
+                
+                RectTransform hpRT = hpObj.GetComponent<RectTransform>();
+                hpRT.anchorMin = new Vector2(0, 0);
+                hpRT.anchorMax = new Vector2(1, 0.5f);
+                hpRT.offsetMin = Vector2.zero;
+                hpRT.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                hpText = hpTransform.GetComponent<Text>();
+            }
+            
+            // Find or create SAN text
+            Transform sanTransform = statsContainer.Find("SANText");
+            Text sanText;
+            if (sanTransform == null)
+            {
+                GameObject sanObj = new GameObject("SANText");
+                sanObj.transform.SetParent(statsContainer, false);
+                sanText = sanObj.AddComponent<Text>();
+                sanText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                sanText.fontSize = 10;
+                sanText.alignment = TextAnchor.MiddleCenter;
+                sanText.color = Color.cyan;
+                
+                RectTransform sanRT = sanObj.GetComponent<RectTransform>();
+                sanRT.anchorMin = new Vector2(0, 0.5f);
+                sanRT.anchorMax = new Vector2(1, 1);
+                sanRT.offsetMin = Vector2.zero;
+                sanRT.offsetMax = Vector2.zero;
+            }
+            else
+            {
+                sanText = sanTransform.GetComponent<Text>();
+            }
+            
+            // Update text content
+            if (agentState != null)
+            {
+                hpText.text = $"HP {agentState.HP}";
+                sanText.text = $"SAN {agentState.SAN}";
+            }
+            else
+            {
+                hpText.text = "HP 100";
+                sanText.text = "SAN 100";
             }
         }
 
@@ -187,17 +277,23 @@ namespace UI.Map
         {
             if (statsText == null) return;
 
-            // Placeholder: Show HP 100 | SAN 100 for now
-            // TODO: Future enhancement - get actual HP/SAN from agent states
-            int agentCount = task.AssignedAgentIds?.Count ?? 0;
-            
-            if (agentCount > 0)
+            // Display task type instead of unified stats (stats are now per-avatar)
+            string taskTypeLabel = GetTaskTypeLabel(task.Type);
+            statsText.text = taskTypeLabel;
+        }
+        
+        private string GetTaskTypeLabel(TaskType taskType)
+        {
+            switch (taskType)
             {
-                statsText.text = "HP 100 | SAN 100";
-            }
-            else
-            {
-                statsText.text = "HP - | SAN -";
+                case TaskType.Investigate:
+                    return "Investigating";
+                case TaskType.Contain:
+                    return "Containing";
+                case TaskType.Manage:
+                    return "Managing";
+                default:
+                    return "Active";
             }
         }
 

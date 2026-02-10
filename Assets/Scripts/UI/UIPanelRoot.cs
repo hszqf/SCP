@@ -282,6 +282,8 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 gc.AssignTask(task.Id, agentIds);
+                
+                // Close panels after successful dispatch
                 if (_managePanel)
                 {
                     CloseModal(_managePanel, "assign_confirm");
@@ -290,6 +292,13 @@ public class UIPanelRoot : MonoBehaviour
                 {
                     _managePanelView.Hide();
                 }
+                
+                // Close node panel to hide buttons during dispatch
+                CloseNode();
+                
+                // Trigger dispatch animation
+                TriggerDispatchAnimation("BASE", _currentNodeId, agentIds, "go");
+                
                 RefreshNodePanel();
             },
             modeLabel: "Investigate"
@@ -367,6 +376,8 @@ public class UIPanelRoot : MonoBehaviour
 
                 task.SourceAnomalyId = targetAnomalyId;
                 gc.AssignTask(task.Id, agentIds);
+                
+                // Close panels after successful dispatch
                 if (_managePanel)
                 {
                     CloseModal(_managePanel, "assign_confirm");
@@ -375,6 +386,13 @@ public class UIPanelRoot : MonoBehaviour
                 {
                     _managePanelView.Hide();
                 }
+                
+                // Close node panel to hide buttons during dispatch
+                CloseNode();
+                
+                // Trigger dispatch animation
+                TriggerDispatchAnimation("BASE", _currentNodeId, agentIds, "go");
+                
                 RefreshNodePanel();
             },
             modeLabel: "Contain"
@@ -847,6 +865,22 @@ public class UIPanelRoot : MonoBehaviour
         if (_modalStack != null && _modalStack.Contains(_confirmDialog.gameObject))
         {
             PopModal(_confirmDialog.gameObject, "ConfirmDialog.OnClosed");
+        }
+    }
+
+    // Trigger dispatch animation
+    private void TriggerDispatchAnimation(string fromNodeId, string toNodeId, List<string> agentIds, string mode)
+    {
+        var dispatchFX = UI.Map.DispatchLineFX.Instance;
+        if (dispatchFX != null)
+        {
+            TaskType taskType = TaskType.Investigate; // Default, will be overridden based on actual task
+            dispatchFX.PlayDispatchAnimation(fromNodeId, toNodeId, taskType);
+            Debug.Log($"[Dispatch] Animation triggered: from={fromNodeId} to={toNodeId} mode={mode} agents={string.Join(",", agentIds)}");
+        }
+        else
+        {
+            Debug.LogWarning("[Dispatch] DispatchLineFX.Instance is null, animation not triggered");
         }
     }
 

@@ -131,6 +131,14 @@ public static class SimpleWorldMapBootstrap
         // Add SimpleWorldMapPanel component
         SimpleWorldMapPanel mapPanel = panelObj.AddComponent<SimpleWorldMapPanel>();
         
+        // Add TaskDispatchWatcher component to monitor task completions
+        TaskDispatchWatcher taskWatcher = panelObj.AddComponent<TaskDispatchWatcher>();
+        Debug.Log("[MapBootstrap] TaskDispatchWatcher component added");
+        
+        // Add DispatchLineFX component for dispatch animations
+        DispatchLineFX dispatchFX = panelObj.AddComponent<DispatchLineFX>();
+        Debug.Log("[MapBootstrap] DispatchLineFX component added");
+        
         // Use reflection to set private fields since they're SerializeField
         var type = typeof(SimpleWorldMapPanel);
         var mapContainerField = type.GetField("mapContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
