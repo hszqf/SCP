@@ -129,16 +129,23 @@ namespace UI.Map
             if (GameController.I == null)
                 return;
 
+            // Create a lookup dictionary for O(1) node access
+            var nodeById = new Dictionary<string, NodeState>();
+            foreach (var node in GameController.I.State.Nodes)
+            {
+                if (node != null && !string.IsNullOrEmpty(node.Id))
+                    nodeById[node.Id] = node;
+            }
+
+            // Refresh each marker with its corresponding node
             foreach (var kvp in _nodeMarkers)
             {
                 var marker = kvp.Value;
                 var nodeId = kvp.Key;
                 
-                if (marker != null)
+                if (marker != null && nodeById.TryGetValue(nodeId, out var node))
                 {
-                    var node = GameController.I.State.Nodes.Find(n => n.Id == nodeId);
-                    if (node != null)
-                        marker.Refresh(node);
+                    marker.Refresh(node);
                 }
             }
         }
