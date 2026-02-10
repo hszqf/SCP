@@ -23,7 +23,6 @@ namespace UI.Map
 
         private GameObject _newMapRoot;
         private GameObject _nodesRoot;
-        private GameObject _cityPanel;
         private Dictionary<string, GameObject> _nodeWidgets = new Dictionary<string, GameObject>();
 
         // Fixed node positions (relative to screen, using anchors)
@@ -124,77 +123,7 @@ namespace UI.Map
             nodesRect.sizeDelta = Vector2.zero;
             nodesRect.anchoredPosition = Vector2.zero;
 
-            // Create CityPanel (hidden by default)
-            CreateCityPanel();
-
             Debug.Log("[MapUI] NewMapRoot structure created");
-        }
-
-        private void CreateCityPanel()
-        {
-            _cityPanel = new GameObject("CityPanel");
-            _cityPanel.transform.SetParent(_newMapRoot.transform, false);
-
-            RectTransform panelRect = _cityPanel.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(300, 200);
-            panelRect.anchoredPosition = Vector2.zero;
-
-            Image panelImage = _cityPanel.AddComponent<Image>();
-            panelImage.color = new Color(0.2f, 0.2f, 0.25f, 0.95f);
-
-            // Add panel title text
-            GameObject titleObj = new GameObject("Title");
-            titleObj.transform.SetParent(_cityPanel.transform, false);
-
-            RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0, 0.5f);
-            titleRect.anchorMax = new Vector2(1, 1);
-            titleRect.sizeDelta = Vector2.zero;
-            titleRect.anchoredPosition = Vector2.zero;
-
-            Text titleText = titleObj.AddComponent<Text>();
-            titleText.text = "Node Info";
-            titleText.color = Color.white;
-            titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.fontSize = 20;
-            titleText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            // Add close button
-            GameObject closeBtn = new GameObject("CloseButton");
-            closeBtn.transform.SetParent(_cityPanel.transform, false);
-
-            RectTransform closeBtnRect = closeBtn.AddComponent<RectTransform>();
-            closeBtnRect.anchorMin = new Vector2(0.5f, 0);
-            closeBtnRect.anchorMax = new Vector2(0.5f, 0);
-            closeBtnRect.sizeDelta = new Vector2(100, 40);
-            closeBtnRect.anchoredPosition = new Vector2(0, 30);
-
-            Image closeBtnImage = closeBtn.AddComponent<Image>();
-            closeBtnImage.color = new Color(0.4f, 0.4f, 0.5f, 1f);
-
-            Button closeBtnButton = closeBtn.AddComponent<Button>();
-            closeBtnButton.onClick.AddListener(() => _cityPanel.SetActive(false));
-
-            GameObject closeBtnText = new GameObject("Text");
-            closeBtnText.transform.SetParent(closeBtn.transform, false);
-
-            RectTransform closeBtnTextRect = closeBtnText.AddComponent<RectTransform>();
-            closeBtnTextRect.anchorMin = Vector2.zero;
-            closeBtnTextRect.anchorMax = Vector2.one;
-            closeBtnTextRect.sizeDelta = Vector2.zero;
-            closeBtnTextRect.anchoredPosition = Vector2.zero;
-
-            Text closeBtnTextComponent = closeBtnText.AddComponent<Text>();
-            closeBtnTextComponent.text = "Close";
-            closeBtnTextComponent.color = Color.white;
-            closeBtnTextComponent.alignment = TextAnchor.MiddleCenter;
-            closeBtnTextComponent.fontSize = 16;
-            closeBtnTextComponent.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            _cityPanel.SetActive(false);
-            Debug.Log("[MapUI] CityPanel created");
         }
 
         private List<string> GetNodeData()
@@ -234,6 +163,20 @@ namespace UI.Map
             }
 
             Debug.Log($"[MapUI] Created {_nodeWidgets.Count} node widgets");
+        }
+
+        private string GetNodeDisplayName(string nodeId)
+        {
+            // Try to get node.Name from GameState, fallback to nodeId
+            if (GameController.I != null)
+            {
+                var node = GameController.I.GetNode(nodeId);
+                if (node != null && !string.IsNullOrEmpty(node.Name))
+                {
+                    return node.Name;
+                }
+            }
+            return nodeId;
         }
 
         private void CreateNodeWidget(string nodeId)
@@ -286,7 +229,7 @@ namespace UI.Map
             nameRect.anchoredPosition = new Vector2(0, -35);
 
             Text nameText = nameObj.AddComponent<Text>();
-            nameText.text = nodeId;
+            nameText.text = GetNodeDisplayName(nodeId);
             nameText.color = nodeTextColor;
             nameText.alignment = TextAnchor.MiddleCenter;
             nameText.fontSize = 14;
@@ -334,8 +277,12 @@ namespace UI.Map
             iconText.fontSize = 20;
             iconText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
-            // Show/hide based on requirements (for now, show it as placeholder)
-            unknownIcon.SetActive(true);
+            // TODO: Show icon when node has unknown anomaly or pending events
+            // Implementation example: var node = GameController.I?.GetNode(nodeId);
+            //                        if (node?.Anomalies.Any(a => !a.IsIdentified) || node?.PendingEvents.Count > 0) 
+            //                            unknownIcon.SetActive(true);
+            // Hide by default to avoid misleading placeholder
+            unknownIcon.SetActive(false);
 
             _nodeWidgets[nodeId] = nodeWidget;
         }
@@ -344,17 +291,22 @@ namespace UI.Map
         {
             Debug.Log($"[MapUI] Click nodeId={nodeId}");
 
-            // Show CityPanel
-            if (_cityPanel != null)
+            // Validate nodeId
+            if (string.IsNullOrEmpty(nodeId))
             {
-                _cityPanel.SetActive(true);
+                Debug.LogWarning("[MapUI] OnNodeClick: nodeId is null or empty");
+                return;
+            }
 
-                // Update panel title
-                Text titleText = _cityPanel.transform.Find("Title")?.GetComponent<Text>();
-                if (titleText != null)
-                {
-                    titleText.text = $"Node: {nodeId}";
-                }
+            // Use UIPanelRoot to open the node panel
+            if (UIPanelRoot.I != null)
+            {
+                // Primary path: open the existing NodePanelView
+                UIPanelRoot.I.OpenNode(nodeId);
+            }
+            else
+            {
+                Debug.LogWarning("[MapUI] UIPanelRoot.I is null, cannot open node panel");
             }
         }
 
