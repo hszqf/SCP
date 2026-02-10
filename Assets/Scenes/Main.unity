@@ -560,6 +560,7 @@ RectTransform:
   m_Children:
   - {fileID: 2000627561}
   - {fileID: 817316638}
+  - {fileID: 1234567890}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -676,6 +677,8 @@ MonoBehaviour:
   mapRect: {fileID: 1947275007}
   nodeLayer: {fileID: 1038949952}
   nodePrefab: {fileID: 537154171956169728, guid: cfa3352faa3d4164ead6900731e405db, type: 3}
+  mapRoot: {fileID: 2000627560}
+  UseNewMap: 1
 --- !u!1 &1947275006
 GameObject:
   m_ObjectHideFlags: 0
@@ -751,6 +754,57 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1947275006}
   m_CullTransparentMesh: 1
+--- !u!1 &1234567889
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1234567890}
+  - component: {fileID: 1234567891}
+  m_Layer: 5
+  m_Name: MapBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1234567890
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234567889}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 804055681}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1234567891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234567889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d20f3816499f4dc1a30a4f24bf460d96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UI.Map::NewMapRuntime
+  backgroundColor: {r: 0.12, g: 0.12, b: 0.18, a: 1}
+  nodeDotColor: {r: 0.3, g: 0.7, b: 1, a: 1}
+  nodeTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &2000627560
 GameObject:
   m_ObjectHideFlags: 0

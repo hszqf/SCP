@@ -8,6 +8,11 @@ public class MapNodeSpawner : MonoBehaviour
     [SerializeField] private RectTransform mapRect;      // MapImage 的 RectTransform
     [SerializeField] private RectTransform nodeLayer;    // NodeLayer
     [SerializeField] private NodeButton nodePrefab;
+    [SerializeField] private GameObject mapRoot;         // MapRoot GameObject reference
+
+    [Header("New Map System")]
+    [Tooltip("When true, disables old map generation and uses NewMapRuntime instead")]
+    public bool UseNewMap = true;
 
     private void Awake()
     {
@@ -16,6 +21,18 @@ public class MapNodeSpawner : MonoBehaviour
 
     private void Start()
     {
+        if (UseNewMap)
+        {
+            // Disable old map system
+            if (mapRoot != null)
+            {
+                mapRoot.SetActive(false);
+                Debug.Log("[MapUI] Old MapRoot disabled (UseNewMap=true)");
+            }
+            Debug.Log("[MapUI] Old map generation skipped (UseNewMap=true)");
+            return;
+        }
+
         Build();
         GameController.I.OnStateChanged += Refresh; // 需要的话
     }
