@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Core;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace UI.Map
 {
@@ -61,12 +62,28 @@ namespace UI.Map
         {
             Debug.Log("[MapUI] NewMapRuntime initializing...");
 
+            // A. DIAGNOSTIC LOGS - Check EventSystem BEFORE UI creation
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
+            Debug.Log($"[MapUI] EventSystem found={eventSystem != null} (before UI creation)");
+            if (eventSystem != null)
+            {
+                Debug.Log($"[MapUI] EventSystem gameObject={eventSystem.gameObject.name} active={eventSystem.gameObject.activeInHierarchy} enabled={eventSystem.enabled}");
+            }
+
             // Find Canvas to attach to
-            Canvas canvas = FindAnyObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
                 Debug.LogError("[MapUI] Cannot find Canvas to attach NewMapRoot");
                 return;
+            }
+
+            // Check Canvas GraphicRaycaster
+            GraphicRaycaster raycaster = canvas.GetComponent<GraphicRaycaster>();
+            Debug.Log($"[MapUI] Canvas GraphicRaycaster found={raycaster != null} canvas={canvas.gameObject.name}");
+            if (raycaster != null)
+            {
+                Debug.Log($"[MapUI] GraphicRaycaster enabled={raycaster.enabled} ignoreReversedGraphics={raycaster.ignoreReversedGraphics} blockingObjects={raycaster.blockingObjects}");
             }
 
             // Check old map status
@@ -83,6 +100,44 @@ namespace UI.Map
 
             // Create node widgets
             CreateNodeWidgets(nodeIds);
+
+            // A. DIAGNOSTIC LOGS - Check EventSystem AFTER UI creation
+            eventSystem = FindFirstObjectByType<EventSystem>();
+            Debug.Log($"[MapUI] EventSystem found={eventSystem != null} (after UI creation)");
+            if (eventSystem != null)
+            {
+                Debug.Log($"[MapUI] EventSystem gameObject={eventSystem.gameObject.name} active={eventSystem.gameObject.activeInHierarchy} enabled={eventSystem.enabled}");
+            }
+            else
+            {
+                Debug.LogWarning("[MapUI] EventSystem is missing! UI clicks will not work without EventSystem.");
+                Debug.LogWarning("[MapUI] Creating EventSystem automatically...");
+                
+                // Create EventSystem GameObject
+                GameObject eventSystemObj = new GameObject("EventSystem");
+                EventSystem newEventSystem = eventSystemObj.AddComponent<EventSystem>();
+                eventSystemObj.AddComponent<StandaloneInputModule>();
+                
+                Debug.Log($"[MapUI] EventSystem created: gameObject={newEventSystem.gameObject.name} enabled={newEventSystem.enabled}");
+            }
+            
+            // Ensure Canvas has GraphicRaycaster (required for UI clicks)
+            if (raycaster == null)
+            {
+                Debug.LogWarning($"[MapUI] Canvas {canvas.gameObject.name} missing GraphicRaycaster! Adding it now...");
+                raycaster = canvas.gameObject.AddComponent<GraphicRaycaster>();
+                Debug.Log($"[MapUI] GraphicRaycaster added to Canvas");
+            }
+
+            // Check NewMapRoot raycast settings
+            if (_newMapRoot != null)
+            {
+                Image bgImage = _newMapRoot.transform.Find("Background")?.GetComponent<Image>();
+                if (bgImage != null)
+                {
+                    Debug.Log($"[MapUI] Background Image raycastTarget={bgImage.raycastTarget}");
+                }
+            }
 
             // Log verification
             Debug.Log($"[MapUI] Verify oldMap={(oldMapRoot != null ? "FOUND" : "NOT_FOUND")}(active={oldMapActive}) newMap={(_newMapRoot != null ? "CREATED" : "FAILED")} nodes={_nodeWidgets.Count}");
@@ -112,6 +167,7 @@ namespace UI.Map
 
             Image bgImage = background.AddComponent<Image>();
             bgImage.color = backgroundColor;
+            bgImage.raycastTarget = false; // Don't block raycasts to node buttons
 
             // Create NodesRoot container
             _nodesRoot = new GameObject("NodesRoot");
@@ -200,9 +256,12 @@ namespace UI.Map
             // Add Button component for click handling
             Image widgetImage = nodeWidget.AddComponent<Image>();
             widgetImage.color = new Color(0, 0, 0, 0); // Transparent
+            widgetImage.raycastTarget = true; // Ensure raycasts are enabled
 
             Button widgetButton = nodeWidget.AddComponent<Button>();
             widgetButton.onClick.AddListener(() => OnNodeClick(nodeId));
+            
+            Debug.Log($"[MapUI] NodeWidget created for nodeId={nodeId} button={widgetButton != null} raycastTarget={widgetImage.raycastTarget}");
 
             // Create Dot (circle)
             GameObject dot = new GameObject("Dot");
@@ -216,6 +275,7 @@ namespace UI.Map
 
             Image dotImage = dot.AddComponent<Image>();
             dotImage.color = nodeDotColor;
+            dotImage.raycastTarget = false; // Don't intercept clicks
             // Note: Using square shape as circular sprites require additional resources
 
             // Create Name Text
@@ -234,6 +294,7 @@ namespace UI.Map
             nameText.alignment = TextAnchor.MiddleCenter;
             nameText.fontSize = 14;
             nameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            nameText.raycastTarget = false; // Don't intercept clicks
 
             // Create TaskBarRoot (placeholder container)
             GameObject taskBarRoot = new GameObject("TaskBarRoot");
@@ -257,6 +318,7 @@ namespace UI.Map
 
             Image badgeImage = eventBadge.AddComponent<Image>();
             badgeImage.color = new Color(1f, 0.5f, 0f, 1f);
+            badgeImage.raycastTarget = false; // Don't intercept clicks
 
             eventBadge.SetActive(false); // Hidden by default
 
@@ -276,6 +338,7 @@ namespace UI.Map
             iconText.alignment = TextAnchor.MiddleCenter;
             iconText.fontSize = 20;
             iconText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            iconText.raycastTarget = false; // Don't intercept clicks
 
             // TODO: Show icon when node has unknown anomaly or pending events
             // Implementation example: var node = GameController.I?.GetNode(nodeId);
