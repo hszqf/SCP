@@ -158,7 +158,7 @@ public static class SimpleWorldMapBootstrap
         // 3. Task bar container
         GameObject taskBarObj = new GameObject("TaskBar");
         taskBarObj.transform.SetParent(prefab.transform, false);
-        RectTransform taskBarRT = taskBarObj.GetComponent<RectTransform>();
+        RectTransform taskBarRT = taskBarObj.AddComponent<RectTransform>();
         taskBarRT.sizeDelta = new Vector2(250, 60);
         taskBarRT.anchoredPosition = new Vector2(0, -45);
         taskBarObj.SetActive(false); // Hidden by default
@@ -170,7 +170,7 @@ public static class SimpleWorldMapBootstrap
         // Avatars container
         GameObject avatarsContainer = new GameObject("AvatarsContainer");
         avatarsContainer.transform.SetParent(taskBarObj.transform, false);
-        RectTransform avatarsRT = avatarsContainer.GetComponent<RectTransform>();
+        RectTransform avatarsRT = avatarsContainer.AddComponent<RectTransform>();
         avatarsRT.anchorMin = new Vector2(0, 0);
         avatarsRT.anchorMax = new Vector2(0.5f, 1);
         avatarsRT.offsetMin = Vector2.zero;
