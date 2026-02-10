@@ -108,10 +108,25 @@ public class UIPanelRoot : MonoBehaviour
 
     public void OpenNode(string nodeId)
     {
+        Debug.Log($"[MapUI] OpenNode enter nodeId={nodeId}");
+        
         _currentNodeId = nodeId;
 
+        // Fix z-order: Bring UIPanelRoot to the top so NewMapRoot doesn't cover the panel
+        transform.SetAsLastSibling();
+
         EnsureNodePanel();
+        
+        if (_nodePanel == null)
+        {
+            Debug.LogError($"[MapUI] NodePanelCreateFailed nodeId={nodeId}");
+            return;
+        }
+        
         _nodePanel.Show(nodeId);
+        bool panelActive = _nodePanel.gameObject.activeSelf;
+        Debug.Log($"[MapUI] NodePanelShown nodeId={nodeId} panelActive={panelActive}");
+        
         if (_nodePanel) PushModal(_nodePanel.gameObject, "open node");
     }
 
@@ -131,7 +146,11 @@ public class UIPanelRoot : MonoBehaviour
     void EnsureNodePanel()
     {
         if (_nodePanel) return;
-        if (!nodePanelPrefab) { Debug.LogError("NodePanelPrefab 未配置！"); return; }
+        if (!nodePanelPrefab) 
+        { 
+            Debug.LogError("[MapUI] NodePanelPrefabMissing (NodePanelPrefab 未配置！)");
+            return; 
+        }
 
         _nodePanel = Instantiate(nodePanelPrefab, transform);
         // Inject callbacks
