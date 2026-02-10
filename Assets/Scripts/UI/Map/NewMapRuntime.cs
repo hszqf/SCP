@@ -85,7 +85,7 @@ namespace UI.Map
             CreateNodeWidgets(nodeIds);
 
             // Log verification
-            Debug.Log($"[MapUI] Verify oldMap={(oldMapRoot != null ? "FOUND" : "NOT_FOUND")}(active={oldMapActive}) newMap={(newMapRoot != null ? "CREATED" : "FAILED")} nodes={_nodeWidgets.Count}");
+            Debug.Log($"[MapUI] Verify oldMap={(oldMapRoot != null ? "FOUND" : "NOT_FOUND")}(active={oldMapActive}) newMap={(_newMapRoot != null ? "CREATED" : "FAILED")} nodes={_nodeWidgets.Count}");
         }
 
         private void CreateNewMapRoot(Transform canvasTransform)
