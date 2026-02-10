@@ -36,6 +36,18 @@ public static class SimpleWorldMapBootstrap
 
         Debug.Log("[MapBootstrap] Creating SimpleWorldMapPanel programmatically...");
 
+        // Disable old NewMapRuntime system if present
+        var oldMapBootstrap = GameObject.Find("MapBootstrap");
+        if (oldMapBootstrap != null)
+        {
+            var newMapRuntime = oldMapBootstrap.GetComponent<UI.Map.NewMapRuntime>();
+            if (newMapRuntime != null)
+            {
+                Debug.Log("[MapBootstrap] Disabling old NewMapRuntime system");
+                oldMapBootstrap.SetActive(false);
+            }
+        }
+
         // Create SimpleWorldMapPanel
         var panelObj = CreateSimpleWorldMapPanel(canvas.transform);
         if (panelObj != null)
