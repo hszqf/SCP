@@ -14,6 +14,9 @@ namespace UI.Map
     /// </summary>
     public class TaskDispatchWatcher : MonoBehaviour
     {
+        // HQ/Base node identifier for return animations
+        private const string HQ_NODE_ID = "BASE";
+        
         private Dictionary<string, TaskState> _taskStates = new Dictionary<string, TaskState>();
 
         private void OnEnable()
@@ -86,8 +89,8 @@ namespace UI.Map
             if (dispatchFX != null)
             {
                 // Play return animation from node back to BASE/HQ
-                dispatchFX.PlayDispatchAnimation(fromNodeId, "BASE", taskType);
-                Debug.Log($"[TaskWatcher] Return animation triggered: from={fromNodeId} to=BASE type={taskType} agents={string.Join(",", agentIds ?? new List<string>())}");
+                dispatchFX.PlayDispatchAnimation(fromNodeId, HQ_NODE_ID, taskType);
+                Debug.Log($"[TaskWatcher] Return animation triggered: from={fromNodeId} to={HQ_NODE_ID} type={taskType} agents={string.Join(",", agentIds ?? new List<string>())}");
             }
             else
             {

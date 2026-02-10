@@ -43,6 +43,9 @@ namespace UI.Map
             // Ensure avatarTemplate is inactive
             if (avatarTemplate != null)
                 avatarTemplate.gameObject.SetActive(false);
+            
+            // Initialize cached font
+            EnsureFontCached();
 
             // Setup button click
             var button = GetComponent<Button>();
@@ -50,6 +53,12 @@ namespace UI.Map
             {
                 button.onClick.AddListener(OnButtonClick);
             }
+        }
+        
+        private static void EnsureFontCached()
+        {
+            if (_cachedFont == null)
+                _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         }
 
         /// <summary>
@@ -223,12 +232,7 @@ namespace UI.Map
                 GameObject hpObj = new GameObject("HPText");
                 hpObj.transform.SetParent(statsContainer, false);
                 hpText = hpObj.AddComponent<Text>();
-                
-                // Use cached font
-                if (_cachedFont == null)
-                    _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 hpText.font = _cachedFont;
-                
                 hpText.fontSize = 10;
                 hpText.alignment = TextAnchor.MiddleCenter;
                 hpText.color = Color.green;
@@ -252,12 +256,7 @@ namespace UI.Map
                 GameObject sanObj = new GameObject("SANText");
                 sanObj.transform.SetParent(statsContainer, false);
                 sanText = sanObj.AddComponent<Text>();
-                
-                // Use cached font
-                if (_cachedFont == null)
-                    _cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 sanText.font = _cachedFont;
-                
                 sanText.fontSize = 10;
                 sanText.alignment = TextAnchor.MiddleCenter;
                 sanText.color = Color.cyan;
