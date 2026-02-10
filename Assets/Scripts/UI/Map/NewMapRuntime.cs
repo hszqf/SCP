@@ -165,6 +165,20 @@ namespace UI.Map
             Debug.Log($"[MapUI] Created {_nodeWidgets.Count} node widgets");
         }
 
+        private string GetNodeDisplayName(string nodeId)
+        {
+            // Try to get node.Name from GameState, fallback to nodeId
+            if (GameController.I != null)
+            {
+                var node = GameController.I.GetNode(nodeId);
+                if (node != null && !string.IsNullOrEmpty(node.Name))
+                {
+                    return node.Name;
+                }
+            }
+            return nodeId;
+        }
+
         private void CreateNodeWidget(string nodeId)
         {
             // Create NodeWidget container
@@ -215,17 +229,7 @@ namespace UI.Map
             nameRect.anchoredPosition = new Vector2(0, -35);
 
             Text nameText = nameObj.AddComponent<Text>();
-            // Display node.Name if available, otherwise fallback to nodeId
-            string displayName = nodeId;
-            if (GameController.I != null)
-            {
-                var node = GameController.I.GetNode(nodeId);
-                if (node != null && !string.IsNullOrEmpty(node.Name))
-                {
-                    displayName = node.Name;
-                }
-            }
-            nameText.text = displayName;
+            nameText.text = GetNodeDisplayName(nodeId);
             nameText.color = nodeTextColor;
             nameText.alignment = TextAnchor.MiddleCenter;
             nameText.fontSize = 14;
@@ -274,6 +278,7 @@ namespace UI.Map
             iconText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             // TODO: Show icon when node has unknown anomaly or pending events
+            // Implementation: Check node.Anomalies for unidentified items or node.PendingEvents.Count > 0
             // Hide by default to avoid misleading placeholder
             unknownIcon.SetActive(false);
 
