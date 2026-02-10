@@ -115,7 +115,7 @@ namespace UI.Map
                     var markerView = markerObj.GetComponent<NodeMarkerView>();
                     if (markerView != null)
                     {
-                        markerView.Initialize(node.Id);
+                        markerView.Bind(node.Id, OnNodeClick);
                         _nodeMarkers[node.Id] = markerView;
                     }
 
@@ -129,10 +129,17 @@ namespace UI.Map
             if (GameController.I == null)
                 return;
 
-            foreach (var marker in _nodeMarkers.Values)
+            foreach (var kvp in _nodeMarkers)
             {
+                var marker = kvp.Value;
+                var nodeId = kvp.Key;
+                
                 if (marker != null)
-                    marker.Refresh();
+                {
+                    var node = GameController.I.State.Nodes.Find(n => n.Id == nodeId);
+                    if (node != null)
+                        marker.Refresh(node);
+                }
             }
         }
 
@@ -153,6 +160,17 @@ namespace UI.Map
 
             // Convert anchored position to world position
             return mapContainer.TransformPoint(anchoredPos);
+        }
+
+        private void OnNodeClick(string nodeId)
+        {
+            Debug.Log($"[MapUI] Node clicked: {nodeId}");
+            
+            // Open node panel via UIPanelRoot
+            if (UIPanelRoot.I != null)
+            {
+                UIPanelRoot.I.OpenNode(nodeId);
+            }
         }
     }
 }
