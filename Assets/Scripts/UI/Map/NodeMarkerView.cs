@@ -1,296 +1,290 @@
-// Node marker view - displays city info, task bars, attention badge, and anomaly pins
+// NodeMarkerView - Simplified node display component for NewMap system
 // Author: Canvas
-// Version: 1.0
+// Version: 2.0 (Step 2 - Prefab-based)
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Core;
 using Data;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace UI.Map
 {
+    /// <summary>
+    /// Displays node information: name, task bar, event badge, unknown anomaly icon.
+    /// Only handles display and click events; does not manage data sources.
+    /// </summary>
     public class NodeMarkerView : MonoBehaviour
     {
         [Header("UI Components")]
-        [SerializeField] private TMP_Text nodeNameText;
-        [SerializeField] private Image nodeCircle;
-        [SerializeField] private GameObject taskBarContainer;
-        [SerializeField] private GameObject attentionBadge;
-        [SerializeField] private Transform anomalyPinsContainer;
-
-        [Header("Prefabs")]
-        [SerializeField] private GameObject taskBarPrefab;
-        [SerializeField] private GameObject anomalyPinPrefab;
-
-        [Header("Settings")]
-        [SerializeField] private Color normalColor = Color.white;
-        [SerializeField] private Color anomalyColor = new Color(1f, 0.3f, 0.3f);
+        [SerializeField] private Image dot;
+        [SerializeField] private Text nameText;
+        [SerializeField] private RectTransform taskBar;
+        [SerializeField] private Transform avatarsContainer;
+        [SerializeField] private Image avatarTemplate;
+        [SerializeField] private Text statsText;
+        [SerializeField] private Image progressBg;
+        [SerializeField] private Image progressFill;
+        [SerializeField] private GameObject eventBadge;
+        [SerializeField] private Text eventBadgeText;
+        [SerializeField] private GameObject unknownIcon;
 
         private string _nodeId;
-        private Button _clickButton;
-        private readonly List<GameObject> _taskBarInstances = new List<GameObject>();
-        private readonly List<AnomalyPinView> _anomalyPins = new List<AnomalyPinView>();
+        private System.Action<string> _onClick;
+        private readonly List<GameObject> _avatarInstances = new List<GameObject>();
 
         private void Awake()
         {
-            _clickButton = GetComponent<Button>();
-            if (_clickButton == null)
-                _clickButton = gameObject.AddComponent<Button>();
+            // Ensure avatarTemplate is inactive
+            if (avatarTemplate != null)
+                avatarTemplate.gameObject.SetActive(false);
 
-            _clickButton.onClick.AddListener(OnClick);
+            // Setup button click
+            var button = GetComponent<Button>();
+            if (button != null)
+            {
+                button.onClick.AddListener(OnButtonClick);
+            }
         }
 
-        public void Initialize(string nodeId)
+        /// <summary>
+        /// Binds this view to a node and sets up click handler.
+        /// </summary>
+        public void Bind(string nodeId, System.Action<string> onClick)
         {
             _nodeId = nodeId;
-            Refresh();
+            _onClick = onClick;
+            Debug.Log($"[MapUI] NodeMarkerView.Bind nodeId={nodeId}");
         }
 
-        public void Refresh()
+        /// <summary>
+        /// Refreshes display based on current node state.
+        /// </summary>
+        public void Refresh(NodeState node)
         {
-            if (string.IsNullOrEmpty(_nodeId) || GameController.I == null)
-                return;
-
-            var node = GameController.I.GetNode(_nodeId);
             if (node == null)
+            {
+                Debug.LogWarning($"[MapUI] NodeMarkerView.Refresh: node is null for nodeId={_nodeId}");
                 return;
+            }
 
-            RefreshNodeName(node);
-            RefreshNodeCircle(node);
-            RefreshTaskBars(node);
-            RefreshAttentionBadge(node);
-            RefreshAnomalyPins(node);
+            RefreshName(node);
+            RefreshEventBadge(node);
+            RefreshUnknownIcon(node);
+            RefreshTaskBar(node);
         }
 
-        private void RefreshNodeName(NodeState node)
+        private void RefreshName(NodeState node)
         {
-            if (nodeNameText == null)
-                return;
-
-            // Fallback to nodeId if name is placeholder
+            if (nameText == null) return;
+            
             string displayName = node.Name;
             if (string.IsNullOrEmpty(displayName) || displayName.StartsWith("??"))
                 displayName = node.Id;
-
-            nodeNameText.text = displayName;
-        }
-
-        private void RefreshNodeCircle(NodeState node)
-        {
-            if (nodeCircle == null)
-                return;
-
-            // Change color if anomaly present
-            nodeCircle.color = node.HasAnomaly ? anomalyColor : normalColor;
-        }
-
-        private void RefreshTaskBars(NodeState node)
-        {
-            if (taskBarContainer == null)
-                return;
-
-            // Clear existing task bars
-            foreach (var bar in _taskBarInstances)
-            {
-                if (bar != null)
-                    Destroy(bar);
-            }
-            _taskBarInstances.Clear();
-
-            if (node.Tasks == null)
-            {
-                taskBarContainer.SetActive(false);
-                return;
-            }
-
-            // Get active investigate tasks
-            var investigateTasks = node.Tasks
-                .Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Investigate)
-                .ToList();
-
-            if (investigateTasks.Count == 0)
-            {
-                taskBarContainer.SetActive(false);
-                return;
-            }
-
-            taskBarContainer.SetActive(true);
-
-            // Show the most progressed investigate task
-            var task = investigateTasks.OrderByDescending(t => t.Progress).First();
             
-            if (taskBarPrefab != null && taskBarContainer != null)
+            nameText.text = displayName;
+        }
+
+        private void RefreshEventBadge(NodeState node)
+        {
+            if (eventBadge == null) return;
+
+            int eventCount = node.PendingEvents?.Count ?? 0;
+            bool hasEvents = eventCount > 0;
+            
+            eventBadge.SetActive(hasEvents);
+            
+            if (hasEvents && eventBadgeText != null)
             {
-                var taskBarObj = Instantiate(taskBarPrefab, taskBarContainer.transform);
-                var taskBarView = taskBarObj.GetComponent<TaskBarView>();
-                if (taskBarView != null)
-                {
-                    taskBarView.SetTask(task, node.Id);
-                }
-                _taskBarInstances.Add(taskBarObj);
+                eventBadgeText.text = eventCount.ToString();
             }
         }
 
-        private void RefreshAttentionBadge(NodeState node)
+        private void RefreshUnknownIcon(NodeState node)
         {
-            if (attentionBadge == null)
-                return;
+            if (unknownIcon == null) return;
 
-            bool needsAttention = false;
+            bool hasUnknown = HasUnknownAnomaly(node);
+            unknownIcon.SetActive(hasUnknown);
+        }
 
-            // Check for unknown anomalies (active but not known)
+        private bool HasUnknownAnomaly(NodeState node)
+        {
+            // Check if there are active anomalies that are not in the known list
             var active = node.ActiveAnomalyIds ?? new List<string>();
             var known = node.KnownAnomalyDefIds ?? new List<string>();
+            
             int unknownCount = active.Except(known).Count();
-
-            if (unknownCount > 0)
-                needsAttention = true;
-
-            // Check for discovered but not contained anomalies
-            var containedIds = node.ManagedAnomalies?
-                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
-                .Select(m => m.AnomalyId)
-                .ToList() ?? new List<string>();
-
-            var inProgressIds = node.Tasks?
-                .Where(t => t != null && t.State == TaskState.Active && 
-                           (t.Type == TaskType.Contain || t.Type == TaskType.Manage) &&
-                           !string.IsNullOrEmpty(t.SourceAnomalyId))
-                .Select(t => t.SourceAnomalyId)
-                .ToList() ?? new List<string>();
-
-            int containableCount = known
-                .Except(containedIds)
-                .Except(inProgressIds)
-                .Count();
-
-            if (containableCount > 0)
-                needsAttention = true;
-
-            // Check for pending events
-            if (node.HasPendingEvent)
-                needsAttention = true;
-
-            attentionBadge.SetActive(needsAttention);
+            return unknownCount > 0;
         }
 
-        private void RefreshAnomalyPins(NodeState node)
+        private void RefreshTaskBar(NodeState node)
         {
-            if (anomalyPinsContainer == null)
+            if (taskBar == null) return;
+
+            // Find representative task (Contain > Investigate > Manage priority)
+            var representativeTask = GetRepresentativeTask(node);
+            
+            if (representativeTask == null)
+            {
+                taskBar.gameObject.SetActive(false);
+                return;
+            }
+
+            taskBar.gameObject.SetActive(true);
+            
+            RefreshAvatars(representativeTask);
+            RefreshStats(representativeTask);
+            RefreshProgress(representativeTask);
+        }
+
+        private NodeTask GetRepresentativeTask(NodeState node)
+        {
+            if (node.Tasks == null || node.Tasks.Count == 0)
+                return null;
+
+            var activeTasks = node.Tasks.Where(t => t != null && t.State == TaskState.Active).ToList();
+            if (activeTasks.Count == 0)
+                return null;
+
+            // Priority: Contain > Investigate > Manage
+            var containTask = activeTasks.FirstOrDefault(t => t.Type == TaskType.Contain);
+            if (containTask != null) return containTask;
+
+            var investigateTask = activeTasks.FirstOrDefault(t => t.Type == TaskType.Investigate);
+            if (investigateTask != null) return investigateTask;
+
+            return activeTasks.FirstOrDefault(t => t.Type == TaskType.Manage);
+        }
+
+        private void RefreshAvatars(NodeTask task)
+        {
+            // Clear existing avatars
+            foreach (var avatar in _avatarInstances)
+            {
+                if (avatar != null)
+                    Destroy(avatar);
+            }
+            _avatarInstances.Clear();
+
+            if (avatarsContainer == null || avatarTemplate == null)
                 return;
 
-            // Clear existing pins
-            foreach (var pin in _anomalyPins)
+            int agentCount = task.AssignedAgentIds?.Count ?? 0;
+            
+            // Create avatar placeholders
+            for (int i = 0; i < agentCount && i < 4; i++)
             {
-                if (pin != null && pin.gameObject != null)
-                    Destroy(pin.gameObject);
+                var avatarObj = Instantiate(avatarTemplate.gameObject, avatarsContainer);
+                avatarObj.SetActive(true);
+                _avatarInstances.Add(avatarObj);
             }
-            _anomalyPins.Clear();
-
-            if (anomalyPinPrefab == null)
-                return;
-
-            var active = node.ActiveAnomalyIds ?? new List<string>();
-            var known = node.KnownAnomalyDefIds ?? new List<string>();
-            var contained = node.ManagedAnomalies?
-                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
-                .Select(m => m.AnomalyId)
-                .ToList() ?? new List<string>();
-
-            // Show unknown anomaly pin if there are unknown anomalies
-            int unknownCount = active.Except(known).Count();
-            if (unknownCount > 0)
-            {
-                var pinObj = Instantiate(anomalyPinPrefab, anomalyPinsContainer);
-                var pinView = pinObj.GetComponent<AnomalyPinView>();
-                if (pinView != null)
-                {
-                    pinView.Initialize(node.Id, null, AnomalyPinState.Unknown);
-                    _anomalyPins.Add(pinView);
-                }
-            }
-
-            // Show pins for known anomalies (limit to 1-2 for simplicity)
-            int pinCount = 0;
-            const int maxPins = 2;
-            foreach (var anomalyId in known)
-            {
-                if (pinCount >= maxPins)
-                    break;
-
-                AnomalyPinState state;
-                if (contained.Contains(anomalyId))
-                {
-                    // Check if managed
-                    bool isManaged = node.Tasks?.Any(t => 
-                        t != null && 
-                        t.State == TaskState.Active && 
-                        t.Type == TaskType.Manage &&
-                        t.SourceAnomalyId == anomalyId &&
-                        t.AssignedAgentIds != null &&
-                        t.AssignedAgentIds.Count > 0) ?? false;
-
-                    state = isManaged ? AnomalyPinState.Managed : AnomalyPinState.Contained;
-                }
-                else
-                {
-                    state = AnomalyPinState.Discovered;
-                }
-
-                var pinObj = Instantiate(anomalyPinPrefab, anomalyPinsContainer);
-                var pinView = pinObj.GetComponent<AnomalyPinView>();
-                if (pinView != null)
-                {
-                    pinView.Initialize(node.Id, anomalyId, state);
-                    _anomalyPins.Add(pinView);
-                }
-
-                pinCount++;
-            }
-
-            // Position pins around the marker
-            PositionPins();
         }
 
-        private void PositionPins()
+        private void RefreshStats(NodeTask task)
         {
-            float radius = 80f;
-            float startAngle = 45f;
-            float angleStep = 90f;
+            if (statsText == null) return;
 
-            for (int i = 0; i < _anomalyPins.Count; i++)
+            // Placeholder: Show HP 100 | SAN 100 for now
+            // TODO: Future enhancement - get actual HP/SAN from agent states
+            int agentCount = task.AssignedAgentIds?.Count ?? 0;
+            
+            if (agentCount > 0)
             {
-                if (_anomalyPins[i] == null)
-                    continue;
-
-                float angle = (startAngle + i * angleStep) * Mathf.Deg2Rad;
-                Vector2 offset = new Vector2(
-                    Mathf.Cos(angle) * radius,
-                    Mathf.Sin(angle) * radius
-                );
-
-                var rt = _anomalyPins[i].GetComponent<RectTransform>();
-                if (rt != null)
-                    rt.anchoredPosition = offset;
+                statsText.text = "HP 100 | SAN 100";
+            }
+            else
+            {
+                statsText.text = "HP - | SAN -";
             }
         }
 
-        private void OnClick()
+        private void RefreshProgress(NodeTask task)
+        {
+            if (progressFill == null) return;
+
+            float progress01 = GetTaskProgress01(task);
+            
+            // Update fill amount (assuming Image type is Filled)
+            if (progressFill.type == Image.Type.Filled)
+            {
+                progressFill.fillAmount = progress01;
+            }
+            else
+            {
+                // Fallback: adjust sizeDelta
+                var rt = progressFill.GetComponent<RectTransform>();
+                if (rt != null && progressBg != null)
+                {
+                    var bgRect = progressBg.GetComponent<RectTransform>();
+                    if (bgRect != null)
+                    {
+                        float width = bgRect.sizeDelta.x * progress01;
+                        rt.sizeDelta = new Vector2(width, rt.sizeDelta.y);
+                    }
+                }
+            }
+        }
+
+        private float GetTaskProgress01(NodeTask task)
+        {
+            if (task == null)
+                return 0f;
+
+            int baseDays = GetTaskBaseDays(task);
+            if (baseDays <= 0)
+                return Mathf.Clamp01(task.Progress);
+
+            return Mathf.Clamp01(task.Progress / baseDays);
+        }
+
+        private int GetTaskBaseDays(NodeTask task)
+        {
+            if (task == null)
+                return 1;
+
+            var registry = DataRegistry.Instance;
+            if (registry == null)
+                return 1;
+
+            // Handle investigate no-result case
+            if (task.Type == TaskType.Investigate && 
+                task.InvestigateTargetLocked && 
+                string.IsNullOrEmpty(task.SourceAnomalyId) && 
+                task.InvestigateNoResultBaseDays > 0)
+            {
+                return task.InvestigateNoResultBaseDays;
+            }
+
+            // Get anomaly base days
+            string anomalyId = task.SourceAnomalyId;
+            if (string.IsNullOrEmpty(anomalyId))
+                return 1;
+
+            return Mathf.Max(1, registry.GetAnomalyBaseDaysWithWarn(anomalyId, 1));
+        }
+
+        private void OnButtonClick()
         {
             if (string.IsNullOrEmpty(_nodeId))
-                return;
-
-            Debug.Log($"[MapUI] Node marker clicked: {_nodeId}");
-
-            // Open investigate panel
-            if (UIPanelRoot.I != null)
             {
-                UIPanelRoot.I.OpenNode(_nodeId);
+                Debug.LogWarning("[MapUI] NodeMarkerView.OnButtonClick: nodeId is null or empty");
+                return;
             }
+
+            Debug.Log($"[MapUI] NodeMarkerView.OnButtonClick nodeId={_nodeId}");
+            _onClick?.Invoke(_nodeId);
+        }
+
+        /// <summary>
+        /// Optional: Set selected state visual feedback.
+        /// </summary>
+        public void SetSelected(bool selected)
+        {
+            // TODO: Add visual feedback for selection if needed
+            // e.g., change dot color or add border
         }
     }
 }
