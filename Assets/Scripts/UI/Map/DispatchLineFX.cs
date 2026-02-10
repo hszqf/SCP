@@ -22,7 +22,6 @@ namespace UI.Map
 
         [Header("Icon Settings")]
         [SerializeField] private GameObject dispatchIconPrefab;
-        [SerializeField] private float iconMoveSpeed = 200f;
 
         [Header("Completion FX")]
         [SerializeField] private GameObject completionIconPrefab;
