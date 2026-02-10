@@ -63,7 +63,7 @@ namespace UI.Map
             Debug.Log("[MapUI] NewMapRuntime initializing...");
 
             // A. DIAGNOSTIC LOGS - Check EventSystem BEFORE UI creation
-            EventSystem eventSystem = FindAnyObjectByType<EventSystem>();
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>();
             Debug.Log($"[MapUI] EventSystem found={eventSystem != null} (before UI creation)");
             if (eventSystem != null)
             {
@@ -71,7 +71,7 @@ namespace UI.Map
             }
 
             // Find Canvas to attach to
-            Canvas canvas = FindAnyObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
                 Debug.LogError("[MapUI] Cannot find Canvas to attach NewMapRoot");
@@ -102,7 +102,7 @@ namespace UI.Map
             CreateNodeWidgets(nodeIds);
 
             // A. DIAGNOSTIC LOGS - Check EventSystem AFTER UI creation
-            eventSystem = FindAnyObjectByType<EventSystem>();
+            eventSystem = FindFirstObjectByType<EventSystem>();
             Debug.Log($"[MapUI] EventSystem found={eventSystem != null} (after UI creation)");
             if (eventSystem != null)
             {
@@ -115,10 +115,10 @@ namespace UI.Map
                 
                 // Create EventSystem GameObject
                 GameObject eventSystemObj = new GameObject("EventSystem");
-                eventSystem = eventSystemObj.AddComponent<EventSystem>();
+                EventSystem newEventSystem = eventSystemObj.AddComponent<EventSystem>();
                 eventSystemObj.AddComponent<StandaloneInputModule>();
                 
-                Debug.Log($"[MapUI] EventSystem created and configured");
+                Debug.Log($"[MapUI] EventSystem created: gameObject={newEventSystem.gameObject.name} enabled={newEventSystem.enabled}");
             }
             
             // Ensure Canvas has GraphicRaycaster (required for UI clicks)
