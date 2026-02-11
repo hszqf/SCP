@@ -2363,7 +2363,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NodePanelView
   titleText: {fileID: 4790344534201751671}
-  statusText: {fileID: 0}
   progressText: {fileID: 6819166894026514941}
   eventCountText: {fileID: 0}
   investigateButton: {fileID: 7440969638111281647}
@@ -2560,8 +2559,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 460, y: -650.085}
-  m_SizeDelta: {x: 888, y: 0}
+  m_AnchoredPosition: {x: -118.66666, y: -650.085}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5537971717493202390
 MonoBehaviour:
@@ -4235,8 +4234,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 444, y: -178.17}
-  m_SizeDelta: {x: 888, y: 0}
+  m_AnchoredPosition: {x: 0, y: -178.17}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4734745629209591722
 MonoBehaviour:

@@ -307,7 +307,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         if (string.IsNullOrEmpty(taskId) || _rollingTasks.Contains(taskId)) return;
         if (GameController.I == null) return;
         if (!GameController.I.TryGetTask(taskId, out var node, out var task) || task == null) return;
-        if (task.Type != TaskType.Investigate) return;
+        if (task.Type != TaskType.Investigate && task.Type != TaskType.Contain) return;
         if (task.Progress <= 0f) return;
 
         int baseDays = GetTaskBaseDays(task);
@@ -365,7 +365,7 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         if (string.IsNullOrEmpty(taskId) || GameController.I == null) return;
         if (!GameController.I.TryGetTask(taskId, out var node, out var task) || task == null) return;
-        if (task.Type != TaskType.Investigate) return;
+        if (task.Type != TaskType.Investigate && task.Type != TaskType.Contain) return;
         if (task.VisualProgress >= 0f) return;
         task.VisualProgress = Mathf.Max(0f, previousProgress);
         _lockedVisualTasks.Add(taskId);
