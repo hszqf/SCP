@@ -44,6 +44,8 @@ namespace Data
         public string name;
         public int startPopulation;
         public int unlocked = 1;
+        public int type = 1;
+        public float[] location;
     }
 
     [Serializable]

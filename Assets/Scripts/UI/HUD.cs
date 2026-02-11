@@ -1,9 +1,11 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class HUD : MonoBehaviour
 {
+    public static HUD I { get; private set; }
     [Header("Texts")]
     [SerializeField] private TMP_Text dayText;
     [SerializeField] private TMP_Text moneyText;
@@ -19,8 +21,14 @@ public class HUD : MonoBehaviour
 
     private void Awake()
     {
+        I = this;
         AutoWireBindingsIfMissing();
         BindButtonsInCode();
+    }
+
+    private void OnDestroy()
+    {
+        if (I == this) I = null;
     }
 
     private void OnEnable()
@@ -29,6 +37,13 @@ public class HUD : MonoBehaviour
             GameController.I.OnStateChanged += Refresh;
 
         Refresh();
+    }
+
+    public void SetControlsInteractable(bool enabled)
+    {
+        if (endDayButton) endDayButton.interactable = enabled;
+        if (newsButton) newsButton.interactable = enabled;
+        if (recruitButton) recruitButton.interactable = enabled;
     }
 
     private void OnDisable()
@@ -107,6 +122,13 @@ public class HUD : MonoBehaviour
     {
         if (GameController.I == null) return;
         GameController.I.EndDay();
+        StartCoroutine(PlayDispatchNextFrame());
+    }
+
+    private IEnumerator PlayDispatchNextFrame()
+    {
+        yield return null;
+        DispatchAnimationSystem.I?.PlayPending();
     }
 
     void OnNewsClicked()

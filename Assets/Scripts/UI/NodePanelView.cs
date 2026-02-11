@@ -866,7 +866,8 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         if (task == null) return 0f;
         if (task.Type == TaskType.Manage) return 0f;
         int baseDays = GetTaskBaseDays(task);
-        return Mathf.Clamp01(task.Progress / baseDays);
+        float progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+        return Mathf.Clamp01(progress / baseDays);
     }
 
     private static int GetTaskBaseDays(NodeTask task)

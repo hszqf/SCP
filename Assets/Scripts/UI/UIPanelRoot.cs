@@ -108,6 +108,13 @@ public class UIPanelRoot : MonoBehaviour
 
     public void OpenNode(string nodeId)
     {
+        if (GameController.I != null)
+        {
+            var node = GameController.I.GetNode(nodeId);
+            if (node != null && node.Type == 0)
+                return;
+        }
+
         _currentNodeId = nodeId;
 
         EnsureNodePanel();

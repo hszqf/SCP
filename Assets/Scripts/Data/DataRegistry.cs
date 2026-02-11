@@ -240,6 +240,8 @@ namespace Data
                     name = GetRowString(row, "name"),
                     startPopulation = GetRowInt(row, "startPopulation"),
                     unlocked = GetRowInt(row, "unlocked", 1),
+                    type = GetRowInt(row, "type", 1),
+                    location = GetRowFloatList(row, "location"),
                 };
             }
 
@@ -555,7 +557,7 @@ namespace Data
             CheckTableColumns("Balance", new[] { "key", "p1", "p2", "p3" });
             CheckTableColumns("Nodes", new[]
             {
-                "nodeId", "name", "startPopulation", "unlocked",
+                "nodeId", "name", "startPopulation", "unlocked", "type", "location",
             });
             CheckTableColumns("Anomalies", new[]
             {
@@ -832,6 +834,13 @@ namespace Data
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return null;
             return TableRegistry.TryCoerceFloat(raw, out var value) ? value : null;
+        }
+
+        private static float[] GetRowFloatList(Dictionary<string, object> row, string column)
+        {
+            if (row == null || !row.TryGetValue(column, out var raw)) return null;
+            var list = TableRegistry.CoerceFloatList(raw);
+            return list != null && list.Count > 0 ? list.ToArray() : null;
         }
 
         private static int[] GetRowIntArray4(Dictionary<string, object> row, string column, string anomalyId)

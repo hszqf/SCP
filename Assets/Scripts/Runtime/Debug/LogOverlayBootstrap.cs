@@ -10,6 +10,9 @@ public static class LogOverlayBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Initialize()
     {
+        // Overlay debug disabled by default.
+        return;
+
         // Check if LogOverlay already exists to prevent duplicates
         var existing = Object.FindObjectOfType<LogOverlay>();
         if (existing != null)

@@ -89,6 +89,7 @@ namespace Core
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Nodes)
             {
+                if (n == null || n.Type == 0) continue;
                 if (n?.Tasks == null || n.Tasks.Count == 0) continue;
 
                 // 推进所有 Active 任务（按事件阻塞策略判断）
@@ -1566,7 +1567,7 @@ namespace Core
 
             foreach (var node in s.Nodes)
             {
-                if (node == null) continue;
+                if (node == null || node.Type == 0) continue;
                 if (node.Tasks == null || node.Tasks.Count == 0) continue;
                 if (node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) continue;
 
@@ -1790,6 +1791,8 @@ namespace Core
 
             var nodes = s.Nodes?.Where(n => n != null).ToList();
             if (nodes == null || nodes.Count == 0) return 0;
+            nodes = nodes.Where(n => n != null && n.Type != 0).ToList();
+            if (nodes.Count == 0) return 0;
 
             int spawned = 0;
             int maxAttempts = Math.Max(10, genNum * 4);

@@ -31,6 +31,8 @@ public class NodeButton : MonoBehaviour
             return;
 
         var node = GameController.I.GetNode(NodeId);
+        if (node != null && node.Type == 0)
+            return;
         if (node != null && node.PendingEvents != null && node.PendingEvents.Count > 0)
             UIPanelRoot.I.OpenNodeEvent(NodeId);
         else
@@ -50,6 +52,8 @@ public class NodeButton : MonoBehaviour
 
         var node = GameController.I.GetNode(NodeId);
         if (node == null) return;
+
+        if (_btn) _btn.interactable = node.Type != 0;
 
         var sb = new StringBuilder();
         sb.Append(node.Name);
@@ -166,7 +170,8 @@ public class NodeButton : MonoBehaviour
     {
         if (task == null) return 0f;
         int baseDays = GetTaskBaseDays(task);
-        return Mathf.Clamp01(task.Progress / baseDays);
+        float progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+        return Mathf.Clamp01(progress / baseDays);
     }
 
     private static int GetTaskBaseDays(NodeTask task)

@@ -111,6 +111,17 @@ public class GameController : MonoBehaviour
             yield break;
         }
 
+        try
+        {
+            DataRegistry.Instance.Reload();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Boot] Reload failed: {ex.Message}");
+            Debug.LogException(ex);
+            yield break;
+        }
+
         Debug.Log("[Boot] Non-WebGL path");
         Debug.Log("[Boot] Calling InitGame");
         InitGame();
@@ -151,10 +162,15 @@ public class GameController : MonoBehaviour
         {
             if (nodeDef.unlocked <= 0) continue;
             var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (x: 0.5f, y: 0.5f);
+            if (nodeDef.location != null && nodeDef.location.Length >= 2)
+                coord = (nodeDef.location[0], nodeDef.location[1]);
             var nodeState = new NodeState
             {
                 Id = nodeDef.nodeId,
                 Name = nodeDef.name,
+                Unlocked = nodeDef.unlocked > 0,
+                Type = nodeDef.type,
+                Location = nodeDef.location,
                 X = coord.x,
                 Y = coord.y,
                 LocalPanic = 0,

@@ -92,6 +92,9 @@ namespace Core
         // 0..1
         public float Progress = 0f;
 
+        // UI-only progress for dispatch roll-in effect (same units as Progress; -1 means disabled)
+        public float VisualProgress = -1f;
+
         // 预定占用：progress==0 也算占用。
         public List<string> AssignedAgentIds = new();
 
@@ -124,6 +127,10 @@ namespace Core
     {
         public string Id;
         public string Name;
+
+        public bool Unlocked = true;
+        public int Type = 1;
+        public float[] Location;
 
         // 0..1 百分比坐标：左下(0,0) 右上(1,1)
         public float X;
