@@ -35,6 +35,7 @@ public class UIPanelRoot : MonoBehaviour
     [SerializeField] private RecruitPanel recruitPanelPrefab;
     [SerializeField] private RosterPanel rosterPanelPrefab;
 
+
     // --- 运行时实例 (自动生成) ---
     private HUD _hud;
     private NodePanelView _nodePanel;
@@ -54,6 +55,7 @@ public class UIPanelRoot : MonoBehaviour
     private string _currentNodeId;
     private string _manageNodeId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
     private string _pickerTaskId;
+    private string _manageTargetAnomalyId;
 
     public string CurrentNodeId => _currentNodeId;
     public string ManageNodeId => _manageNodeId;
@@ -71,6 +73,8 @@ public class UIPanelRoot : MonoBehaviour
     private void Start()
     {
         InitHUD();
+        int count = AgentPickerItemView.PreloadAvatars();
+        Debug.Log($"[AvatarPreload] count={count}");
     }
 
     private void OnEnable()
@@ -143,8 +147,8 @@ public class UIPanelRoot : MonoBehaviour
         _nodePanel = Instantiate(nodePanelPrefab, transform);
         // Inject callbacks
         _nodePanel.Init(
-            onInvestigate: () => OpenInvestigateAssignPanel(),
-            onContain: () => OpenContainAssignPanel(),
+            onInvestigate: () => OpenInvestigateAssignPanelForNode(_currentNodeId),
+            onContain: () => OpenContainAssignPanelForNode(_currentNodeId),
             onClose: () => CloseNode()
         );
     }
@@ -199,16 +203,21 @@ public class UIPanelRoot : MonoBehaviour
 
     // ================== ASSIGNMENT PANEL (Investigate / Contain) ==================
 
-    void OpenInvestigateAssignPanel()
+    public void OpenInvestigateAssignPanelForNode(string nodeId)
+    {
+        OpenInvestigateAssignPanelForNode(nodeId, null);
+    }
+
+    public void OpenInvestigateAssignPanelForNode(string nodeId, string targetAnomalyId)
     {
         if (GameController.I == null) return;
-        if (string.IsNullOrEmpty(_currentNodeId)) return;
+        if (string.IsNullOrEmpty(nodeId)) return;
 
         EnsureManagePanel();
         if (!_managePanelView) return;
 
         var gc = GameController.I;
-        var node = gc.GetNode(_currentNodeId);
+        var node = gc.GetNode(nodeId);
         if (node == null)
         {
             ShowInfo("派遣失败", "节点不存在");
@@ -216,17 +225,22 @@ public class UIPanelRoot : MonoBehaviour
         }
 
         var registry = DataRegistry.Instance;
-        var targets = BuildInvestigateTargets(node, registry, gc.State?.NewsLog);
+        var targets = BuildInvestigateTargets(node, registry, targetAnomalyId);
         var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Investigate, 1, int.MaxValue);
 
-        _manageNodeId = _currentNodeId;
+        _currentNodeId = nodeId;
+        _manageNodeId = nodeId;
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
         PushModal(_managePanel, "open manage");
         RefreshModalStack("open manage", _managePanel);
+        string hint = string.IsNullOrEmpty(targetAnomalyId)
+            ? "派遣干员进行调查"
+            : "派遣干员调查该异常";
+
         _managePanelView.ShowGeneric(
-            header: $"Investigate | {_currentNodeId}",
-            hint: "选择新闻线索（可选）并派遣干员",
+            header: $"Investigate | {nodeId}",
+            hint: hint,
             targets: targets,
             agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
@@ -250,7 +264,7 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
-                var task = gc.CreateInvestigateTask(_currentNodeId);
+                var task = gc.CreateInvestigateTask(nodeId);
                 if (task == null)
                 {
                     ShowInfo("派遣失败", "创建任务失败");
@@ -261,12 +275,18 @@ public class UIPanelRoot : MonoBehaviour
                 task.TargetNewsId = targetNewsId;
 
                 string sourceAnomalyId = null;
-                if (!string.IsNullOrEmpty(targetNewsId))
+                if (!string.IsNullOrEmpty(targetAnomalyId))
+                {
+                    sourceAnomalyId = targetAnomalyId;
+                    task.SourceAnomalyId = sourceAnomalyId;
+                    task.InvestigateTargetLocked = true;
+                }
+                else if (!string.IsNullOrEmpty(targetNewsId))
                 {
                     var news = gc.State?.NewsLog?.FirstOrDefault(n => n != null && n.Id == targetNewsId);
                     sourceAnomalyId = news?.SourceAnomalyId;
                     task.SourceAnomalyId = sourceAnomalyId;
-                    Debug.Log($"[InvestigateBindNews] taskId={task.Id} newsId={targetNewsId} srcAnom={sourceAnomalyId} nodeId={_currentNodeId}");
+                    Debug.Log($"[InvestigateBindNews] taskId={task.Id} newsId={targetNewsId} srcAnom={sourceAnomalyId} nodeId={nodeId}");
                 }
 
                 gc.AssignTask(task.Id, agentIds);
@@ -284,16 +304,16 @@ public class UIPanelRoot : MonoBehaviour
         );
     }
 
-    void OpenContainAssignPanel()
+    public void OpenContainAssignPanelForNode(string nodeId)
     {
         if (GameController.I == null) return;
-        if (string.IsNullOrEmpty(_currentNodeId)) return;
+        if (string.IsNullOrEmpty(nodeId)) return;
 
         EnsureManagePanel();
         if (!_managePanelView) return;
 
         var gc = GameController.I;
-        var node = gc.GetNode(_currentNodeId);
+        var node = gc.GetNode(nodeId);
         if (node == null)
         {
             ShowInfo("派遣失败", "节点不存在");
@@ -308,13 +328,14 @@ public class UIPanelRoot : MonoBehaviour
             ? "无已确认异常：请先调查（随意或针对新闻）以发现异常"
             : "选择要收容的异常并派遣干员";
 
-        _manageNodeId = _currentNodeId;
+        _currentNodeId = nodeId;
+        _manageNodeId = nodeId;
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
         PushModal(_managePanel, "open manage");
         RefreshModalStack("open manage", _managePanel);
         _managePanelView.ShowGeneric(
-            header: $"Contain | {_currentNodeId}",
+            header: $"Contain | {nodeId}",
             hint: hint,
             targets: targets,
             agentSlotsMin: slotsMin,
@@ -346,7 +367,7 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 string containableId = EnsureContainableForAnomaly(node, registry, targetAnomalyId);
-                var task = gc.CreateContainTask(_currentNodeId, containableId);
+                var task = gc.CreateContainTask(nodeId, containableId);
                 if (task == null)
                 {
                     ShowInfo("派遣失败", "创建任务失败");
@@ -369,39 +390,32 @@ public class UIPanelRoot : MonoBehaviour
         );
     }
 
-    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(NodeState node, DataRegistry registry, List<NewsInstance> newsLog)
+    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(NodeState node, DataRegistry registry, string targetAnomalyId)
     {
-        var targets = new List<AnomalyManagePanel.TargetEntry>
+        var targets = new List<AnomalyManagePanel.TargetEntry>();
+        if (!string.IsNullOrEmpty(targetAnomalyId))
         {
-            new AnomalyManagePanel.TargetEntry
-            {
-                id = "",
-                title = "随意调查",
-                subtitle = "不针对任何新闻（较慢）",
-                disabled = false
-            }
-        };
-
-        if (newsLog == null) return targets;
-
-        foreach (var news in newsLog)
-        {
-            if (news == null) continue;
-            if (!string.Equals(news.NodeId, node.Id, StringComparison.OrdinalIgnoreCase)) continue;
-            var def = registry.GetNewsDefById(news.NewsDefId);
-            string title = def?.title ?? news.NewsDefId ?? "";
-            string subtitle = !string.IsNullOrEmpty(news.SourceAnomalyId)
-                ? $"线索指向：{news.SourceAnomalyId}"
-                : "线索来源未知";
+            string title = targetAnomalyId;
+            if (registry != null && registry.AnomaliesById.TryGetValue(targetAnomalyId, out var def) && def != null && !string.IsNullOrEmpty(def.name))
+                title = def.name;
 
             targets.Add(new AnomalyManagePanel.TargetEntry
             {
-                id = news.Id,
-                title = title,
-                subtitle = subtitle,
+                id = targetAnomalyId,
+                title = $"调查异常：{title}",
+                subtitle = null,
                 disabled = false
             });
+            return targets;
         }
+
+        targets.Add(new AnomalyManagePanel.TargetEntry
+        {
+            id = "",
+            title = "随意调查",
+            subtitle = null,
+            disabled = false
+        });
 
         return targets;
     }
@@ -463,6 +477,14 @@ public class UIPanelRoot : MonoBehaviour
     public void OpenManage(string nodeId)
     {
         _manageNodeId = nodeId;
+        _manageTargetAnomalyId = null;
+        OpenManage();
+    }
+
+    public void OpenManage(string nodeId, string managedAnomalyId)
+    {
+        _manageNodeId = nodeId;
+        _manageTargetAnomalyId = managedAnomalyId;
         OpenManage();
     }
 
@@ -472,9 +494,9 @@ public class UIPanelRoot : MonoBehaviour
         EnsureManagePanel();
         if (_managePanel)
         {
-            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
+            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId, _manageTargetAnomalyId);
             _managePanel.SetActive(true);
-            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId);
+            if (_managePanelView) _managePanelView.ShowForNode(_manageNodeId, _manageTargetAnomalyId);
             _managePanel.transform.SetAsLastSibling();
             PushModal(_managePanel, "open manage");
             RefreshModalStack("open manage", _managePanel);

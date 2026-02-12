@@ -31,12 +31,16 @@ public class NodeButton : MonoBehaviour
             return;
 
         var node = GameController.I.GetNode(NodeId);
-        if (node != null && node.Type == 0)
+        if (node == null || node.Type == 0)
             return;
-        if (node != null && node.PendingEvents != null && node.PendingEvents.Count > 0)
-            UIPanelRoot.I.OpenNodeEvent(NodeId);
-        else
-            UIPanelRoot.I.OpenNode(NodeId);
+
+        var active = node.ActiveAnomalyIds != null ? string.Join(",", node.ActiveAnomalyIds) : "";
+        var known = node.KnownAnomalyDefIds != null ? string.Join(",", node.KnownAnomalyDefIds) : "";
+        int managedCount = node.ManagedAnomalies?.Count ?? 0;
+        int taskCount = node.Tasks?.Count ?? 0;
+        int pendingEvents = node.PendingEvents?.Count ?? 0;
+
+        Debug.Log($"[NodeClick] nodeId={node.Id} name={node.Name} hasAnomaly={node.HasAnomaly} active=[{active}] known=[{known}] managedCount={managedCount} tasks={taskCount} pendingEvents={pendingEvents}");
     }
 
     public void Set(string nodeId, string _unusedText)

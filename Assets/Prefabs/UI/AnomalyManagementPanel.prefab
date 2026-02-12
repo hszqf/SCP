@@ -1484,7 +1484,7 @@ MonoBehaviour:
   anomalyListContent: {fileID: 3409131374678229757}
   anomalyListItemPrefab: {fileID: 6395851169240743903, guid: 6762d155745bfe046a245db30051e67b, type: 3}
   agentListContent: {fileID: 3805413757024641408}
-  agentPickerItemPrefab: {fileID: 613666048140394576, guid: 30273646f02dbbf4d9d5fda1185cb3a7, type: 3}
+  agentPickerItemPrefab: {fileID: 613666048140394576, guid: 8e8d16d0cf0dfef419195b09a967c563, type: 3}
   confirmButton: {fileID: 6091507656999187307}
   closeButton: {fileID: 6786570211510566554}
   dimmerButton: {fileID: 437819942438759068}

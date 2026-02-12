@@ -21,6 +21,7 @@ public class DispatchAnimationSystem : MonoBehaviour
     [SerializeField] private float arrivalProgressInterval = 0.12f;
 
     private readonly Dictionary<string, RectTransform> _nodes = new();
+    private readonly Dictionary<string, RectTransform> _anomalies = new();
     private readonly Dictionary<string, TaskSnapshot> _taskCache = new();
     private readonly Queue<DispatchEvent> _pending = new();
     private readonly HashSet<string> _pendingKeys = new();
@@ -31,10 +32,13 @@ public class DispatchAnimationSystem : MonoBehaviour
     private bool _isSubscribed;
     private GameController _boundController;
     private int _activeAgents;
+    private int _activeProgressRolls;
     private bool _hudLocked;
     private float _lastBindAttempt;
     private readonly HashSet<string> _rollingTasks = new();
     private readonly HashSet<string> _lockedVisualTasks = new();
+
+    public bool IsInteractionLocked => _activeAgents > 0 || _activeProgressRolls > 0;
 
     private class TaskSnapshot
     {
@@ -96,6 +100,12 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         if (string.IsNullOrEmpty(nodeId) || nodeRT == null) return;
         _nodes[nodeId] = nodeRT;
+    }
+
+    public void RegisterAnomaly(string nodeId, string anomalyId, RectTransform anomalyRT)
+    {
+        if (string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(anomalyId) || anomalyRT == null) return;
+        _anomalies[BuildAnomalyKey(nodeId, anomalyId)] = anomalyRT;
     }
 
     public void PlayPending()
@@ -222,6 +232,8 @@ public class DispatchAnimationSystem : MonoBehaviour
             }
         }
 
+        RollProgressDeltas(current);
+
         _taskCache.Clear();
         foreach (var kvp in current)
             _taskCache[kvp.Key] = kvp.Value;
@@ -260,7 +272,7 @@ public class DispatchAnimationSystem : MonoBehaviour
             var ev = _pending.Dequeue();
             _pendingKeys.Remove(ev.Key);
 
-            if (!TryGetNodeLocalPoint(ev.FromNodeId, out var fromLocal) || !TryGetNodeLocalPoint(ev.ToNodeId, out var toLocal))
+            if (!TryGetDispatchPoint(ev.TaskId, ev.FromNodeId, out var fromLocal) || !TryGetDispatchPoint(ev.TaskId, ev.ToNodeId, out var toLocal))
                 continue;
 
             int agentCount = ev.AgentIds?.Count ?? 0;
@@ -317,15 +329,21 @@ public class DispatchAnimationSystem : MonoBehaviour
         float target = Mathf.Clamp01(task.Progress / baseDays);
         float interval = Mathf.Max(0.01f, arrivalProgressInterval);
 
+        float startPercent = 0f;
+        if (task.VisualProgress >= 0f)
+            startPercent = Mathf.Clamp01(task.VisualProgress / baseDays);
+
         _lockedVisualTasks.Remove(taskId);
         _rollingTasks.Add(taskId);
-        StartCoroutine(ProgressRollRoutine(taskId, baseDays, step, target, interval));
+        _activeProgressRolls += 1;
+        SetHudLocked(true);
+        StartCoroutine(ProgressRollRoutine(taskId, baseDays, step, target, interval, startPercent));
     }
 
-    private IEnumerator ProgressRollRoutine(string taskId, int baseDays, float stepPercent, float targetPercent, float interval)
+    private IEnumerator ProgressRollRoutine(string taskId, int baseDays, float stepPercent, float targetPercent, float interval, float startPercent)
     {
         float target = Mathf.Clamp01(targetPercent);
-        float current = 0f;
+        float current = Mathf.Clamp01(startPercent);
         while (current < target)
         {
             if (GameController.I == null || !GameController.I.TryGetTask(taskId, out var node, out var task) || task == null || task.State != TaskState.Active)
@@ -340,6 +358,9 @@ public class DispatchAnimationSystem : MonoBehaviour
         if (GameController.I != null && GameController.I.TryGetTask(taskId, out var _, out var finalTask) && finalTask != null)
             finalTask.VisualProgress = -1f;
         _rollingTasks.Remove(taskId);
+        _activeProgressRolls = Mathf.Max(0, _activeProgressRolls - 1);
+        if (_activeProgressRolls == 0 && _activeAgents == 0)
+            SetHudLocked(false);
     }
 
     private void SyncVisualProgress()
@@ -370,6 +391,27 @@ public class DispatchAnimationSystem : MonoBehaviour
         task.VisualProgress = Mathf.Max(0f, previousProgress);
         _lockedVisualTasks.Add(taskId);
         GameController.I.Notify();
+    }
+
+    private void RollProgressDeltas(Dictionary<string, TaskSnapshot> current)
+    {
+        if (current == null || current.Count == 0) return;
+
+        foreach (var kvp in current)
+        {
+            var taskId = kvp.Key;
+            var snapshot = kvp.Value;
+            if (snapshot == null || snapshot.State != TaskState.Active) continue;
+            if (snapshot.AgentIds == null || snapshot.AgentIds.Count == 0) continue;
+
+            if (!_taskCache.TryGetValue(taskId, out var previous)) continue;
+            if (previous.State != TaskState.Active) continue;
+            if (previous.Progress <= 0f) continue;
+            if (snapshot.Progress <= previous.Progress) continue;
+
+            PrepareVisualProgressForRoll(taskId, previous.Progress);
+            StartProgressRoll(taskId);
+        }
     }
 
     private static int GetTaskBaseDays(NodeTask task)
@@ -428,6 +470,59 @@ public class DispatchAnimationSystem : MonoBehaviour
         }
         return TryGetNodeLocalPoint(nodeRT, out localPoint);
     }
+
+    private bool TryGetDispatchPoint(string taskId, string nodeId, out Vector2 localPoint)
+    {
+        localPoint = Vector2.zero;
+        if (string.IsNullOrEmpty(nodeId)) return false;
+
+        if (string.Equals(nodeId, baseNodeId, System.StringComparison.OrdinalIgnoreCase))
+            return TryGetNodeLocalPoint(nodeId, out localPoint);
+
+        if (TryGetTaskAnomalyLocalPoint(taskId, nodeId, out localPoint))
+            return true;
+
+        return TryGetNodeLocalPoint(nodeId, out localPoint);
+    }
+
+    private bool TryGetTaskAnomalyLocalPoint(string taskId, string nodeId, out Vector2 localPoint)
+    {
+        localPoint = Vector2.zero;
+        if (string.IsNullOrEmpty(taskId) || GameController.I == null) return false;
+        if (!GameController.I.TryGetTask(taskId, out var node, out var task) || task == null) return false;
+        if (node == null || !string.Equals(node.Id, nodeId, System.StringComparison.OrdinalIgnoreCase)) return false;
+
+        var anomalyId = ResolveTaskAnomalyId(node, task);
+        if (string.IsNullOrEmpty(anomalyId)) return false;
+
+        var key = BuildAnomalyKey(node.Id, anomalyId);
+        if (!_anomalies.TryGetValue(key, out var anomalyRT) || anomalyRT == null)
+            return false;
+
+        return TryGetNodeLocalPoint(anomalyRT, out localPoint);
+    }
+
+    private static string ResolveTaskAnomalyId(NodeState node, NodeTask task)
+    {
+        if (node == null || task == null) return null;
+
+        if (task.Type == TaskType.Manage)
+        {
+            var managed = node.ManagedAnomalies?.Find(m => m != null && m.Id == task.TargetManagedAnomalyId);
+            return managed?.AnomalyId ?? task.SourceAnomalyId;
+        }
+
+        if (!string.IsNullOrEmpty(task.SourceAnomalyId))
+            return task.SourceAnomalyId;
+
+        if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0)
+            return node.ActiveAnomalyIds[0];
+
+        return null;
+    }
+
+    private static string BuildAnomalyKey(string nodeId, string anomalyId)
+        => $"{nodeId}:{anomalyId}";
 
     private bool TryGetNodeLocalPoint(RectTransform nodeRT, out Vector2 localPoint)
     {

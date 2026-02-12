@@ -360,7 +360,7 @@
           "type": "int"
         },
         {
-          "name": "manNegentropy PerDay",
+          "name": "manNegentropyPerDay",
           "type": "int"
         }
       ],
@@ -400,7 +400,7 @@
           "invExp": 5,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_002",
@@ -437,7 +437,7 @@
           "invExp": 2,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_003",
@@ -474,7 +474,7 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_004",
@@ -511,7 +511,7 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_005",
@@ -548,7 +548,7 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_006",
@@ -585,7 +585,7 @@
           "invExp": 1,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_007",
@@ -622,7 +622,7 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_008",
@@ -659,7 +659,7 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_009",
@@ -696,7 +696,7 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_010",
@@ -733,7 +733,7 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_011",
@@ -770,7 +770,7 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_012",
@@ -807,7 +807,7 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_013",
@@ -844,7 +844,7 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_014",
@@ -881,7 +881,7 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_015",
@@ -918,7 +918,7 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_016",
@@ -955,7 +955,7 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_017",
@@ -992,7 +992,7 @@
           "invExp": 1,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_018",
@@ -1029,7 +1029,7 @@
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_019",
@@ -1066,7 +1066,7 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_020",
@@ -1103,7 +1103,7 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_021",
@@ -1140,7 +1140,7 @@
           "invExp": 1,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_022",
@@ -1177,7 +1177,7 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_023",
@@ -1214,7 +1214,7 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_024",
@@ -1251,7 +1251,7 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_025",
@@ -1288,7 +1288,7 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_026",
@@ -1325,7 +1325,7 @@
           "invExp": 4,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_027",
@@ -1362,7 +1362,7 @@
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_028",
@@ -1399,7 +1399,7 @@
           "invExp": 5,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_029",
@@ -1436,7 +1436,7 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_030",
@@ -1473,7 +1473,7 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_031",
@@ -1510,7 +1510,7 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_032",
@@ -1547,7 +1547,7 @@
           "invExp": 4,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_033",
@@ -1584,7 +1584,7 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_034",
@@ -1621,7 +1621,7 @@
           "invExp": 5,
           "conExp": 2,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_035",
@@ -1658,7 +1658,7 @@
           "invExp": 2,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_036",
@@ -1695,7 +1695,7 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_037",
@@ -1732,7 +1732,7 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_038",
@@ -1769,7 +1769,7 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_039",
@@ -1806,7 +1806,7 @@
           "invExp": 4,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_040",
@@ -1843,7 +1843,7 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_041",
@@ -1880,7 +1880,7 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_042",
@@ -1917,7 +1917,7 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_043",
@@ -1954,7 +1954,7 @@
           "invExp": 1,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_044",
@@ -1991,7 +1991,7 @@
           "invExp": 5,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_045",
@@ -2028,7 +2028,7 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_046",
@@ -2065,7 +2065,7 @@
           "invExp": 3,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_047",
@@ -2102,7 +2102,7 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_048",
@@ -2139,7 +2139,7 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_049",
@@ -2176,7 +2176,7 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_050",
@@ -2213,7 +2213,7 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_051",
@@ -2250,7 +2250,7 @@
           "invExp": 5,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_052",
@@ -2287,7 +2287,7 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_053",
@@ -2324,7 +2324,7 @@
           "invExp": 4,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_054",
@@ -2361,7 +2361,7 @@
           "invExp": 1,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_055",
@@ -2398,7 +2398,7 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_056",
@@ -2435,7 +2435,7 @@
           "invExp": 2,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_057",
@@ -2472,7 +2472,7 @@
           "invExp": 3,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_058",
@@ -2509,7 +2509,7 @@
           "invExp": 2,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_059",
@@ -2546,7 +2546,7 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_060",
@@ -2583,7 +2583,7 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 12
+          "manNegentropyPerDay": 12
         },
         {
           "anomalyId": "AN_061",
@@ -2620,7 +2620,7 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_062",
@@ -2657,7 +2657,7 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_063",
@@ -2694,7 +2694,7 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropy PerDay": 6
+          "manNegentropyPerDay": 6
         },
         {
           "anomalyId": "AN_064",
@@ -2731,7 +2731,7 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         },
         {
           "anomalyId": "AN_065",
@@ -2768,7 +2768,7 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropy PerDay": 3
+          "manNegentropyPerDay": 3
         }
       ]
     },
@@ -2791,15 +2791,15 @@
         },
         {
           "day": 2,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 3,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 4,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 5,
@@ -2807,15 +2807,15 @@
         },
         {
           "day": 6,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 7,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 8,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 9,
@@ -2823,27 +2823,27 @@
         },
         {
           "day": 10,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 11,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 12,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 13,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 14,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 15,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 16,
@@ -2851,11 +2851,11 @@
         },
         {
           "day": 17,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 18,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 19,
@@ -2871,71 +2871,71 @@
         },
         {
           "day": 22,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 23,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 24,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 2
         },
         {
           "day": 25,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 26,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 27,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 28,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 29,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 30,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 31,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 32,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 33,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 34,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 35,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 36,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 37,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 38,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 39,
@@ -2947,15 +2947,15 @@
         },
         {
           "day": 41,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 42,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 43,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 44,
@@ -2963,7 +2963,7 @@
         },
         {
           "day": 45,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 46,
@@ -2971,19 +2971,19 @@
         },
         {
           "day": 47,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 48,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 49,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 50,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 51,
@@ -2995,27 +2995,27 @@
         },
         {
           "day": 53,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 54,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 55,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 56,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 57,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 58,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 59,
@@ -3027,11 +3027,11 @@
         },
         {
           "day": 61,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 62,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 63,
@@ -3039,39 +3039,39 @@
         },
         {
           "day": 64,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 65,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 66,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 67,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 68,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 69,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 70,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 71,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 72,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 73,
@@ -3079,23 +3079,23 @@
         },
         {
           "day": 74,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 75,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 76,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 77,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 78,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 79,
@@ -3111,67 +3111,67 @@
         },
         {
           "day": 82,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 83,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 84,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 85,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 86,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 87,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 88,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 89,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 90,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 91,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 92,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 93,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 94,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 1
         },
         {
           "day": 95,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 1
         },
         {
           "day": 96,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 1
         },
         {
           "day": 97,
-          "AnomaliesGenNum": 0
+          "AnomaliesGenNum": 3
         },
         {
           "day": 98,
@@ -3187,79 +3187,79 @@
         },
         {
           "day": 101,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 102,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 103,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 104,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 105,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 106,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 107,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 108,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 109,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 110,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 111,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 2
         },
         {
           "day": 112,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 113,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 114,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 115,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 116,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 117,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 118,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 119,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 120,
@@ -3267,39 +3267,39 @@
         },
         {
           "day": 121,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 122,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 3
         },
         {
           "day": 123,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 124,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 125,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 126,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 127,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 128,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 129,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 130,
@@ -3307,7 +3307,7 @@
         },
         {
           "day": 131,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 132,
@@ -3315,111 +3315,111 @@
         },
         {
           "day": 133,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 134,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 135,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 136,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 137,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 138,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 139,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 140,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 141,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 142,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 143,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 144,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 145,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 146,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 147,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 148,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 149,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 150,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 151,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 152,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 1
         },
         {
           "day": 153,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 154,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 155,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 156,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 157,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 158,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 159,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 160,
@@ -3427,27 +3427,27 @@
         },
         {
           "day": 161,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 1
         },
         {
           "day": 162,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 1
         },
         {
           "day": 163,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 164,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 165,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 166,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 167,
@@ -3467,19 +3467,19 @@
         },
         {
           "day": 171,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 172,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 173,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 174,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 175,
@@ -3491,7 +3491,7 @@
         },
         {
           "day": 177,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 178,
@@ -3503,15 +3503,15 @@
         },
         {
           "day": 180,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 181,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 182,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 183,
@@ -3519,43 +3519,43 @@
         },
         {
           "day": 184,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 185,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 186,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 187,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 188,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 189,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 190,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 191,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 192,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 193,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 194,
@@ -3563,35 +3563,35 @@
         },
         {
           "day": 195,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 196,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 197,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 198,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 199,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 200,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 201,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 202,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 203,
@@ -3599,35 +3599,35 @@
         },
         {
           "day": 204,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 205,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 206,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 207,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 1
         },
         {
           "day": 208,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 209,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 210,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 211,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 212,
@@ -3639,103 +3639,103 @@
         },
         {
           "day": 214,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 215,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 216,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 1
         },
         {
           "day": 217,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 1
         },
         {
           "day": 218,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 219,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 220,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 221,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 222,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 223,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 224,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 225,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 226,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 227,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 228,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 5
         },
         {
           "day": 229,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 230,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 231,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 232,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 233,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 234,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 235,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 236,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 237,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 2
         },
         {
           "day": 238,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 4
         },
         {
           "day": 239,
@@ -3743,7 +3743,7 @@
         },
         {
           "day": 240,
-          "AnomaliesGenNum": 0
+          "AnomaliesGenNum": 1
         },
         {
           "day": 241,
@@ -3755,43 +3755,43 @@
         },
         {
           "day": 243,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 244,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 245,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 246,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 247,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 248,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 249,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 250,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 1
         },
         {
           "day": 251,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 252,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 253,
@@ -3799,19 +3799,19 @@
         },
         {
           "day": 254,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 1
         },
         {
           "day": 255,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 256,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 257,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 258,
@@ -3827,7 +3827,7 @@
         },
         {
           "day": 261,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 262,
@@ -3839,19 +3839,19 @@
         },
         {
           "day": 264,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 265,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 266,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 267,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 268,
@@ -3859,7 +3859,7 @@
         },
         {
           "day": 269,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 270,
@@ -3867,7 +3867,7 @@
         },
         {
           "day": 271,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 272,
@@ -3875,63 +3875,63 @@
         },
         {
           "day": 273,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 1
         },
         {
           "day": 274,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 1
         },
         {
           "day": 275,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 276,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 277,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 278,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 279,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 280,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 0
         },
         {
           "day": 281,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 2
         },
         {
           "day": 282,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 283,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 284,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 285,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 286,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 2
         },
         {
           "day": 287,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 288,
@@ -3939,23 +3939,23 @@
         },
         {
           "day": 289,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 290,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 291,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 292,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 293,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 294,
@@ -3963,19 +3963,19 @@
         },
         {
           "day": 295,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 296,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 297,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 298,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 299,
@@ -3991,7 +3991,7 @@
         },
         {
           "day": 302,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 303,
@@ -4011,7 +4011,7 @@
         },
         {
           "day": 307,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 308,
@@ -4047,7 +4047,7 @@
         },
         {
           "day": 316,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 317,
@@ -4079,7 +4079,7 @@
         },
         {
           "day": 324,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 325,
@@ -4095,7 +4095,7 @@
         },
         {
           "day": 328,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 329,
@@ -4103,23 +4103,23 @@
         },
         {
           "day": 330,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 331,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 332,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 333,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 334,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 335,
@@ -4131,23 +4131,23 @@
         },
         {
           "day": 337,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 338,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 339,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 340,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 341,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 342,
@@ -4163,7 +4163,7 @@
         },
         {
           "day": 345,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 346,
@@ -4183,11 +4183,11 @@
         },
         {
           "day": 350,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 351,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 352,
@@ -4207,23 +4207,23 @@
         },
         {
           "day": 356,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 357,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 358,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 359,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 360,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 361,
@@ -4239,27 +4239,27 @@
         },
         {
           "day": 364,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 365,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 366,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 367,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 368,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 369,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 370,
@@ -4279,27 +4279,27 @@
         },
         {
           "day": 374,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 375,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 376,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 377,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 378,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 379,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 380,
@@ -4311,31 +4311,31 @@
         },
         {
           "day": 382,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 383,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 384,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 385,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 386,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 387,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 388,
-          "AnomaliesGenNum": 7
+          "AnomaliesGenNum": 0
         },
         {
           "day": 389,
@@ -4355,7 +4355,7 @@
         },
         {
           "day": 393,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 394,
@@ -4367,7 +4367,7 @@
         },
         {
           "day": 396,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 397,
@@ -4387,11 +4387,11 @@
         },
         {
           "day": 401,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 402,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 403,
@@ -4407,7 +4407,7 @@
         },
         {
           "day": 406,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 407,
@@ -4419,7 +4419,7 @@
         },
         {
           "day": 409,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 410,
@@ -4439,7 +4439,7 @@
         },
         {
           "day": 414,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 415,
@@ -4451,7 +4451,7 @@
         },
         {
           "day": 417,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 418,
@@ -4463,7 +4463,7 @@
         },
         {
           "day": 420,
-          "AnomaliesGenNum": 3
+          "AnomaliesGenNum": 0
         },
         {
           "day": 421,
@@ -4479,23 +4479,23 @@
         },
         {
           "day": 424,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 425,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 426,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 427,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 428,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 429,
@@ -4511,7 +4511,7 @@
         },
         {
           "day": 432,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 433,
@@ -4523,7 +4523,7 @@
         },
         {
           "day": 435,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 436,
@@ -4535,31 +4535,31 @@
         },
         {
           "day": 438,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 439,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 440,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 441,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 442,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 443,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 444,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 445,
@@ -4571,15 +4571,15 @@
         },
         {
           "day": 447,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 448,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 449,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 450,
@@ -4591,7 +4591,7 @@
         },
         {
           "day": 452,
-          "AnomaliesGenNum": 8
+          "AnomaliesGenNum": 0
         },
         {
           "day": 453,
@@ -4603,11 +4603,11 @@
         },
         {
           "day": 455,
-          "AnomaliesGenNum": 8
+          "AnomaliesGenNum": 0
         },
         {
           "day": 456,
-          "AnomaliesGenNum": 8
+          "AnomaliesGenNum": 0
         },
         {
           "day": 457,
@@ -4643,35 +4643,35 @@
         },
         {
           "day": 465,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 466,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 467,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 468,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 469,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 470,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 471,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 472,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 473,
@@ -4683,35 +4683,35 @@
         },
         {
           "day": 475,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 476,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 477,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 478,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 479,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 480,
-          "AnomaliesGenNum": 4
+          "AnomaliesGenNum": 0
         },
         {
           "day": 481,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 482,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 483,
@@ -4723,35 +4723,35 @@
         },
         {
           "day": 485,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 486,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 487,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 488,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 489,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 490,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 491,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 492,
-          "AnomaliesGenNum": 6
+          "AnomaliesGenNum": 0
         },
         {
           "day": 493,
@@ -4763,19 +4763,19 @@
         },
         {
           "day": 495,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 496,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 497,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 498,
-          "AnomaliesGenNum": 5
+          "AnomaliesGenNum": 0
         },
         {
           "day": 499,

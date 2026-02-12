@@ -23,6 +23,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     [SerializeField] private RectTransform agentListContent;
     [SerializeField] private ScrollRect agentListScrollRect;
     [SerializeField] private AgentPickerItemView itemPrefab;
+    [SerializeField] private RectTransform agentGridContent;
 
     private readonly List<GameObject> _agentItems = new();
     private const int RecruitPoolSize = 3;
@@ -64,27 +65,8 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
     {
         if (!ValidateBindings()) return;
         if (GameController.I == null) return;
-
         EnsureRecruitPool(false);
-
-        int money = GameController.I.State?.Money ?? 0;
-        int candidateCount = GameController.I.State?.RecruitPool?.candidates?.Count ?? 0;
-        var pool = GameController.I.State?.RecruitPool;
-        int refreshUsedToday = pool?.refreshUsedToday ?? 0;
-        int remainingFree = Mathf.Max(0, FreeRefreshPerDay - refreshUsedToday);
-        int paidIndex = Mathf.Max(0, refreshUsedToday - FreeRefreshPerDay);
-        int nextPaidCost = RefreshBaseCost * (paidIndex + 1);
-
-        if (titleText) titleText.text = "Personnel Management";
-        if (moneyText) moneyText.text = $"Money: {money}";
-        if (costText) costText.text = $"候选池：{candidateCount}/{RecruitPoolSize}";
-        if (refreshLabel)
-        {
-            refreshLabel.text = remainingFree > 0
-                ? $"免费刷新（{remainingFree}/{FreeRefreshPerDay}）"
-                : $"刷新 ¥{nextPaidCost}";
-        }
-        if (cancelLabel) cancelLabel.text = "Close";
+        UpdateHeaderTexts();
 
         // Rebuild agent list to show current status
         EnsureListLayout();
@@ -126,14 +108,14 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         EnsureListLayout();
         // Clear existing items (only children, keep content)
         _agentItems.Clear();
-        foreach (Transform child in agentListContent)
+        var contentRoot = GetContentRoot();
+        foreach (Transform child in contentRoot)
         {
             if (child) Destroy(child.gameObject);
         }
 
-        if (agentListContent == null || itemPrefab == null)
+        if (contentRoot == null || itemPrefab == null)
         {
-            // Agent list not set up yet
             return;
         }
 
@@ -154,7 +136,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
                 : "<color=#66FF66>HIRE</color>";
 
             // Create candidate item UI from prefab
-            var item = Instantiate(itemPrefab, agentListContent, false);
+            var item = Instantiate(itemPrefab, contentRoot, false);
             item.name = $"CandidateItem_{candidate.cid}";
             string displayName = BuildCandidateDisplayName(candidate);
             string attrLine = BuildCandidateAttrLine(candidate);
@@ -178,7 +160,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
             count++;
         }
 
-        LayoutRebuilder.ForceRebuildLayoutImmediate(agentListContent);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot);
         Canvas.ForceUpdateCanvases();
     }
 
@@ -218,9 +200,54 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         candidate.hiredAgentId = agent?.Id;
         candidate.hiredName = agent?.Name;
         UIEvents.RaiseAgentsChanged();
-        Refresh();
-        Canvas.ForceUpdateCanvases();
-        if (agentListScrollRect) agentListScrollRect.verticalNormalizedPosition = 0f;
+        UpdateHeaderTexts();
+        UpdateCandidateItem(candidate);
+    }
+
+    private void UpdateHeaderTexts()
+    {
+        if (!ValidateBindings() || GameController.I == null) return;
+
+        int money = GameController.I.State?.Money ?? 0;
+        int candidateCount = GameController.I.State?.RecruitPool?.candidates?.Count ?? 0;
+        var pool = GameController.I.State?.RecruitPool;
+        int refreshUsedToday = pool?.refreshUsedToday ?? 0;
+        int remainingFree = Mathf.Max(0, FreeRefreshPerDay - refreshUsedToday);
+        int paidIndex = Mathf.Max(0, refreshUsedToday - FreeRefreshPerDay);
+        int nextPaidCost = RefreshBaseCost * (paidIndex + 1);
+
+        if (titleText) titleText.text = "Personnel Management";
+        if (moneyText) moneyText.text = $"Money: {money}";
+        if (costText) costText.text = $"候选池：{candidateCount}/{RecruitPoolSize}";
+        if (refreshLabel)
+        {
+            refreshLabel.text = remainingFree > 0
+                ? $"免费刷新（{remainingFree}/{FreeRefreshPerDay}）"
+                : $"刷新 ¥{nextPaidCost}";
+        }
+        if (cancelLabel) cancelLabel.text = "Close";
+    }
+
+    private void UpdateCandidateItem(RecruitCandidate candidate)
+    {
+        if (candidate == null) return;
+        var contentRoot = GetContentRoot();
+        if (!contentRoot) return;
+
+        var itemTransform = contentRoot.Find($"CandidateItem_{candidate.cid}");
+        if (!itemTransform) return;
+
+        var item = itemTransform.GetComponent<AgentPickerItemView>();
+        if (!item) return;
+
+        bool isHired = candidate.isHired;
+        string statusLine = isHired
+            ? "<color=#AAAAAA>已雇佣</color>"
+            : "<color=#66FF66>HIRE</color>";
+        string displayName = BuildCandidateDisplayName(candidate);
+        string attrLine = BuildCandidateAttrLine(candidate);
+
+        item.Bind(candidate.agent, displayName, attrLine, isHired, false, _ => OnHireCandidate(candidate), statusLine);
     }
 
     private void OnRefreshClicked()
@@ -304,9 +331,15 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
 
     private bool ValidateBindings()
     {
-        if (!agentListContent || !agentListScrollRect || !itemPrefab)
+        if (!itemPrefab)
         {
-            Debug.LogError("RecruitPanel: agentListContent/agentListScrollRect/itemPrefab not assigned in Inspector.");
+            Debug.LogError("RecruitPanel: itemPrefab not assigned in Inspector.");
+            return false;
+        }
+
+        if (!agentListContent && !agentGridContent)
+        {
+            Debug.LogError("RecruitPanel: agentListContent or agentGridContent not assigned in Inspector.");
             return false;
         }
 
@@ -315,9 +348,18 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
 
     private void EnsureListLayout()
     {
-        if (!agentListContent || !agentListScrollRect) return;
+        var contentRoot = GetContentRoot();
+        var scrollRect = GetScrollRect();
+        if (!contentRoot || !scrollRect) return;
 
-        var vlg = agentListContent.GetComponent<VerticalLayoutGroup>() ?? agentListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        if (contentRoot == agentGridContent)
+        {
+            if (scrollRect.content == null)
+                scrollRect.content = contentRoot;
+            return;
+        }
+
+        var vlg = contentRoot.GetComponent<VerticalLayoutGroup>() ?? contentRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.childControlHeight = true;
         vlg.childControlWidth = true;
         vlg.childForceExpandHeight = false;
@@ -325,13 +367,19 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         vlg.spacing = 8f;
         vlg.padding = new RectOffset(0, 0, 0, 0);
 
-        var csf = agentListContent.GetComponent<ContentSizeFitter>() ?? agentListContent.gameObject.AddComponent<ContentSizeFitter>();
+        var csf = contentRoot.GetComponent<ContentSizeFitter>() ?? contentRoot.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        if (agentListScrollRect.content == null)
+        if (scrollRect.content == null)
         {
-            agentListScrollRect.content = agentListContent;
+            scrollRect.content = contentRoot;
         }
     }
+
+    private RectTransform GetContentRoot()
+        => agentGridContent ? agentGridContent : agentListContent;
+
+    private ScrollRect GetScrollRect()
+        => agentListScrollRect;
 
 }

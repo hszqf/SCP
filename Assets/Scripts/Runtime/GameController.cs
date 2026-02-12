@@ -146,9 +146,9 @@ public class GameController : MonoBehaviour
         State.WorldPanic = Math.Max(clampWorldPanicMin, startWorldPanic);
 
         // ---- 初始干员（先写死，后面再换 Data/ScriptableObject）----
-        State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4 });
-        State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6 });
-        State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4 });
+        State.Agents.Add(new AgentState { Id = "A1", Name = "Alice", Perception = 6, Operation = 5, Resistance = 5, Power = 4, AvatarSeed = "A1".GetHashCode() });
+        State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6, AvatarSeed = "A2".GetHashCode() });
+        State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4, AvatarSeed = "A3".GetHashCode() });
 
         // ---- 初始节点（从 DataRegistry 读取，坐标仍由代码提供）----
         var nodeCoords = new Dictionary<string, (float x, float y)>
@@ -272,6 +272,7 @@ public class GameController : MonoBehaviour
             Operation = 5,
             Resistance = 5,
             Power = 5,
+            AvatarSeed = _rng.Next(),
         };
 
         State.Agents.Add(agent);
@@ -303,6 +304,7 @@ public class GameController : MonoBehaviour
             Resistance = stats[2],
             Power = stats[3],
             Level = level,
+            AvatarSeed = _rng.Next(),
         };
 
         int propSum = agent.Perception + agent.Operation + agent.Resistance + agent.Power;

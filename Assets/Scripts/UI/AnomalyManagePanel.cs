@@ -35,12 +35,10 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Generic
     }
 
-    [Header("Left: Anomaly list")]
-    [SerializeField] private Transform anomalyListContent;
-    [SerializeField] private GameObject anomalyListItemPrefab; // must have Button + TMP_Text named "Label" (or any TMP_Text)
-
     [Header("Right: Agent list (AgentPickerItemView)")]
     [SerializeField] private Transform agentListContent;
+    [SerializeField] private RectTransform agentGridContent;
+    [SerializeField] private ScrollRect agentListScrollRect;
     [SerializeField] private GameObject agentPickerItemPrefab; // prefab with AgentPickerItemView
 
     [Header("Actions")]
@@ -50,9 +48,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     [SerializeField] private TMP_Text headerText; // optional
     [SerializeField] private TMP_Text hintText;   // optional
 
-    private readonly List<GameObject> _anomalyItems = new();
     private readonly List<AgentPickerItemView> _agentItems = new();
-    private readonly List<TargetEntry> _currentTargets = new();
 
     private string _selectedTargetId;
     private string _nodeId; // management context node id (set by UIPanelRoot.ManageNodeId)
@@ -139,6 +135,17 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         ClearSelectionState();
         _mode = AssignPanelMode.Manage;
         _nodeId = nodeId;
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+        RefreshUI();
+    }
+
+    public void ShowForNode(string nodeId, string preselectTargetId)
+    {
+        ClearSelectionState();
+        _mode = AssignPanelMode.Manage;
+        _nodeId = nodeId;
+        _selectedTargetId = preselectTargetId;
         gameObject.SetActive(true);
         transform.SetAsLastSibling();
         RefreshUI();
@@ -239,7 +246,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (string.IsNullOrEmpty(_selectedTargetId) || !safeTargets.Any(x => x != null && x.id == _selectedTargetId))
             _selectedTargetId = safeTargets.FirstOrDefault()?.id;
 
-        RebuildTargetList(safeTargets);
+        if (string.IsNullOrEmpty(_selectedTargetId) && safeTargets.Count > 0)
+            _selectedTargetId = safeTargets[0]?.id;
         RebuildAgentList();
         RefreshConfirmState();
 
@@ -253,82 +261,10 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Debug.Log($"[AssignPanel] mode={modeLabel} targets={safeTargets.Count} slots={_slotsMin}-{_slotsMax}");
     }
 
-    private void RebuildTargetList(List<TargetEntry> list)
-    {
-        // Clear
-        for (int i = 0; i < _anomalyItems.Count; i++)
-            if (_anomalyItems[i]) Destroy(_anomalyItems[i]);
-        _anomalyItems.Clear();
-        _currentTargets.Clear();
-
-        if (!anomalyListContent || !anomalyListItemPrefab)
-            return;
-
-        if (list == null || list.Count == 0) return;
-
-        foreach (var entry in list)
-        {
-            var go = Instantiate(anomalyListItemPrefab, anomalyListContent);
-            string entryId = entry?.id ?? "";
-            go.name = "Target_" + entryId;
-            _anomalyItems.Add(go);
-            _currentTargets.Add(entry);
-
-            SetListItemLabels(go, entry);
-
-            bool selected = (entryId == _selectedTargetId);
-            SetListItemSelectedVisual(go, selected);
-
-            var btn = go.GetComponentInChildren<Button>(true);
-            if (btn)
-            {
-                btn.onClick.RemoveAllListeners();
-                string id = entryId;
-                btn.interactable = entry == null || !entry.disabled;
-                btn.onClick.AddListener(() => SelectTarget(id));
-            }
-        }
-    }
-
     private static string BuildAnomalyLabel(ManagedAnomalyState a, int mgr)
     {
         if (a == null) return "";
         return $"{a.Name}  (管理:{mgr})";
-    }
-
-    private void SetListItemSelectedVisual(GameObject go, bool selected)
-    {
-        // Minimal visual: try Image tint if present.
-        var img = go.GetComponentInChildren<Image>(true);
-        if (img)
-        {
-            img.color = selected ? new Color(0f, 0.68f, 0.71f, 0.25f) : new Color(1f, 1f, 1f, 0.05f);
-        }
-    }
-
-    private void SelectTarget(string targetId)
-    {
-        _selectedTargetId = targetId;
-        _selectedAgentIds.Clear();
-
-        Debug.Log($"[AssignPanelSelect] targetId={_selectedTargetId}");
-
-        if (_mode == AssignPanelMode.Manage)
-        {
-            // Pull current assignment (prefer Manage Task, fallback legacy field)
-            var gc = GameController.I;
-            var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
-            var mt = FindManageTask(node, targetId);
-            if (mt?.AssignedAgentIds != null)
-            {
-                foreach (var id in mt.AssignedAgentIds)
-                    _selectedAgentIds.Add(id);
-            }
-        }
-
-        RebuildAgentList();
-        RefreshTargetSelectionVisuals();
-        UpdateHeader();
     }
 
     private void RebuildAgentList()
@@ -338,15 +274,23 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             if (_agentItems[i]) Destroy(_agentItems[i].gameObject);
         _agentItems.Clear();
 
-        if (agentListContent)
+        if (agentListScrollRect && agentListScrollRect.content == null)
         {
-            foreach (Transform child in agentListContent)
+            var scrollContent = GetContentRoot();
+            if (scrollContent is RectTransform rect)
+                agentListScrollRect.content = rect;
+        }
+
+        var contentRoot = GetContentRoot();
+        if (contentRoot)
+        {
+            foreach (Transform child in contentRoot)
             {
                 if (child) Destroy(child.gameObject);
             }
         }
 
-        if (!agentListContent || !agentPickerItemPrefab)
+        if (!contentRoot || !agentPickerItemPrefab)
             return;
 
         var gc = GameController.I;
@@ -385,7 +329,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                 ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText)
                 : "<color=#66FF66>IDLE</color>";
 
-            var go = Instantiate(agentPickerItemPrefab, agentListContent);
+            var go = Instantiate(agentPickerItemPrefab, contentRoot);
             go.name = "Agent_" + ag.Id;
 
             var item = go.GetComponent<AgentPickerItemView>();
@@ -408,6 +352,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         // Update confirm button
         RefreshConfirmState();
     }
+
+    private Transform GetContentRoot()
+        => agentGridContent ? agentGridContent : agentListContent;
 
     private static string BuildAgentAttrLine(AgentState a)
     {
@@ -621,18 +568,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (subtitleLabel) subtitleLabel.text = entry.subtitle ?? "";
     }
 
-    private void RefreshTargetSelectionVisuals()
-    {
-        for (int i = 0; i < _anomalyItems.Count; i++)
-        {
-            var go = _anomalyItems[i];
-            if (go == null) continue;
-            string targetId = i < _currentTargets.Count ? _currentTargets[i]?.id : null;
-            bool selected = !string.IsNullOrEmpty(targetId) && targetId == _selectedTargetId;
-            SetListItemSelectedVisual(go, selected);
-        }
-    }
-
     // 清空所有选中状态（agent/target/缓存）
     private void ClearSelectionState()
     {
@@ -642,13 +577,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         foreach (var item in _agentItems)
         {
             if (item != null) item.SetSelected(false);
-        }
-        // 清空 target item 选中
-        for (int i = 0; i < _anomalyItems.Count; i++)
-        {
-            var go = _anomalyItems[i];
-            if (go == null) continue;
-            SetListItemSelectedVisual(go, false);
         }
     }
 

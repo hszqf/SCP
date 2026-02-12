@@ -26,6 +26,8 @@ namespace Core
         public string Id;
         public string Name;
 
+        public int AvatarSeed = -1;
+
         public int Perception = 5;
         public int Operation = 5;
         public int Resistance = 5;

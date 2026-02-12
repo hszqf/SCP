@@ -21,6 +21,7 @@ public class RosterPanel : MonoBehaviour, IModalClosable
     [SerializeField] private RectTransform agentListContent;
     [SerializeField] private ScrollRect agentListScrollRect;
     [SerializeField] private AgentPickerItemView itemPrefab;
+    [SerializeField] private RectTransform agentGridContent;
 
     private readonly List<GameObject> _agentItems = new();
 
@@ -111,14 +112,14 @@ public class RosterPanel : MonoBehaviour, IModalClosable
         EnsureListLayout();
         // Clear existing items (only children, keep content)
         _agentItems.Clear();
-        foreach (Transform child in agentListContent)
+        var contentRoot = GetContentRoot();
+        foreach (Transform child in contentRoot)
         {
             if (child) Destroy(child.gameObject);
         }
 
-        if (agentListContent == null || itemPrefab == null)
+        if (contentRoot == null || itemPrefab == null)
         {
-            // Agent list not set up yet
             return;
         }
 
@@ -138,7 +139,7 @@ public class RosterPanel : MonoBehaviour, IModalClosable
                 : "<color=#66FF66>IDLE</color>";
 
             // Create agent item UI from prefab
-            var item = Instantiate(itemPrefab, agentListContent, false);
+            var item = Instantiate(itemPrefab, contentRoot, false);
             item.name = $"AgentItem_{agent.Id}";
             string displayName = BuildAgentDisplayName(agent);
             item.Bind(agent, displayName, BuildAgentAttrLine(agent), isBusy, false, null, statusText);
@@ -160,7 +161,7 @@ public class RosterPanel : MonoBehaviour, IModalClosable
             _agentItems.Add(item.gameObject);
         }
 
-        LayoutRebuilder.ForceRebuildLayoutImmediate(agentListContent);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot);
         Canvas.ForceUpdateCanvases();
     }
 
@@ -185,9 +186,15 @@ public class RosterPanel : MonoBehaviour, IModalClosable
 
     private bool ValidateBindings()
     {
-        if (!agentListContent || !agentListScrollRect || !itemPrefab)
+        if (!itemPrefab)
         {
-            Debug.LogError("RosterPanel: agentListContent/agentListScrollRect/itemPrefab not assigned in Inspector.");
+            Debug.LogError("RosterPanel: itemPrefab not assigned in Inspector.");
+            return false;
+        }
+
+        if (!agentListContent && !agentGridContent)
+        {
+            Debug.LogError("RosterPanel: agentListContent or agentGridContent not assigned in Inspector.");
             return false;
         }
 
@@ -196,9 +203,18 @@ public class RosterPanel : MonoBehaviour, IModalClosable
 
     private void EnsureListLayout()
     {
-        if (!agentListContent || !agentListScrollRect) return;
+        var contentRoot = GetContentRoot();
+        var scrollRect = GetScrollRect();
+        if (!contentRoot || !scrollRect) return;
 
-        var vlg = agentListContent.GetComponent<VerticalLayoutGroup>() ?? agentListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        if (contentRoot == agentGridContent)
+        {
+            if (scrollRect.content == null)
+                scrollRect.content = contentRoot;
+            return;
+        }
+
+        var vlg = contentRoot.GetComponent<VerticalLayoutGroup>() ?? contentRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.childControlHeight = true;
         vlg.childControlWidth = true;
         vlg.childForceExpandHeight = false;
@@ -206,13 +222,19 @@ public class RosterPanel : MonoBehaviour, IModalClosable
         vlg.spacing = 8f;
         vlg.padding = new RectOffset(0, 0, 0, 0);
 
-        var csf = agentListContent.GetComponent<ContentSizeFitter>() ?? agentListContent.gameObject.AddComponent<ContentSizeFitter>();
+        var csf = contentRoot.GetComponent<ContentSizeFitter>() ?? contentRoot.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        if (agentListScrollRect.content == null)
+        if (scrollRect.content == null)
         {
-            agentListScrollRect.content = agentListContent;
+            scrollRect.content = contentRoot;
         }
     }
+
+    private RectTransform GetContentRoot()
+        => agentGridContent ? agentGridContent : agentListContent;
+
+    private ScrollRect GetScrollRect()
+        => agentListScrollRect;
 
 }
