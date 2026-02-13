@@ -22,7 +22,9 @@ public class GameController : MonoBehaviour
 
     public GameState State { get; private set; } = new GameState();
     public event Action OnStateChanged;
+    public event Action OnInitialized;
     public bool IsGameOver { get; private set; }
+    public bool IsInitialized => _initialized;
 
     private System.Random _rng;
     private bool _initialized;
@@ -198,6 +200,8 @@ public class GameController : MonoBehaviour
         NewsGenerator.EnsureBootstrapNews(State, registry);
 
         Notify();
+        OnInitialized?.Invoke();
+        Debug.Log("[Boot] GameController initialized and OnInitialized event fired");
     }
 
     private void OnDestroy()

@@ -31,6 +31,56 @@ public class MapNodeSpawner : MonoBehaviour
         I = this;
     }
 
+    private void OnDestroy()
+    {
+        if (GameController.I != null)
+        {
+            GameController.I.OnInitialized -= OnGameControllerInitialized;
+            GameController.I.OnStateChanged -= Refresh;
+        }
+    }
+
+    private void OnGameControllerInitialized()
+    {
+        Debug.Log("[MapNodeSpawner] GameController initialized, building nodes now");
+        if (GameController.I != null)
+            GameController.I.OnInitialized -= OnGameControllerInitialized;
+        Build();
+    }
+
+    private System.Collections.IEnumerator WaitForGameControllerAndBuild()
+    {
+        int maxRetries = 60; // Wait up to 3 seconds (60 frames at 50fps)
+        int retries = 0;
+        
+        while (GameController.I == null && retries < maxRetries)
+        {
+            retries++;
+            yield return null;
+        }
+
+        if (GameController.I == null)
+        {
+            Debug.LogError("[MapNodeSpawner] GameController.I is still null after waiting");
+            yield break;
+        }
+
+        Debug.Log($"[MapNodeSpawner] GameController found after {retries} frame(s)");
+        
+        if (GameController.I.IsInitialized)
+        {
+            Debug.Log("[MapNodeSpawner] GameController already initialized, building immediately");
+            Build();
+        }
+        else
+        {
+            Debug.Log("[MapNodeSpawner] Subscribing to OnInitialized event");
+            GameController.I.OnInitialized += OnGameControllerInitialized;
+        }
+        
+        GameController.I.OnStateChanged += Refresh;
+    }
+
     private void Start()
     {
         if (!mapRect || !nodeLayer || !cityPrefab || !basePrefab)
@@ -42,9 +92,26 @@ public class MapNodeSpawner : MonoBehaviour
 
         BuildAnomalySpriteLookup();
 
-        Build();
+        // Wait for GameController to initialize before building nodes
         if (GameController.I != null)
-            GameController.I.OnStateChanged += Refresh; // 需要的话
+        {
+            if (GameController.I.IsInitialized)
+            {
+                Debug.Log("[MapNodeSpawner] GameController already initialized, building immediately");
+                Build();
+            }
+            else
+            {
+                Debug.Log("[MapNodeSpawner] Waiting for GameController to initialize...");
+                GameController.I.OnInitialized += OnGameControllerInitialized;
+            }
+            GameController.I.OnStateChanged += Refresh;
+        }
+        else
+        {
+            Debug.LogWarning("[MapNodeSpawner] GameController.I is null, will retry in next frame");
+            StartCoroutine(WaitForGameControllerAndBuild());
+        }
     }
 
     private void Build()
