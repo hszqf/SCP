@@ -754,7 +754,8 @@ MonoBehaviour:
   basePrefab: {fileID: 537154171956169728, guid: cfa3352faa3d4164ead6900731e405db, type: 3}
   anomalyLayer: {fileID: 1038949952}
   anomalyPrefab: {fileID: 1515208111589600992, guid: 1ff251a60febe75408fde28f4c15c13d, type: 3}
-  anomalySpawnRadius: 100
+  anomalySpawnRadiusMin: 100
+  anomalySpawnRadiusMax: 150
   unknownAnomalySprite: {fileID: -4731254752490577659, guid: bac8ad09b6594a245831c24a616c1940, type: 3}
   anomalySprites: []
   anomalySpritesResourcePath: Anomalies

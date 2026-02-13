@@ -197,8 +197,8 @@
           "startPopulation": 10000,
           "unlocked": 1,
           "location": [
-            0.1,
-            0.2
+            0.2,
+            0.3
           ]
         },
         {
@@ -208,8 +208,8 @@
           "startPopulation": 20000,
           "unlocked": 1,
           "location": [
-            0.3,
-            0.3
+            0.4,
+            0.5
           ]
         },
         {
@@ -219,8 +219,8 @@
           "startPopulation": 5000,
           "unlocked": 1,
           "location": [
-            0.3,
-            0.5
+            0.7,
+            0.3
           ]
         },
         {
@@ -2803,7 +2803,7 @@
         },
         {
           "day": 5,
-          "AnomaliesGenNum": 1
+          "AnomaliesGenNum": 0
         },
         {
           "day": 6,
@@ -2819,7 +2819,7 @@
         },
         {
           "day": 9,
-          "AnomaliesGenNum": 2
+          "AnomaliesGenNum": 1
         },
         {
           "day": 10,

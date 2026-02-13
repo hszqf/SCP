@@ -15,7 +15,8 @@ public class MapNodeSpawner : MonoBehaviour
     [Header("Anomalies")]
     [SerializeField] private RectTransform anomalyLayer;
     [SerializeField] private GameObject anomalyPrefab;
-    [SerializeField] private float anomalySpawnRadius = 24f;
+    [SerializeField] private float anomalySpawnRadiusMin = 8f;
+    [SerializeField] private float anomalySpawnRadiusMax = 24f;
     [SerializeField] private Sprite unknownAnomalySprite;
     [SerializeField] private List<Sprite> anomalySprites = new();
     [SerializeField] private string anomalySpritesResourcePath = "Anomalies";
@@ -310,13 +311,18 @@ public class MapNodeSpawner : MonoBehaviour
         if (string.IsNullOrEmpty(key)) return Vector2.zero;
         if (_anomalyOffsets.TryGetValue(key, out var offset)) return offset;
 
-        if (anomalySpawnRadius <= 0f)
+        float min = Mathf.Max(0f, anomalySpawnRadiusMin);
+        float max = Mathf.Max(min, anomalySpawnRadiusMax);
+        if (max <= 0f)
         {
             _anomalyOffsets[key] = Vector2.zero;
             return Vector2.zero;
         }
 
-        offset = Random.insideUnitCircle * anomalySpawnRadius;
+        // 取单位圆向量，长度在[min, max]之间
+        Vector2 dir = Random.insideUnitCircle.normalized;
+        float len = Random.Range(min, max);
+        offset = dir * len;
         _anomalyOffsets[key] = offset;
         return offset;
     }
