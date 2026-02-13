@@ -62,7 +62,11 @@ public class NodeButton : MonoBehaviour
         // 只显示城市名字和人口信息，格式：名字\n人口：xxxx
         if (label)
         {
-            label.text = $"{node.Name}\n人口：{node.Population}";
+            int displayPopulation = node.Population;
+            if (node.Type == 0 && DispatchAnimationSystem.I != null)
+                displayPopulation = DispatchAnimationSystem.I.GetVisualAvailableAgentCount();
+
+            label.text = $"{node.Name}\n人口：{displayPopulation}";
         }
     }
 

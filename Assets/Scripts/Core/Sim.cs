@@ -83,9 +83,6 @@ namespace Core
             // Prune old facts (keep last 60 days)
             PruneFacts(s);
 
-            // 0) 异常生成（按 AnomaliesGen 表调度）
-            GenerateScheduledAnomalies(s, rng, registry, s.Day);
-
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Nodes)
             {
@@ -331,6 +328,9 @@ namespace Core
             {
                 GameController.I.MarkGameOver($"reason=WorldPanic day={s.Day} value={s.WorldPanic:0.##} threshold={failThreshold:0.##}");
             }
+
+            // 5) 异常生成（按 AnomaliesGen 表调度）
+            GenerateScheduledAnomalies(s, rng, registry, s.Day);
 
             s.News.Add($"Day {s.Day} 结束");
         }
@@ -1807,6 +1807,14 @@ namespace Core
                 attempts++;
                 var anomalyId = PickRandomAnomalyId(registry, rng);
                 if (string.IsNullOrEmpty(anomalyId)) break;
+
+                bool alreadySpawned = s.Nodes.Any(n =>
+                    n != null &&
+                    ((n.ActiveAnomalyIds != null && n.ActiveAnomalyIds.Contains(anomalyId)) ||
+                     (n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null && m.AnomalyId == anomalyId)) ||
+                     (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Contains(anomalyId))));
+                if (alreadySpawned)
+                    continue;
 
                 var node = nodes[rng.Next(nodes.Count)];
                 if (node == null) continue;

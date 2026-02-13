@@ -38,11 +38,28 @@ public class DispatchAnimationSystem : MonoBehaviour
     private readonly HashSet<string> _rollingTasks = new();
     private readonly HashSet<string> _lockedVisualTasks = new();
     private readonly HashSet<string> _inTransitTasks = new();
+    private readonly HashSet<string> _offBaseAgents = new();
 
     public bool IsInteractionLocked => _activeAgents > 0 || _activeProgressRolls > 0;
 
     public bool IsTaskInTransit(string taskId)
         => !string.IsNullOrEmpty(taskId) && _inTransitTasks.Contains(taskId);
+
+    public int GetVisualAvailableAgentCount()
+    {
+        var gc = GameController.I;
+        if (gc?.State?.Agents == null) return 0;
+
+        int count = 0;
+        foreach (var agent in gc.State.Agents)
+        {
+            if (agent == null || agent.IsDead || agent.IsInsane) continue;
+            if (_offBaseAgents.Contains(agent.Id)) continue;
+            count += 1;
+        }
+
+        return count;
+    }
 
     private class TaskSnapshot
     {
@@ -145,6 +162,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         _boundController = controller;
         _isSubscribed = true;
         CacheCurrentTasks();
+        SyncOffBaseAgents();
         Debug.Log("[MapUI] DispatchAnimationSystem bound to GameController");
     }
 
@@ -162,6 +180,30 @@ public class DispatchAnimationSystem : MonoBehaviour
         _taskCache.Clear();
         foreach (var kvp in current)
             _taskCache[kvp.Key] = kvp.Value;
+    }
+
+    private void SyncOffBaseAgents()
+    {
+        _offBaseAgents.Clear();
+        var gc = GameController.I;
+        if (gc?.State?.Nodes == null) return;
+
+        foreach (var node in gc.State.Nodes)
+        {
+            if (node?.Tasks == null) continue;
+            foreach (var task in node.Tasks)
+            {
+                if (task == null || task.State != TaskState.Active) continue;
+                if (task.Progress <= 0f) continue;
+                if (task.AssignedAgentIds == null) continue;
+
+                foreach (var agentId in task.AssignedAgentIds)
+                {
+                    if (!string.IsNullOrEmpty(agentId))
+                        _offBaseAgents.Add(agentId);
+                }
+            }
+        }
     }
 
     private void ReportDispatchState()
@@ -308,8 +350,13 @@ public class DispatchAnimationSystem : MonoBehaviour
 
                 int index = i + 1;
                 var startPos = ApplyBaseSpawnOffset(ev.FromNodeId, fromLocal);
+                string agentId = ev.AgentIds[i];
                 StartCoroutine(AnimateAgent(ev.TaskId, index, agentCount, startPos, toLocal, duration, () =>
                 {
+                    if (ev.Mode == DispatchMode.Go)
+                        MarkAgentOffBase(agentId);
+                    else
+                        MarkAgentOnBase(agentId);
                     remaining -= 1;
                     _activeAgents = Mathf.Max(0, _activeAgents - 1);
                     if (_activeAgents == 0)
@@ -474,6 +521,20 @@ public class DispatchAnimationSystem : MonoBehaviour
         _hudLocked = locked;
         HUD.I?.SetControlsInteractable(!locked);
         Debug.Log($"[MapUI] HUD {(locked ? "locked" : "unlocked")} during dispatch");
+    }
+
+    private void MarkAgentOffBase(string agentId)
+    {
+        if (string.IsNullOrEmpty(agentId)) return;
+        if (_offBaseAgents.Add(agentId))
+            GameController.I?.Notify();
+    }
+
+    private void MarkAgentOnBase(string agentId)
+    {
+        if (string.IsNullOrEmpty(agentId)) return;
+        if (_offBaseAgents.Remove(agentId))
+            GameController.I?.Notify();
     }
 
     private bool TryGetNodeLocalPoint(string nodeId, out Vector2 localPoint)

@@ -212,18 +212,21 @@ public class MapNodeSpawner : MonoBehaviour
                 string key = BuildAnomalyKey(node.Id, entry.anomalyId, entry.managedId);
                 toKeep.Add(key);
 
+                bool created = false;
                 if (!_anomalyMarkers.TryGetValue(key, out var marker) || marker == null)
                 {
                     var go = Instantiate(anomalyPrefab, anomalyLayer);
                     marker = go.GetComponent<AnomalyMarker>();
                     if (marker == null) marker = go.AddComponent<AnomalyMarker>();
                     _anomalyMarkers[key] = marker;
+                    created = true;
                 }
 
                 var rt = marker.transform as RectTransform;
-                if (rt != null)
+                if (created && rt != null)
                 {
-                    rt.anchoredPosition = nodePos + GetOrCreateAnomalyOffset(key);
+                    var offsetKey = BuildAnomalyOffsetKey(node.Id, entry.anomalyId);
+                    rt.anchoredPosition = nodePos + GetOrCreateAnomalyOffset(offsetKey);
                 }
 
                 bool isKnown = entry.contained || (node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(entry.anomalyId));
@@ -365,6 +368,11 @@ public class MapNodeSpawner : MonoBehaviour
     {
         var managedSuffix = string.IsNullOrEmpty(managedId) ? string.Empty : $":{managedId}";
         return $"{nodeId}:{anomalyId}{managedSuffix}";
+    }
+
+    private static string BuildAnomalyOffsetKey(string nodeId, string anomalyId)
+    {
+        return $"{nodeId}:{anomalyId}";
     }
 
     private static Vector2 ResolveNodeLocation(NodeState node)
