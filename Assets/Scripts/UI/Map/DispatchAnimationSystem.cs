@@ -37,8 +37,12 @@ public class DispatchAnimationSystem : MonoBehaviour
     private float _lastBindAttempt;
     private readonly HashSet<string> _rollingTasks = new();
     private readonly HashSet<string> _lockedVisualTasks = new();
+    private readonly HashSet<string> _inTransitTasks = new();
 
     public bool IsInteractionLocked => _activeAgents > 0 || _activeProgressRolls > 0;
+
+    public bool IsTaskInTransit(string taskId)
+        => !string.IsNullOrEmpty(taskId) && _inTransitTasks.Contains(taskId);
 
     private class TaskSnapshot
     {
@@ -244,6 +248,9 @@ public class DispatchAnimationSystem : MonoBehaviour
         string key = $"{mode}:{taskId}";
         if (!_pendingKeys.Add(key)) return;
 
+        if (mode == DispatchMode.Go && !string.IsNullOrEmpty(taskId))
+            _inTransitTasks.Add(taskId);
+
         _pending.Enqueue(new DispatchEvent
         {
             Mode = mode,
@@ -273,10 +280,19 @@ public class DispatchAnimationSystem : MonoBehaviour
             _pendingKeys.Remove(ev.Key);
 
             if (!TryGetDispatchPoint(ev.TaskId, ev.FromNodeId, out var fromLocal) || !TryGetDispatchPoint(ev.TaskId, ev.ToNodeId, out var toLocal))
+            {
+                if (ev.Mode == DispatchMode.Go && !string.IsNullOrEmpty(ev.TaskId))
+                    _inTransitTasks.Remove(ev.TaskId);
                 continue;
+            }
 
             int agentCount = ev.AgentIds?.Count ?? 0;
-            if (agentCount <= 0) continue;
+            if (agentCount <= 0)
+            {
+                if (ev.Mode == DispatchMode.Go && !string.IsNullOrEmpty(ev.TaskId))
+                    _inTransitTasks.Remove(ev.TaskId);
+                continue;
+            }
 
             Debug.Log($"[MapUI] Dispatch start mode={ev.Mode} taskId={ev.TaskId} from={ev.FromNodeId} to={ev.ToNodeId} agents={agentCount}");
 
@@ -307,6 +323,8 @@ public class DispatchAnimationSystem : MonoBehaviour
             while (remaining > 0)
                 yield return null;
 
+            if (ev.Mode == DispatchMode.Go)
+                _inTransitTasks.Remove(ev.TaskId);
             if (ev.Mode == DispatchMode.Go)
                 StartProgressRoll(ev.TaskId);
         }

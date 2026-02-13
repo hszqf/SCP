@@ -133,7 +133,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
             bool isHired = candidate.isHired;
             string statusLine = isHired
                 ? "<color=#AAAAAA>已雇佣</color>"
-                : "<color=#66FF66>HIRE</color>";
+                : "<color=#66FF66>可雇佣</color>";
 
             // Create candidate item UI from prefab
             var item = Instantiate(itemPrefab, contentRoot, false);

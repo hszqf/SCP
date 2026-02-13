@@ -1170,9 +1170,13 @@ namespace Core
 
                 if (!hasActiveContainTask)
                 {
-                    node.HasAnomaly = false;
-                    node.ActiveAnomalyIds?.Clear();
-                    node.Status = hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
+                    if (!string.IsNullOrEmpty(anomalyId))
+                    {
+                        node.ActiveAnomalyIds?.Remove(anomalyId);
+                    }
+
+                    node.HasAnomaly = node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0;
+                    node.Status = node.HasAnomaly || hasActiveInvestigateWithSquad ? NodeStatus.Calm : NodeStatus.Secured;
                 }
 
                 // ===== EXP Reward for Contain =====
