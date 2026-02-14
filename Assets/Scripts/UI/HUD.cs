@@ -155,9 +155,9 @@ public class HUD : MonoBehaviour
         if (debugText)
         {
             int ev = 0;
-            if (s.Nodes != null)
+            if (s.Cities != null)
             {
-                foreach (var node in s.Nodes)
+                foreach (var node in s.Cities)
                     ev += node?.PendingEvents?.Count ?? 0;
             }
             debugText.text = $"Events: {ev}";

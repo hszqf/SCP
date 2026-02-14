@@ -512,7 +512,51 @@ public class UIPanelRoot : MonoBehaviour
 
     public void OpenNews()
     {
-        OpenNewspaperPanel();
+        if (NewspaperPanelPrefab)
+        {
+            OpenNewspaperPanel();
+            return;
+        }
+
+        OpenNewsPanel();
+    }
+
+    void EnsureNewsPanel()
+    {
+        if (_newsPanel) return;
+        if (!newsPanelPrefab)
+        {
+            Debug.LogWarning("[UIPanelRoot] NewsPanel prefab 未配置！");
+            return;
+        }
+
+        _newsPanel = Instantiate(newsPanelPrefab, transform);
+        _newsPanel.gameObject.SetActive(false);
+    }
+
+    void EnsureAgentPicker()
+    {
+        if (_agentPicker) return;
+        if (!agentPickerPrefab)
+        {
+            Debug.LogWarning("[UIPanelRoot] AgentPicker prefab 未配置！");
+            return;
+        }
+
+        _agentPicker = Instantiate(agentPickerPrefab, transform);
+        _agentPicker.gameObject.SetActive(false);
+    }
+
+    void OpenNewsPanel()
+    {
+        EnsureNewsPanel();
+        if (_newsPanel)
+        {
+            _newsPanel.Show();
+            _newsPanel.transform.SetAsLastSibling();
+            PushModal(_newsPanel.gameObject, "open news");
+            RefreshModalStack("open news", _newsPanel.gameObject);
+        }
     }
 
     void EnsureNewspaperPanel()
@@ -657,7 +701,7 @@ public class UIPanelRoot : MonoBehaviour
         nodeId = null;
         ev = null;
 
-        foreach (var n in GameController.I.State.Nodes)
+        foreach (var n in GameController.I.State.Cities)
         {
             if (n?.PendingEvents == null || n.PendingEvents.Count == 0) continue;
             ev = n.PendingEvents[0];

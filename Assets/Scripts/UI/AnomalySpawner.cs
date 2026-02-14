@@ -111,7 +111,7 @@ public class AnomalySpawner : MonoBehaviour
 
     private void Build()
     {
-        if (GameController.I == null || GameController.I.State?.Nodes == null) return;
+        if (GameController.I == null || GameController.I.State?.Cities == null) return;
 
         _cityRects.Clear();
 
@@ -140,12 +140,12 @@ public class AnomalySpawner : MonoBehaviour
     private void RefreshAnomalies()
     {
         if (!anomalyLayer || !anomalyPrefab) return;
-        if (GameController.I == null || GameController.I.State?.Nodes == null) return;
+        if (GameController.I == null || GameController.I.State?.Cities == null) return;
 
         var toKeep = new HashSet<string>();
         var offsetKeysToKeep = new HashSet<string>();
 
-        foreach (var node in GameController.I.State.Nodes)
+        foreach (var node in GameController.I.State.Cities)
         {
             if (node == null || !node.Unlocked) continue;
 
@@ -335,7 +335,7 @@ public class AnomalySpawner : MonoBehaviour
     private static string ResolveNodeName(string nodeId)
     {
         if (string.IsNullOrEmpty(nodeId)) return string.Empty;
-        var nodes = GameController.I?.State?.Nodes;
+        var nodes = GameController.I?.State?.Cities;
         if (nodes == null) return nodeId;
         var node = nodes.Find(n => n != null && n.Id == nodeId);
         return node?.Name ?? nodeId;
@@ -348,7 +348,7 @@ public class AnomalySpawner : MonoBehaviour
         if (_anomalyAnchorPositions.TryGetValue(key, out var anchor))
             return anchor;
 
-        var nodes = GameController.I?.State?.Nodes;
+        var nodes = GameController.I?.State?.Cities;
         if (nodes != null)
         {
             var candidates = new List<NodeState>();

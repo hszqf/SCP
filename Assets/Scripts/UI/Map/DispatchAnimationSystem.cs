@@ -13,7 +13,6 @@ public class DispatchAnimationSystem : MonoBehaviour
     [SerializeField] private GameObject agentPrefab;
 
     [Header("Config")]
-    [SerializeField] private string baseNodeId = "BASE";
     [SerializeField] private float travelSeconds = 10f;
     [SerializeField] private float baseSpawnRadius = 5f;
     [SerializeField] private float launchInterval = 0.5f;
@@ -39,6 +38,9 @@ public class DispatchAnimationSystem : MonoBehaviour
     private readonly HashSet<string> _lockedVisualTasks = new();
     private readonly HashSet<string> _inTransitTasks = new();
     private readonly HashSet<string> _offBaseAgents = new();
+    private string _cachedBaseNodeId;
+    private bool _nodesScanned;
+    private readonly Dictionary<string, List<string>> _taskAgentHistory = new();
 
     public bool IsInteractionLocked => _activeAgents > 0 || _activeProgressRolls > 0;
 
@@ -121,6 +123,12 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         if (string.IsNullOrEmpty(nodeId) || nodeRT == null) return;
         _nodes[nodeId] = nodeRT;
+
+        if (!string.IsNullOrEmpty(_cachedBaseNodeId) &&
+            string.Equals(_cachedBaseNodeId, nodeId, System.StringComparison.OrdinalIgnoreCase))
+        {
+            _missingNodeWarned.Remove("__base__");
+        }
     }
 
     public void RegisterAnomaly(string nodeId, string anomalyId, RectTransform anomalyRT)
@@ -163,6 +171,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         _isSubscribed = true;
         CacheCurrentTasks();
         SyncOffBaseAgents();
+        EnsureNodeRegistry();
         Debug.Log("[MapUI] DispatchAnimationSystem bound to GameController");
     }
 
@@ -186,9 +195,9 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         _offBaseAgents.Clear();
         var gc = GameController.I;
-        if (gc?.State?.Nodes == null) return;
+        if (gc?.State?.Cities == null) return;
 
-        foreach (var node in gc.State.Nodes)
+        foreach (var node in gc.State.Cities)
         {
             if (node?.Tasks == null) continue;
             foreach (var task in node.Tasks)
@@ -228,22 +237,22 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         var result = new Dictionary<string, TaskSnapshot>();
         var gc = GameController.I;
-        if (gc?.State?.Nodes == null) return result;
+        if (gc?.State?.Cities == null) return result;
 
-        foreach (var node in gc.State.Nodes)
+        foreach (var node in gc.State.Cities)
         {
             if (node?.Tasks == null) continue;
-            foreach (var task in node.Tasks)
+            foreach (var t in node.Tasks)
             {
-                if (task == null || string.IsNullOrEmpty(task.Id)) continue;
-                var agents = task.AssignedAgentIds ?? new List<string>();
-                result[task.Id] = new TaskSnapshot
+                if (t == null || t.State != TaskState.Active) continue;
+                if (string.IsNullOrEmpty(t.Id)) continue;
+                result.Add(t.Id, new TaskSnapshot
                 {
                     NodeId = node.Id,
-                    State = task.State,
-                    AgentIds = new List<string>(agents),
-                    Progress = task.Progress
-                };
+                    State = t.State,
+                    AgentIds = t.AssignedAgentIds ?? new List<string>(),
+                    Progress = t.Progress
+                });
             }
         }
 
@@ -252,6 +261,10 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     private void EnqueueTransitions()
     {
+        var baseId = ResolveBaseNodeId();
+        if (string.IsNullOrEmpty(baseId))
+            return;
+
         var current = BuildTaskSnapshotMap();
 
         foreach (var kvp in current)
@@ -262,7 +275,7 @@ public class DispatchAnimationSystem : MonoBehaviour
                 continue;
 
             if (!_taskCache.TryGetValue(taskId, out var previous) || previous.Progress <= 0f)
-                EnqueueDispatch(DispatchMode.Go, taskId, baseNodeId, snapshot.NodeId, snapshot.AgentIds, previous?.Progress ?? 0f);
+                EnqueueDispatch(DispatchMode.Go, taskId, baseId, snapshot.NodeId, snapshot.AgentIds, previous?.Progress ?? 0f);
         }
 
         foreach (var kvp in _taskCache)
@@ -273,8 +286,8 @@ public class DispatchAnimationSystem : MonoBehaviour
 
             if (!current.TryGetValue(taskId, out var currentSnapshot) || currentSnapshot.State != TaskState.Active)
             {
-                if (snapshot.Progress > 0f)
-                    EnqueueDispatch(DispatchMode.Return, taskId, snapshot.NodeId, baseNodeId, snapshot.AgentIds);
+                if (snapshot.Progress > 0f || HasOffBaseAgents(snapshot.AgentIds) || _inTransitTasks.Contains(taskId))
+                    EnqueueDispatch(DispatchMode.Return, taskId, snapshot.NodeId, baseId, snapshot.AgentIds);
             }
         }
 
@@ -287,6 +300,10 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     private void EnqueueDispatch(DispatchMode mode, string taskId, string fromNodeId, string toNodeId, List<string> agentIds, float previousProgress = 0f)
     {
+        var resolvedAgents = ResolveDispatchAgents(mode, taskId, agentIds);
+        if (resolvedAgents.Count == 0)
+            return;
+
         string key = $"{mode}:{taskId}";
         if (!_pendingKeys.Add(key)) return;
 
@@ -299,12 +316,39 @@ public class DispatchAnimationSystem : MonoBehaviour
             TaskId = taskId,
             FromNodeId = fromNodeId,
             ToNodeId = toNodeId,
-            AgentIds = agentIds != null ? new List<string>(agentIds) : new List<string>(),
+            AgentIds = resolvedAgents,
             Key = key,
             PreviousProgress = previousProgress
         });
 
-        Debug.Log($"[MapUI] Dispatch enqueue mode={mode} taskId={taskId} from={fromNodeId} to={toNodeId} agents={agentIds?.Count ?? 0}");
+        Debug.Log($"[MapUI] Dispatch enqueue mode={mode} taskId={taskId} from={fromNodeId} to={toNodeId} agents={resolvedAgents.Count}");
+    }
+
+    private List<string> ResolveDispatchAgents(DispatchMode mode, string taskId, List<string> agentIds)
+    {
+        List<string> resolved;
+        if (agentIds != null && agentIds.Count > 0)
+        {
+            resolved = new List<string>();
+            foreach (var id in agentIds)
+            {
+                if (!string.IsNullOrEmpty(id))
+                    resolved.Add(id);
+            }
+        }
+        else if (!string.IsNullOrEmpty(taskId) && _taskAgentHistory.TryGetValue(taskId, out var cached))
+        {
+            resolved = new List<string>(cached);
+        }
+        else
+        {
+            resolved = new List<string>();
+        }
+
+        if (mode == DispatchMode.Go && !string.IsNullOrEmpty(taskId) && resolved.Count > 0)
+            _taskAgentHistory[taskId] = new List<string>(resolved);
+
+        return resolved;
     }
 
     private IEnumerator PlayPendingRoutine()
@@ -374,6 +418,8 @@ public class DispatchAnimationSystem : MonoBehaviour
                 _inTransitTasks.Remove(ev.TaskId);
             if (ev.Mode == DispatchMode.Go)
                 StartProgressRoll(ev.TaskId);
+            if (ev.Mode == DispatchMode.Return && !string.IsNullOrEmpty(ev.TaskId))
+                _taskAgentHistory.Remove(ev.TaskId);
         }
 
         _playRoutine = null;
@@ -431,9 +477,9 @@ public class DispatchAnimationSystem : MonoBehaviour
     private void SyncVisualProgress()
     {
         var gc = GameController.I;
-        if (gc?.State?.Nodes == null) return;
+        if (gc?.State?.Cities == null) return;
 
-        foreach (var node in gc.State.Nodes)
+        foreach (var node in gc.State.Cities)
         {
             if (node?.Tasks == null) continue;
             foreach (var task in node.Tasks)
@@ -537,10 +583,56 @@ public class DispatchAnimationSystem : MonoBehaviour
             GameController.I?.Notify();
     }
 
+    private void TryRegisterNodeFromScene(string nodeId)
+    {
+        if (string.IsNullOrEmpty(nodeId)) return;
+        var cities = FindObjectsByType<City>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (cities == null || cities.Length == 0) return;
+
+        foreach (var city in cities)
+        {
+            if (city == null || !string.Equals(city.CityId, nodeId, System.StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var rt = city.transform as RectTransform;
+            if (rt != null)
+            {
+                _nodes[city.CityId] = rt;
+                Debug.Log($"[MapUI] Dispatch node registered cityId={city.CityId}");
+            }
+            return;
+        }
+    }
+
+    private void EnsureNodeRegistry()
+    {
+        if (_nodesScanned) return;
+        _nodesScanned = true;
+
+        var cities = FindObjectsByType<City>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Debug.Log($"[MapUI] Dispatch node scan count={cities?.Length ?? 0}");
+
+        if (cities == null || cities.Length == 0) return;
+
+        foreach (var city in cities)
+        {
+            if (city == null || string.IsNullOrEmpty(city.CityId))
+                continue;
+
+            var rt = city.transform as RectTransform;
+            if (rt != null)
+            {
+                _nodes[city.CityId] = rt;
+                Debug.Log($"[MapUI] Dispatch node registered cityId={city.CityId}");
+            }
+        }
+    }
+
     private bool TryGetNodeLocalPoint(string nodeId, out Vector2 localPoint)
     {
         localPoint = Vector2.zero;
         if (string.IsNullOrEmpty(nodeId)) return false;
+        EnsureNodeRegistry();
         if (!_nodes.TryGetValue(nodeId, out var nodeRT) || nodeRT == null)
         {
             if (_missingNodeWarned.Add(nodeId))
@@ -555,7 +647,10 @@ public class DispatchAnimationSystem : MonoBehaviour
         localPoint = Vector2.zero;
         if (string.IsNullOrEmpty(nodeId)) return false;
 
-        if (string.Equals(nodeId, baseNodeId, System.StringComparison.OrdinalIgnoreCase))
+        EnsureNodeRegistry();
+        var baseId = ResolveBaseNodeId();
+        Debug.Log($"[MapUI] Dispatch point lookup taskId={taskId} nodeId={nodeId} baseId={baseId ?? "null"} nodes={_nodes.Count}");
+        if (!string.IsNullOrEmpty(baseId) && string.Equals(nodeId, baseId, System.StringComparison.OrdinalIgnoreCase))
             return TryGetNodeLocalPoint(nodeId, out localPoint);
 
         if (TryGetTaskAnomalyLocalPoint(taskId, nodeId, out localPoint))
@@ -614,10 +709,85 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     private Vector2 ApplyBaseSpawnOffset(string fromNodeId, Vector2 origin)
     {
-        if (!string.Equals(fromNodeId, baseNodeId, System.StringComparison.OrdinalIgnoreCase))
+        var baseId = ResolveBaseNodeId();
+        if (string.IsNullOrEmpty(baseId) || !string.Equals(fromNodeId, baseId, System.StringComparison.OrdinalIgnoreCase))
             return origin;
 
         if (baseSpawnRadius <= 0f) return origin;
         return origin + Random.insideUnitCircle * baseSpawnRadius;
+    }
+
+    private string ResolveBaseNodeId()
+    {
+        if (!string.IsNullOrEmpty(_cachedBaseNodeId))
+            return _cachedBaseNodeId;
+
+        if (_nodes.Count > 0)
+        {
+            var mapBase = FindBaseCityOnMap();
+            if (!string.IsNullOrEmpty(mapBase))
+            {
+                Debug.Log($"[MapUI] Dispatch base resolved from map cityId={mapBase}");
+                _cachedBaseNodeId = mapBase;
+                return _cachedBaseNodeId;
+            }
+        }
+
+        var gc = GameController.I;
+        var baseNode = gc?.State?.Cities?.Find(node => node != null && node.Type == 0);
+        if (baseNode == null)
+        {
+            if (_missingNodeWarned.Add("__base__"))
+                Debug.LogWarning("[MapUI] Dispatch base node missing (type=0)");
+            return null;
+        }
+
+        if (!_nodes.ContainsKey(baseNode.Id))
+            TryRegisterNodeFromScene(baseNode.Id);
+
+        Debug.Log($"[MapUI] Dispatch base resolved from state nodeId={baseNode.Id}");
+        _cachedBaseNodeId = baseNode.Id;
+        return _cachedBaseNodeId;
+    }
+
+    private string FindBaseCityOnMap()
+    {
+        var cities = FindObjectsByType<City>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Debug.Log($"[MapUI] Dispatch base map scan count={cities?.Length ?? 0} nodes={_nodes.Count}");
+        if (cities == null || cities.Length == 0) return null;
+
+        City baseCity = null;
+        foreach (var city in cities)
+        {
+            if (city == null || city.CityType != 0 || string.IsNullOrEmpty(city.CityId))
+                continue;
+            baseCity = city;
+            break;
+        }
+
+        if (baseCity == null) return null;
+
+        if (!_nodes.ContainsKey(baseCity.CityId))
+        {
+            var rt = baseCity.transform as RectTransform;
+            if (rt != null)
+            {
+                _nodes[baseCity.CityId] = rt;
+                Debug.Log($"[MapUI] Dispatch base node registered cityId={baseCity.CityId}");
+            }
+        }
+
+        return baseCity.CityId;
+    }
+
+    private bool HasOffBaseAgents(List<string> agentIds)
+    {
+        if (agentIds == null || agentIds.Count == 0) return false;
+        foreach (var agentId in agentIds)
+        {
+            if (string.IsNullOrEmpty(agentId)) continue;
+            if (_offBaseAgents.Contains(agentId)) return true;
+        }
+        return false;
     }
 }

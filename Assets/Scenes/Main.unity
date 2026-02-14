@@ -775,8 +775,8 @@ MonoBehaviour:
   nodeLayer: {fileID: 1038949952}
   anomalyLayer: {fileID: 1038949952}
   anomalyPrefab: {fileID: 1515208111589600992, guid: 1ff251a60febe75408fde28f4c15c13d, type: 3}
-  anomalySpawnRadiusMin: 1
-  anomalySpawnRadiusMax: 1
+  anomalySpawnRadiusMin: 50
+  anomalySpawnRadiusMax: 150
 --- !u!224 &1442465173 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
@@ -792,7 +792,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityId
-      value: 2
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
+      propertyPath: cityName
+      value: BASE
+      objectReference: {fileID: 0}
+    - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
+      propertyPath: cityType
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
+      propertyPath: population
+      value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_Pivot.x
@@ -860,7 +872,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -396
+      value: -432
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1011,8 +1023,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DispatchAnimationSystem
   tokenLayer: {fileID: 582351644}
   agentPrefab: {fileID: 5703374399035949852, guid: 992cd55eb171b8f45b7c858893700a63, type: 3}
-  baseNodeId: BASE
-  travelSeconds: 3
+  travelSeconds: 2
   baseSpawnRadius: 20
   launchInterval: 0.3
   arrivalProgressStepPercent: 0.01
@@ -1027,19 +1038,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityId
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityName
-      value: Base
+      value: Rockford
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityType
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: population
-      value: -1
+      value: 10000
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_Pivot.x
@@ -1107,7 +1118,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 20
+      value: -16
       objectReference: {fileID: 0}
     - target: {fileID: 4121930885990953639, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

@@ -11,10 +11,11 @@ public static class LogOverlayBootstrap
     private static void Initialize()
     {
         // Overlay debug disabled by default.
-        return;
+        if (!ShouldInitialize())
+            return;
 
         // Check if LogOverlay already exists to prevent duplicates
-        var existing = Object.FindObjectOfType<LogOverlay>();
+        var existing = Object.FindAnyObjectByType<LogOverlay>();
         if (existing != null)
         {
             Debug.Log("[LogOverlayBootstrap] LogOverlay already exists, skipping creation");
@@ -29,5 +30,10 @@ public static class LogOverlayBootstrap
         Debug.Log("[LogOverlayBootstrap] LogOverlay created and initialized");
         
         // Note: Initial visibility is set in LogOverlay.OnEnable() based on platform and URL
+    }
+    
+    private static bool ShouldInitialize()
+    {
+        return false;
     }
 }

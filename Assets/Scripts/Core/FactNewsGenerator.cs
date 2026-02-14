@@ -455,10 +455,10 @@ namespace Core
         /// </summary>
         private static string GetNodeName(GameState state, string nodeId)
         {
-            if (state?.Nodes == null || string.IsNullOrEmpty(nodeId))
+            if (state?.Cities == null || string.IsNullOrEmpty(nodeId))
                 return "未知地点";
 
-            var node = state.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
+            var node = state.Cities.FirstOrDefault(n => n != null && n.Id == nodeId);
             return node?.Name ?? nodeId;
         }
     }

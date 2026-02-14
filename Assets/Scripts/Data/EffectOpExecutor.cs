@@ -126,8 +126,8 @@ namespace Data
 
         private static void ApplyToTaskType(EffectOp op, GameState state, TaskType? taskType)
         {
-            if (state?.Nodes == null || !taskType.HasValue) return;
-            foreach (var node in state.Nodes)
+            if (state?.Cities == null || !taskType.HasValue) return;
+            foreach (var node in state.Cities)
             {
                 if (node?.Tasks == null) continue;
                 foreach (var task in node.Tasks)

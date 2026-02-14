@@ -84,7 +84,7 @@ namespace Core
             PruneFacts(s);
 
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
-            foreach (var n in s.Nodes)
+            foreach (var n in s.Cities)
             {
                 if (n == null || n.Type == 0) continue;
                 if (n?.Tasks == null || n.Tasks.Count == 0) continue;
@@ -238,7 +238,7 @@ namespace Core
             int maintenance = 0;
             float worldPanicAdd = 0f;
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null) continue;
 
@@ -275,7 +275,7 @@ namespace Core
             int totalPopLoss = 0;
             var popLossByNode = new Dictionary<string, int>();
 
-            foreach (var originNode in s.Nodes)
+            foreach (var originNode in s.Cities)
             {
                 if (originNode == null || originNode.ActiveAnomalyIds == null || originNode.ActiveAnomalyIds.Count == 0)
                     continue;
@@ -287,7 +287,7 @@ namespace Core
                     if (kill <= 0) continue;
 
                     float range = registry.GetAnomalyFloatWithWarn(anomalyId, "range", 0f);
-                    foreach (var targetNode in s.Nodes)
+                    foreach (var targetNode in s.Cities)
                     {
                         if (targetNode == null || targetNode.Type == 0) continue;
                         if (!IsNodeWithinRange(originNode, targetNode, range)) continue;
@@ -300,7 +300,7 @@ namespace Core
                 }
             }
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null) continue;
                 if (!popLossByNode.TryGetValue(node.Id, out var popLoss) || popLoss <= 0) continue;
@@ -321,7 +321,7 @@ namespace Core
             }
 
             int income = 0;
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null) continue;
                 income += Mathf.FloorToInt(node.Population * popToMoneyRate);
@@ -357,7 +357,7 @@ namespace Core
         public static (bool success, string text) ResolveEvent(GameState s, string nodeId, string eventInstanceId, string optionId, Random rng)
         {
             var registry = DataRegistry.Instance;
-            var node = s.Nodes.FirstOrDefault(n => n != null && n.Id == nodeId);
+            var node = s.Cities.FirstOrDefault(n => n != null && n.Id == nodeId);
             if (node == null) return (false, "节点不存在");
             if (node.PendingEvents == null || node.PendingEvents.Count == 0) return (false, "节点无事件");
 
@@ -428,7 +428,7 @@ namespace Core
 
         private static void GenerateRandomDailyEvents(GameState s, Random rng, DataRegistry registry)
         {
-            if (s == null || s.Nodes == null) return;
+            if (s == null || s.Cities == null) return;
 
             var randomDailyDefs = registry.EventsById.Values
                 .Where(def => def != null &&
@@ -444,7 +444,7 @@ namespace Core
             var firedCounts = s.EventFiredCounts ??= new Dictionary<string, int>();
             var lastFiredDay = s.EventLastFiredDay ??= new Dictionary<string, int>();
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.Tasks == null || node.Tasks.Count == 0) continue;
 
@@ -492,7 +492,7 @@ namespace Core
                 }
             }
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null) continue;
                 nodeCtxChecked += 1;
@@ -536,7 +536,7 @@ namespace Core
 
         private static void GenerateRandomDailyNews(GameState s, Random rng, DataRegistry registry)
         {
-            if (s == null || s.Nodes == null) return;
+            if (s == null || s.Cities == null) return;
 
             // Create a day-specific RNG to ensure each day has different news
             // Use base seed from rng.Next() XOR day to maintain reproducibility while varying per day
@@ -564,7 +564,7 @@ namespace Core
             var firedCounts = s.NewsFiredCounts ??= new Dictionary<string, int>();
             var lastFiredDay = s.NewsLastFiredDay ??= new Dictionary<string, int>();
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0) continue;
 
@@ -596,7 +596,7 @@ namespace Core
                 }
             }
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null) continue;
                 nodeCtxChecked += 1;
@@ -628,7 +628,7 @@ namespace Core
         public static bool ApplyIgnorePenaltyOnDayEnd(GameState s, DataRegistry registry)
         {
             bool anyApplied = false;
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
 
@@ -688,7 +688,7 @@ namespace Core
             int scanned = 0;
             int removed = 0;
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
 
@@ -1576,7 +1576,7 @@ namespace Core
         {
             if (s == null || string.IsNullOrEmpty(agentId)) return;
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.Tasks == null) continue;
                 foreach (var task in node.Tasks)
@@ -1606,11 +1606,11 @@ namespace Core
 
         static void StepManageTasks(GameState s, Random rng, DataRegistry registry)
         {
-            if (s == null || s.Nodes == null || s.Nodes.Count == 0) return;
+            if (s == null || s.Cities == null || s.Cities.Count == 0) return;
 
             int totalAllNodes = 0;
 
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node == null || node.Type == 0) continue;
                 if (node.Tasks == null || node.Tasks.Count == 0) continue;
@@ -1641,7 +1641,7 @@ namespace Core
                     {
                         registry.AnomaliesById.TryGetValue(defId, out manageDef);
                     }
-                    if (manageDef == null) continue;
+                    if ( manageDef == null) continue;
 
                     int yield = CalcDailyNegEntropyYield(m, manageDef);
                     if (yield <= 0) continue;
@@ -1717,10 +1717,10 @@ namespace Core
 
         private static void ApplyIdleAgentRecovery(GameState s)
         {
-            if (s?.Agents == null || s.Nodes == null) return;
+            if (s?.Agents == null || s.Cities == null) return;
 
             var busy = new HashSet<string>();
-            foreach (var node in s.Nodes)
+            foreach (var node in s.Cities)
             {
                 if (node?.Tasks == null) continue;
                 foreach (var task in node.Tasks)
@@ -1777,9 +1777,9 @@ namespace Core
         private static bool TryGetOriginTask(GameState s, string taskId, out NodeState node)
         {
             node = null;
-            if (string.IsNullOrEmpty(taskId) || s?.Nodes == null) return false;
+            if (string.IsNullOrEmpty(taskId) || s?.Cities == null) return false;
 
-            foreach (var n in s.Nodes)
+            foreach (var n in s.Cities)
             {
                 if (n?.Tasks == null) continue;
                 if (n.Tasks.Any(t => t != null && t.Id == taskId))
@@ -1834,7 +1834,7 @@ namespace Core
             int genNum = registry.GetAnomaliesGenNumForDay(day);
             if (genNum <= 0) return 0;
 
-            var nodes = s.Nodes?.Where(n => n != null).ToList();
+            var nodes = s.Cities?.Where(n => n != null).ToList();
             if (nodes == null || nodes.Count == 0) return 0;
             nodes = nodes.Where(n => n != null && n.Type != 0 && n.Unlocked).ToList();
             if (nodes.Count == 0) return 0;
@@ -1849,7 +1849,7 @@ namespace Core
                 var anomalyId = PickRandomAnomalyId(registry, rng);
                 if (string.IsNullOrEmpty(anomalyId)) break;
 
-                bool alreadySpawned = s.Nodes.Any(n =>
+                bool alreadySpawned = s.Cities.Any(n =>
                     n != null &&
                     ((n.ActiveAnomalyIds != null && n.ActiveAnomalyIds.Contains(anomalyId)) ||
                      (n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null && m.AnomalyId == anomalyId)) ||
@@ -1921,7 +1921,7 @@ namespace Core
         /// </summary>
         public static string BuildAgentBusyText(GameState state, string agentId)
         {
-            if (state?.Nodes == null || string.IsNullOrEmpty(agentId))
+            if (state?.Cities == null || string.IsNullOrEmpty(agentId))
                 return string.Empty;
 
             var registry = DataRegistry.Instance;
@@ -1934,7 +1934,7 @@ namespace Core
             }
 
             // Traverse all nodes and tasks to find where this agent is assigned
-            foreach (var node in state.Nodes)
+            foreach (var node in state.Cities)
             {
                 if (node?.Tasks == null) continue;
 

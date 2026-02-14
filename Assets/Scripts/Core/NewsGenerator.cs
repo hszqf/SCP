@@ -51,16 +51,16 @@ namespace Core
 
         private static string ResolveBootstrapNodeId(GameState state, string requiresNodeId)
         {
-            if (state?.Nodes == null || state.Nodes.Count == 0) return null;
+            if (state?.Cities == null || state.Cities.Count == 0) return null;
 
             if (string.IsNullOrEmpty(requiresNodeId) || string.Equals(requiresNodeId, "ANY", StringComparison.OrdinalIgnoreCase))
             {
-                return state.Nodes[0].Id;
+                return state.Cities[0].Id;
             }
 
             if (string.Equals(requiresNodeId, "START", StringComparison.OrdinalIgnoreCase))
             {
-                return state.Nodes[0].Id;
+                return state.Cities[0].Id;
             }
 
             return requiresNodeId;

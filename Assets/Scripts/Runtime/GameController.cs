@@ -153,7 +153,7 @@ public class GameController : MonoBehaviour
         State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4, AvatarSeed = "A3".GetHashCode() });
 
         // ---- 初始节点（从场景 City 组件读取）----
-        var cities = FindObjectsOfType<City>(true)
+        var cities = FindObjectsByType<City>(FindObjectsInactive.Include, FindObjectsSortMode.None)
             .Where(c => c != null && !string.IsNullOrEmpty(c.CityId))
             .OrderBy(c => c.CityId)
             .ToList();
@@ -185,7 +185,7 @@ public class GameController : MonoBehaviour
 
             nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
 
-            State.Nodes.Add(nodeState);
+            State.Cities.Add(nodeState);
         }
 
         // ---- 初始异常生成（AnomaliesGen day=1）----
@@ -209,7 +209,7 @@ public class GameController : MonoBehaviour
     public void Notify() => OnStateChanged?.Invoke();
 
     public NodeState GetNode(string nodeId)
-        => State.Nodes.FirstOrDefault(n => n.Id == nodeId);
+        => State.Cities.FirstOrDefault(n => n.Id == nodeId);
 
     public AgentState GetAgent(string agentId)
         => State.Agents.FirstOrDefault(a => a.Id == agentId);
@@ -245,7 +245,7 @@ public class GameController : MonoBehaviour
     // Legacy wrapper: locate node by eventId across all nodes.
     public (bool success, string text) ResolveEvent(string eventId, string optionId)
     {
-        var node = State.Nodes.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventInstanceId == eventId));
+        var node = State.Cities.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventInstanceId == eventId));
         if (node == null) return (false, "事件不存在");
         return ResolveEvent(node.Id, eventId, optionId);
     }
@@ -499,9 +499,9 @@ public class GameController : MonoBehaviour
     {
         node = null;
         task = null;
-        if (string.IsNullOrEmpty(taskId) || State?.Nodes == null) return false;
+        if (string.IsNullOrEmpty(taskId) || State?.Cities == null) return false;
 
-        foreach (var n in State.Nodes)
+        foreach (var n in State.Cities)
         {
             if (n?.Tasks == null) continue;
             var t = n.Tasks.FirstOrDefault(x => x != null && x.Id == taskId);
@@ -659,7 +659,7 @@ public static class GameControllerTaskExt
 
     public static bool AreAgentsBusy(GameController gc, List<string> agentIds, string _unusedCurrentNodeId = null)
     {
-        if (gc == null || gc.State?.Nodes == null) return false;
+        if (gc == null || gc.State?.Cities == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 
         var busy = DeriveBusyAgentIdsFromTasks(gc);
@@ -823,9 +823,9 @@ public static class GameControllerTaskExt
     public static HashSet<string> DeriveBusyAgentIdsFromTasks(GameController gc)
     {
         var result = new HashSet<string>();
-        if (gc?.State?.Nodes == null) return result;
+        if (gc?.State?.Cities == null) return result;
 
-        foreach (var node in gc.State.Nodes)
+        foreach (var node in gc.State.Cities)
         {
             if (node?.Tasks == null) continue;
             foreach (var t in node.Tasks)

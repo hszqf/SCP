@@ -62,10 +62,10 @@ public class Anomaly : MonoBehaviour
     private void Refresh()
     {
         var gc = GameController.I;
-        if (gc?.State?.Nodes == null || string.IsNullOrEmpty(_nodeId) || string.IsNullOrEmpty(_anomalyId))
+        if (gc?.State?.Cities == null || string.IsNullOrEmpty(_nodeId) || string.IsNullOrEmpty(_anomalyId))
             return;
 
-        var node = gc.State.Nodes.Find(n => n != null && n.Id == _nodeId);
+        var node = gc.State.Cities.Find(n => n != null && n.Id == _nodeId);
         if (node == null) return;
 
         var managed = ResolveManagedAnomaly(node);
@@ -307,13 +307,13 @@ public class Anomaly : MonoBehaviour
         }
 
         var gc = GameController.I;
-        if (gc?.State?.Nodes == null)
+        if (gc?.State?.Cities == null)
         {
             agentGridRoot.gameObject.SetActive(false);
             return;
         }
 
-        var node = gc.State.Nodes.Find(n => n != null && n.Id == _nodeId);
+        var node = gc.State.Cities.Find(n => n != null && n.Id == _nodeId);
         if (node == null)
         {
             agentGridRoot.gameObject.SetActive(false);
