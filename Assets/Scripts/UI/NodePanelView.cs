@@ -31,13 +31,11 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     [Header("UI Components")]
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text progressText;
-    [SerializeField] private TMP_Text eventCountText;
 
     [Header("Buttons")]
     [SerializeField] private Button investigateButton;
     [SerializeField] private Button containButton;
-    [SerializeField] private Button manageButton; // 收容后管理（打开管理面板）
-    [SerializeField] private Button processEventButton; // 处理事件
+    [SerializeField] private Button manageButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button dimmerButton;
     [SerializeField] private Button backgroundButton; // 蒙版按钮
@@ -163,18 +161,6 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             });
         }
 
-        if (!processEventButton)
-        {
-            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
-            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
-        }
-
-        if (processEventButton)
-        {
-            processEventButton.onClick.RemoveAllListeners();
-            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
-        }
-
         if (closeButton)
         {
             closeButton.onClick.RemoveAllListeners();
@@ -185,28 +171,6 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         CacheTaskListUIIfNeeded();
     }
 
-    public void Show(string nodeId)
-    {
-        _nodeId = nodeId;
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-
-        CacheTaskStatusUIIfNeeded();
-        CacheTaskListUIIfNeeded();
-        Refresh();
-    }
-
-    public void Hide()
-    {
-        gameObject.SetActive(false);
-    }
-
-    public void CloseFromRoot()
-    {
-        if (_onClose != null) _onClose.Invoke();
-        else Hide();
-    }
-
     public void Refresh()
     {
         if (string.IsNullOrEmpty(_nodeId)) return;
@@ -215,46 +179,15 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         var n = GameController.I.GetNode(_nodeId);
         if (n == null) return;
 
-        if (!eventCountText)
-        {
-            var evtT = FindDeepChild(transform, "EventCountText");
-            if (evtT != null) eventCountText = evtT.GetComponent<TMP_Text>();
-        }
+        if (titleText) titleText.text = $"{n.Name} ({n.Population}浜哄彛)";
 
-        if (!processEventButton)
-        {
-            var btnT = FindDeepChild(transform, "Btn_ProcessEvent");
-            if (btnT != null) processEventButton = btnT.GetComponent<Button>();
-        }
-
-        if (processEventButton && processEventButton.onClick.GetPersistentEventCount() == 0)
-        {
-            processEventButton.onClick.RemoveAllListeners();
-            processEventButton.onClick.AddListener(() => _uiRoot?.OpenNodeEvent(_nodeId));
-        }
-
-        if (titleText) titleText.text = $"{n.Name} ({n.Population}人口)";
-
-        // 统一口径：可收容 = 已发现 - 已收容
+        // 缁熶竴鍙ｅ緞锛氬彲鏀跺 = 宸插彂鐜?- 宸叉敹瀹?
         int containableCount = GetContainableCount(n);
         bool hasContainables = containableCount > 0;
 
         UpdateDispatchButtons(n, containableCount, hasContainables);
 
         UpdateManageButton(n);
-
-        int pendingEvents = n.HasPendingEvent ? n.PendingEvents.Count : 0;
-
-        if (eventCountText)
-        {
-            eventCountText.text = pendingEvents > 0 ? $"待处理事件：{pendingEvents}" : "待处理事件：0";
-        }
-
-        if (processEventButton)
-        {
-            processEventButton.gameObject.SetActive(pendingEvents > 0);
-            processEventButton.interactable = pendingEvents > 0;
-        }
 
         if (progressText)
         {
@@ -712,6 +645,29 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             }
         }
     }
+
+    public void Show(string nodeId)
+    {
+        _nodeId = nodeId;
+        gameObject.SetActive(true);
+        transform.SetAsLastSibling();
+
+        CacheTaskStatusUIIfNeeded();
+        CacheTaskListUIIfNeeded();
+        Refresh();
+    }
+
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
+
+    public void CloseFromRoot()
+    {
+        if (_onClose != null) _onClose.Invoke();
+        else Hide();
+    }
+
 
     private static int TaskStateOrder(TaskState s)
     {

@@ -62,10 +62,6 @@ namespace Core
         }
 
         private const string RequirementAny = "ANY";
-        private const string RandomDailySource = "RandomDaily";
-
-        public static event Action OnIgnorePenaltyApplied;
-
 
         public static void StepDay(GameState s, Random rng)
         {
@@ -78,10 +74,6 @@ namespace Core
                 s.RecruitPool.refreshUsedToday = 0;
                 s.RecruitPool.candidates?.Clear();
             }
-            s.News.Add($"Day {s.Day}: 日结算开始");
-
-            // Prune old facts (keep last 60 days)
-            PruneFacts(s);
 
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Cities)
@@ -89,16 +81,13 @@ namespace Core
                 if (n == null || n.Type == 0) continue;
                 if (n?.Tasks == null || n.Tasks.Count == 0) continue;
 
-                // 推进所有 Active 任务（按事件阻塞策略判断）
+                // 推进所有 Active 任务
                 for (int i = 0; i < n.Tasks.Count; i++)
                 {
                     var t = n.Tasks[i];
                     if (t == null) continue;
                     if (t.State != TaskState.Active) continue;
                     if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
-
-                    if (IsTaskBlockedByEvents(s, n, t, registry))
-                        continue;
 
                     var squad = GetAssignedAgents(s, t.AssignedAgentIds);
                     if (squad.Count == 0) continue;
@@ -134,10 +123,7 @@ namespace Core
 
                     float sMatch = ComputeMatchS_NoWeight(team, req);
                     float progressScale = MapSToMult(sMatch);
-                    if (t.Type == TaskType.Investigate && !string.IsNullOrEmpty(t.TargetNewsId) && !string.IsNullOrEmpty(t.SourceAnomalyId))
-                    {
-                        progressScale *= 1.5f;
-                    }
+
                     float effDelta = progressScale;
 
                     // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
@@ -201,31 +187,6 @@ namespace Core
             // 1.75) Idle agents recover HP/SAN (10% max per day)
             ApplyIdleAgentRecovery(s);
 
-            // 2) 不处理的后果（按 IgnoreApplyMode 执行）
-            ApplyIgnorePenaltyOnDayEnd(s, registry);
-
-            // 2.5) 事件自动关闭（按 autoResolvecountDownDays）
-            AutoResolvePendingEventsOnDayEnd(s, registry);
-
-            // 3) RandomDaily 事件生成
-            GenerateRandomDailyEvents(s, rng, registry);
-
-            // 3.5) News Generation - Prioritize Fact-based, then RandomDaily
-            int factNewsGenerated = FactNewsGenerator.GenerateNewsFromFacts(s, registry, maxCount: 5);
-            Debug.Log($"[NewsGen] day={s.Day} factNewsGenerated={factNewsGenerated}");
-            
-            // Always generate some RandomDaily news to ensure variety
-            // Fact-based news is prioritized but RandomDaily adds diversity
-            int minNewsPerDay = registry.GetBalanceIntWithWarn("MinNewsPerDay", 1);
-            if (factNewsGenerated < minNewsPerDay)
-            {
-                Debug.Log($"[NewsGen] day={s.Day} addingRandomDaily reason=InsufficientFactNews factCount={factNewsGenerated} min={minNewsPerDay}");
-                GenerateRandomDailyNews(s, rng, registry);
-            }
-            else
-            {
-                Debug.Log($"[NewsGen] day={s.Day} skipRandomDaily reason=SufficientFactNews count={factNewsGenerated}");
-            }
 
             // 4) 经济 & 世界恐慌（全局）
             float popToMoneyRate = registry.GetBalanceFloatWithWarn("PopToMoneyRate", 0f);
@@ -350,688 +311,8 @@ namespace Core
 
             // 5) 异常生成（按 AnomaliesGen 表调度）
             GenerateScheduledAnomalies(s, rng, registry, s.Day);
-
-            s.News.Add($"Day {s.Day} 结束");
         }
 
-        public static (bool success, string text) ResolveEvent(GameState s, string nodeId, string eventInstanceId, string optionId, Random rng)
-        {
-            var registry = DataRegistry.Instance;
-            var node = s.Cities.FirstOrDefault(n => n != null && n.Id == nodeId);
-            if (node == null) return (false, "节点不存在");
-            if (node.PendingEvents == null || node.PendingEvents.Count == 0) return (false, "节点无事件");
-
-            var ev = node.PendingEvents.FirstOrDefault(e => e != null && e.EventInstanceId == eventInstanceId);
-            if (ev == null) return (false, "事件不存在");
-            if (!registry.TryGetEvent(ev.EventDefId, out var eventDef)) return (false, "事件配置不存在");
-            if (!registry.TryGetOption(ev.EventDefId, optionId, out var optionDef)) return (false, "选项不存在");
-
-            var originTask = TryGetOriginTask(s, ev.SourceTaskId, out var originNode) ? originNode?.Tasks?.FirstOrDefault(t => t != null && t.Id == ev.SourceTaskId) : null;
-
-            var affects = ResolveAffects(eventDef, optionDef, registry);
-            var ctx = new EffectContext
-            {
-                State = s,
-                Node = node,
-                OriginTask = originTask,
-                EventDefId = ev.EventDefId,
-                OptionId = optionId,
-            };
-            int effectsApplied = EffectOpExecutor.ApplyEffect(optionDef.effectId, ctx, affects);
-
-            node.PendingEvents.Remove(ev);
-
-            Debug.Log($"[EventResolve] node={node.Id} inst={ev.EventInstanceId} def={ev.EventDefId} option={optionDef.optionId} effectsApplied={effectsApplied}");
-
-            // ===== HP/SAN Impact for Events (hardcoded examples) =====
-            // Apply impacts to agents assigned to the origin task, if any
-            if (originTask != null && originTask.AssignedAgentIds != null && originTask.AssignedAgentIds.Count > 0)
-            {
-                int hpDelta = 0;
-                int sanDelta = 0;
-
-                // Hardcoded examples for specific events
-                if (ev.EventDefId == "EV_001") // Example event 1
-                {
-                    hpDelta = -(1 + rng.Next(3)); // -1 to -3
-                    sanDelta = -(2 + rng.Next(3)); // -2 to -4
-                }
-                else if (ev.EventDefId == "EV_002") // Example event 2
-                {
-                    hpDelta = -(2 + rng.Next(4)); // -2 to -5
-                    sanDelta = -(1 + rng.Next(2)); // -1 to -2
-                }
-                else if (ev.EventDefId == "EV_003") // Example event 3
-                {
-                    hpDelta = 0;
-                    sanDelta = -(3 + rng.Next(3)); // -3 to -5
-                }
-
-                // Apply to all agents on the task if any delta was set
-                if (hpDelta != 0 || sanDelta != 0)
-                {
-                    foreach (var agentId in originTask.AssignedAgentIds)
-                    {
-                        string reason = $"EventResolve:event={ev.EventDefId},option={optionId},node={node.Id}";
-                        ApplyAgentImpact(s, agentId, hpDelta, sanDelta, reason);
-                    }
-                }
-            }
-
-            s.News.Add($"- {node.Name} 事件处理：{eventDef.title} -> {optionDef.text}");
-
-            var resultText = string.IsNullOrEmpty(optionDef.resultText) ? BuildEffectSummary(optionDef.effectId, affects) : optionDef.resultText;
-            if (string.IsNullOrEmpty(resultText)) resultText = optionDef.text;
-            if (string.IsNullOrEmpty(resultText)) resultText = "事件已处理";
-            return (true, resultText);
-        }
-
-        private static void GenerateRandomDailyEvents(GameState s, Random rng, DataRegistry registry)
-        {
-            if (s == null || s.Cities == null) return;
-
-            var randomDailyDefs = registry.EventsById.Values
-                .Where(def => def != null &&
-                              !string.IsNullOrEmpty(def.eventDefId) &&
-                              string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            int taskCtxChecked = 0;
-            int taskFired = 0;
-            int nodeCtxChecked = 0;
-            int nodeFired = 0;
-
-            var firedCounts = s.EventFiredCounts ??= new Dictionary<string, int>();
-            var lastFiredDay = s.EventLastFiredDay ??= new Dictionary<string, int>();
-
-            foreach (var node in s.Cities)
-            {
-                if (node?.Tasks == null || node.Tasks.Count == 0) continue;
-
-                foreach (var task in node.Tasks)
-                {
-                    if (task == null || task.State != TaskState.Active) continue;
-                    if (task.Type != TaskType.Investigate && task.Type != TaskType.Contain && task.Type != TaskType.Manage) continue;
-
-                    taskCtxChecked += 1;
-                    int pendingBefore = node.PendingEvents?.Count ?? 0;
-                    string ctxTaskTypeKey = GetTaskTypeKey(task.Type);
-                    string ctxAnomalyId = GetTaskAnomalyId(node, task);
-
-                    if (pendingBefore > 0)
-                    {
-                        Debug.Log($"[EventGenCheck] day={s.Day} ctx=Task node={node.Id} taskId={task.Id} taskType={ctxTaskTypeKey} anomaly={ctxAnomalyId ?? "none"} roll=0 p=0 allow=false reason=pendingEvents pendingBefore={pendingBefore}");
-                        continue;
-                    }
-
-                    var matched = GetRandomDailyMatches(randomDailyDefs, s.Day, node.Id, ctxTaskTypeKey, ctxAnomalyId, firedCounts, lastFiredDay, requireAnomalyAny: false);
-                    Debug.Log($"[EventPool] day={s.Day} ctx=Task node={node.Id} taskId={task.Id} candidates={randomDailyDefs.Count} matched={matched.Count}");
-
-                    if (matched.Count == 0)
-                    {
-                        Debug.Log($"[EventGenCheck] day={s.Day} ctx=Task node={node.Id} taskId={task.Id} taskType={ctxTaskTypeKey} anomaly={ctxAnomalyId ?? "none"} roll=0 p=0 allow=false reason=noMatch pendingBefore={pendingBefore}");
-                        continue;
-                    }
-
-                    float pContext = Mathf.Clamp01(matched.Max(def => def.p));
-                    double roll = rng.NextDouble();
-                    bool allow = roll <= pContext;
-                    string reason = allow ? "trigger" : "rollTooHigh";
-                    Debug.Log($"[EventGenCheck] day={s.Day} ctx=Task node={node.Id} taskId={task.Id} taskType={ctxTaskTypeKey} anomaly={ctxAnomalyId ?? "none"} roll={roll:0.00} p={pContext:0.00} allow={allow} reason={reason} pendingBefore={pendingBefore}");
-
-                    if (!allow) continue;
-                    if (!TryPickWeighted(matched, rng, out var picked)) continue;
-
-                    var instance = EventInstanceFactory.Create(picked.eventDefId, node.Id, s.Day, task.Id, ctxAnomalyId, RandomDailySource);
-                    AddEventToNode(node, instance);
-                    UpdateEventFireTracking(s.Day, picked.eventDefId, firedCounts, lastFiredDay);
-                    taskFired += 1;
-
-                    Debug.Log($"[EventGen] day={s.Day} ctx=Task node={node.Id} eventDefId={picked.eventDefId} inst={instance.EventInstanceId} cause={RandomDailySource} taskId={task.Id} anomalyId={ctxAnomalyId ?? "none"}");
-                    s.News.Add($"- {node.Name} 发生事件：{picked.title}");
-                }
-            }
-
-            foreach (var node in s.Cities)
-            {
-                if (node == null) continue;
-                nodeCtxChecked += 1;
-
-                int pendingBefore = node.PendingEvents?.Count ?? 0;
-                if (pendingBefore > 0)
-                {
-                    Debug.Log($"[EventGenCheck] day={s.Day} ctx=Node node={node.Id} taskId=none taskType=ANY anomaly=none roll=0 p=0 allow=false reason=pendingEvents pendingBefore={pendingBefore}");
-                    continue;
-                }
-
-                var matched = GetRandomDailyMatches(randomDailyDefs, s.Day, node.Id, RequirementAny, null, firedCounts, lastFiredDay, requireAnomalyAny: true);
-                Debug.Log($"[EventPool] day={s.Day} ctx=Node node={node.Id} taskId=none candidates={randomDailyDefs.Count} matched={matched.Count}");
-
-                if (matched.Count == 0)
-                {
-                    Debug.Log($"[EventGenCheck] day={s.Day} ctx=Node node={node.Id} taskId=none taskType=ANY anomaly=none roll=0 p=0 allow=false reason=noMatch pendingBefore={pendingBefore}");
-                    continue;
-                }
-
-                float pContext = Mathf.Clamp01(matched.Max(def => def.p));
-                double roll = rng.NextDouble();
-                bool allow = roll <= pContext;
-                string reason = allow ? "trigger" : "rollTooHigh";
-                Debug.Log($"[EventGenCheck] day={s.Day} ctx=Node node={node.Id} taskId=none taskType=ANY anomaly=none roll={roll:0.00} p={pContext:0.00} allow={allow} reason={reason} pendingBefore={pendingBefore}");
-
-                if (!allow) continue;
-                if (!TryPickWeighted(matched, rng, out var picked)) continue;
-
-                var instance = EventInstanceFactory.Create(picked.eventDefId, node.Id, s.Day, null, null, RandomDailySource);
-                AddEventToNode(node, instance);
-                UpdateEventFireTracking(s.Day, picked.eventDefId, firedCounts, lastFiredDay);
-                nodeFired += 1;
-
-                Debug.Log($"[EventGen] day={s.Day} ctx=Node node={node.Id} eventDefId={picked.eventDefId} inst={instance.EventInstanceId} cause={RandomDailySource} taskId=none anomalyId=none");
-                s.News.Add($"- {node.Name} 发生事件：{picked.title}");
-            }
-
-            Debug.Log($"[RandomDailySummary] day={s.Day} taskCtxChecked={taskCtxChecked} taskFired={taskFired} nodeCtxChecked={nodeCtxChecked} nodeFired={nodeFired}");
-        }
-
-        private static void GenerateRandomDailyNews(GameState s, Random rng, DataRegistry registry)
-        {
-            if (s == null || s.Cities == null) return;
-
-            // Create a day-specific RNG to ensure each day has different news
-            // Use base seed from rng.Next() XOR day to maintain reproducibility while varying per day
-            int baseSeed = rng.Next();
-            int newsSeed = baseSeed ^ (s.Day * 31337); // XOR with day-dependent value
-            var newsRng = new Random(newsSeed);
-            
-            Debug.Log($"[News] day={s.Day} baseSeed={baseSeed} newsSeed={newsSeed} rngType=System.Random");
-
-            var randomDailyDefs = registry.NewsDefsById.Values
-                .Where(def => def != null &&
-                              !string.IsNullOrEmpty(def.newsDefId) &&
-                              string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            
-            Debug.Log($"[News] day={s.Day} poolBefore={randomDailyDefs.Count} source={RandomDailySource}");
-
-            int nodeAnomCtxChecked = 0;
-            int nodeAnomPicked = 0;
-            int nodeAnomEmitted = 0;
-            int nodeCtxChecked = 0;
-            int nodePicked = 0;
-            int nodeEmitted = 0;
-
-            var firedCounts = s.NewsFiredCounts ??= new Dictionary<string, int>();
-            var lastFiredDay = s.NewsLastFiredDay ??= new Dictionary<string, int>();
-
-            foreach (var node in s.Cities)
-            {
-                if (node?.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0) continue;
-
-                foreach (var anomalyId in node.ActiveAnomalyIds)
-                {
-                    if (string.IsNullOrEmpty(anomalyId)) continue;
-                    nodeAnomCtxChecked += 1;
-
-                    var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, anomalyId, firedCounts, lastFiredDay, requireAnomalyAny: false);
-                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} poolAfterFilter={matched.Count}");
-                    if (matched.Count == 0) continue;
-
-                    if (!TryPickWeightedNews(matched, newsRng, out var picked)) continue;
-                    nodeAnomPicked += 1;
-
-                    double roll = newsRng.NextDouble();
-                    bool emit = roll <= picked.p;
-                    string reason = emit ? "Picked" : "RolledAboveP";
-                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
-                    if (!emit) continue;
-
-                    string sourceAnomalyId = IsRequirementAny(picked.requiresAnomalyId) ? null : anomalyId;
-                    var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, sourceAnomalyId, RandomDailySource, s.Day);
-                    AddNewsToLog(s, instance);
-                    UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
-                    nodeAnomEmitted += 1;
-
-                    Debug.Log($"[News] day={s.Day} ctx=NodeAnom nodeId={node.Id} anomalyId={anomalyId} newsDefId={picked.newsDefId} instId={instance.Id} EMITTED");
-                }
-            }
-
-            foreach (var node in s.Cities)
-            {
-                if (node == null) continue;
-                nodeCtxChecked += 1;
-
-                var matched = GetRandomDailyNewsMatches(randomDailyDefs, s.Day, node.Id, null, firedCounts, lastFiredDay, requireAnomalyAny: true);
-                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} poolAfterFilter={matched.Count}");
-                if (matched.Count == 0) continue;
-
-                if (!TryPickWeightedNews(matched, newsRng, out var picked)) continue;
-                nodePicked += 1;
-
-                double roll = newsRng.NextDouble();
-                bool emit = roll <= picked.p;
-                string reason = emit ? "Picked" : "RolledAboveP";
-                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} newsDefId={picked.newsDefId} weight={picked.weight} p={picked.p:0.00} roll={roll:0.00} emit={(emit ? 1 : 0)} reason={reason}");
-                if (!emit) continue;
-
-                var instance = NewsInstanceFactory.Create(picked.newsDefId, node.Id, null, RandomDailySource, s.Day);
-                AddNewsToLog(s, instance);
-                UpdateNewsFireTracking(s.Day, picked.newsDefId, firedCounts, lastFiredDay);
-                nodeEmitted += 1;
-
-                Debug.Log($"[News] day={s.Day} ctx=Node nodeId={node.Id} newsDefId={picked.newsDefId} instId={instance.Id} EMITTED");
-            }
-
-            Debug.Log($"[News] day={s.Day} SUMMARY nodeAnomCtxChecked={nodeAnomCtxChecked} nodeAnomPicked={nodeAnomPicked} nodeAnomEmitted={nodeAnomEmitted} nodeCtxChecked={nodeCtxChecked} nodePicked={nodePicked} nodeEmitted={nodeEmitted} newsTotal={(s.NewsLog?.Count ?? 0)}");
-        }
-
-        public static bool ApplyIgnorePenaltyOnDayEnd(GameState s, DataRegistry registry)
-        {
-            bool anyApplied = false;
-            foreach (var node in s.Cities)
-            {
-                if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
-
-                var toRemove = new List<EventInstance>();
-                foreach (var ev in node.PendingEvents)
-                {
-                    if (ev == null) continue;
-                    if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
-
-                    var ignoreMode = registry.GetIgnoreApplyMode(def);
-                    if (ignoreMode == IgnoreApplyMode.NeverAuto) continue;
-                    if (string.IsNullOrEmpty(def.ignoreEffectId)) continue;
-
-                    var originTask = TryGetOriginTask(s, ev.SourceTaskId, out var originNode)
-                        ? originNode?.Tasks?.FirstOrDefault(t => t != null && t.Id == ev.SourceTaskId)
-                        : null;
-
-                    var affects = GetDefaultAffects(def);
-                    var ctx = new EffectContext
-                    {
-                        State = s,
-                        Node = node,
-                        OriginTask = originTask,
-                        EventDefId = ev.EventDefId,
-                        OptionId = "__ignore__",
-                    };
-
-                    if (ignoreMode == IgnoreApplyMode.ApplyOnceThenRemove)
-                    {
-                        if (ev.IgnoreAppliedOnce) continue;
-                        EffectOpExecutor.ApplyEffect(def.ignoreEffectId, ctx, affects);
-                        ev.IgnoreAppliedOnce = true;
-                        toRemove.Add(ev);
-                        anyApplied = true;
-                        Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} mode={ignoreMode} removed=true");
-                    }
-                    else if (ignoreMode == IgnoreApplyMode.ApplyDailyKeep)
-                    {
-                        EffectOpExecutor.ApplyEffect(def.ignoreEffectId, ctx, affects);
-                        anyApplied = true;
-                        Debug.Log($"[EventIgnore] day={s.Day} node={node.Id} eventInstanceId={ev.EventInstanceId} mode={ignoreMode} removed=false");
-                    }
-                }
-
-                if (toRemove.Count > 0)
-                {
-                    foreach (var ev in toRemove) node.PendingEvents.Remove(ev);
-                }
-            }
-
-            if (anyApplied) OnIgnorePenaltyApplied?.Invoke();
-            return anyApplied;
-        }
-
-        private static void AutoResolvePendingEventsOnDayEnd(GameState s, DataRegistry registry)
-        {
-            int scanned = 0;
-            int removed = 0;
-
-            foreach (var node in s.Cities)
-            {
-                if (node?.PendingEvents == null || node.PendingEvents.Count == 0) continue;
-
-                var toRemove = new List<EventInstance>();
-                foreach (var ev in node.PendingEvents)
-                {
-                    if (ev == null) continue;
-                    scanned += 1;
-                    ev.AgeDays += 1;
-
-                    if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
-                    int limit = def.autoResolveAfterDays;
-                    if (limit <= 0) continue;
-                    if (ev.AgeDays < limit) continue;
-
-                    toRemove.Add(ev);
-                    removed += 1;
-                    Debug.Log($"[EventAutoResolve] day={s.Day} nodeId={node.Id} eventDefId={ev.EventDefId} age={ev.AgeDays} limit={limit} reason=AutoResolveAfterDays");
-                }
-
-                if (toRemove.Count > 0)
-                {
-                    foreach (var ev in toRemove) node.PendingEvents.Remove(ev);
-                }
-            }
-
-            Debug.Log($"[EventAutoResolve] day={s.Day} scanned={scanned} removed={removed}");
-        }
-
-        private static bool IsTaskBlockedByEvents(GameState state, NodeState node, NodeTask task, DataRegistry registry)
-        {
-            if (node?.PendingEvents == null || node.PendingEvents.Count == 0) return false;
-
-            foreach (var ev in node.PendingEvents)
-            {
-                if (ev == null) continue;
-                if (!registry.TryGetEvent(ev.EventDefId, out var def)) continue;
-                if (!DataRegistry.TryParseBlockPolicy(def.blockPolicy, out var policy, out _)) continue;
-
-                if (policy == BlockPolicy.BlockAllTasksOnNode) return true;
-                if (policy == BlockPolicy.BlockOriginTask && !string.IsNullOrEmpty(ev.SourceTaskId) && ev.SourceTaskId == task.Id)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static void AddEventToNode(NodeState node, EventInstance ev)
-        {
-            if (node.PendingEvents == null) node.PendingEvents = new List<EventInstance>();
-            node.PendingEvents.Add(ev);
-        }
-
-        private static void AddNewsToLog(GameState s, NewsInstance news)
-        {
-            if (s.NewsLog == null) s.NewsLog = new List<NewsInstance>();
-            s.NewsLog.Add(news);
-        }
-
-        private static List<AffectScope> ResolveAffects(EventDef eventDef, EventOptionDef optionDef, DataRegistry registry)
-        {
-            if (optionDef?.affects != null && optionDef.affects.Count > 0 &&
-                DataRegistry.TryParseAffectScopes(optionDef.affects, out var optionScopes, out _))
-            {
-                return optionScopes;
-            }
-
-            return GetDefaultAffects(eventDef);
-        }
-
-        private static List<AffectScope> GetDefaultAffects(EventDef eventDef)
-        {
-            if (eventDef?.defaultAffects != null && eventDef.defaultAffects.Count > 0 &&
-                DataRegistry.TryParseAffectScopes(eventDef.defaultAffects, out var scopes, out _))
-            {
-                return scopes;
-            }
-
-            return new List<AffectScope> { new(AffectScopeKind.Node) };
-        }
-
-        private static string BuildEffectSummary(string effectId, IReadOnlyCollection<AffectScope> affects)
-        {
-            if (string.IsNullOrEmpty(effectId)) return string.Empty;
-            var registry = DataRegistry.Instance;
-            if (!registry.EffectOpsByEffectId.TryGetValue(effectId, out var ops) || ops == null || ops.Count == 0)
-                return string.Empty;
-
-            HashSet<string> allowed = affects != null && affects.Count > 0
-                ? new HashSet<string>(affects.Select(a => a.Raw))
-                : null;
-
-            var parts = new List<string>();
-            foreach (var op in ops)
-            {
-                if (op == null) continue;
-                if (allowed != null && !allowed.Contains(op.Scope.Raw)) continue;
-
-                string label = op.StatKey switch
-                {
-                    var k when string.Equals(k, "LocalPanic", StringComparison.OrdinalIgnoreCase) => "本地恐慌",
-                    var k when string.Equals(k, "Population", StringComparison.OrdinalIgnoreCase) => "人口",
-                    var k when string.Equals(k, "WorldPanic", StringComparison.OrdinalIgnoreCase) || string.Equals(k, "Panic", StringComparison.OrdinalIgnoreCase) => "全局恐慌",
-                    var k when string.Equals(k, "Money", StringComparison.OrdinalIgnoreCase) => "资金",
-                    var k when string.Equals(k, "NegEntropy", StringComparison.OrdinalIgnoreCase) => "负熵",
-                    var k when string.Equals(k, "TaskProgressDelta", StringComparison.OrdinalIgnoreCase) => "任务进度",
-                    _ => op.StatKey,
-                };
-
-                string scopeLabel = op.Scope.Kind switch
-                {
-                    AffectScopeKind.Node => string.Empty,
-                    AffectScopeKind.Global => "(全局)",
-                    AffectScopeKind.OriginTask => "(来源任务)",
-                    AffectScopeKind.TaskType when op.Scope.TaskType.HasValue => $"(任务类型:{op.Scope.TaskType.Value})",
-                    _ => string.Empty,
-                };
-
-                string valueLabel = op.Op == EffectOpType.Set
-                    ? $"={op.Value:+0;-0;0}"
-                    : $"{(op.Value >= 0 ? "+" : string.Empty)}{op.Value:0}";
-
-                parts.Add($"{label}{scopeLabel} {valueLabel}");
-            }
-
-            return parts.Count == 0 ? string.Empty : string.Join("，", parts);
-        }
-
-        private static List<EventDef> GetRandomDailyMatches(
-            IReadOnlyList<EventDef> candidates,
-            int day,
-            string nodeId,
-            string taskTypeKey,
-            string anomalyId,
-            Dictionary<string, int> firedCounts,
-            Dictionary<string, int> lastFiredDay,
-            bool requireAnomalyAny)
-        {
-            var matched = new List<EventDef>();
-            if (candidates == null || candidates.Count == 0) return matched;
-
-            foreach (var ev in candidates)
-            {
-                if (ev == null || string.IsNullOrEmpty(ev.eventDefId)) continue;
-                if (ev.weight <= 0) continue;
-                if (!IsWithinDayWindow(ev, day)) continue;
-                if (!RequirementMatches(ev.requiresNodeId, nodeId)) continue;
-                if (!RequirementMatches(ev.requiresTaskType, taskTypeKey)) continue;
-
-                if (requireAnomalyAny)
-                {
-                    if (!IsRequirementAny(ev.requiresAnomalyId)) continue;
-                }
-                else
-                {
-                    if (!IsRequirementAny(ev.requiresAnomalyId))
-                    {
-                        if (string.IsNullOrEmpty(anomalyId)) continue;
-                        if (!string.Equals(ev.requiresAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)) continue;
-                    }
-                }
-
-                if (ev.limitNum > 0 && firedCounts.TryGetValue(ev.eventDefId, out var fired) && fired >= ev.limitNum)
-                    continue;
-
-                if (ev.cd > 0 && lastFiredDay.TryGetValue(ev.eventDefId, out var lastDay) && day - lastDay < ev.cd)
-                    continue;
-
-                matched.Add(ev);
-            }
-
-            return matched;
-        }
-
-        private static List<NewsDef> GetRandomDailyNewsMatches(
-            IReadOnlyList<NewsDef> candidates,
-            int day,
-            string nodeId,
-            string anomalyId,
-            Dictionary<string, int> firedCounts,
-            Dictionary<string, int> lastFiredDay,
-            bool requireAnomalyAny)
-        {
-            var matched = new List<NewsDef>();
-            if (candidates == null || candidates.Count == 0) return matched;
-
-            foreach (var news in candidates)
-            {
-                if (news == null || string.IsNullOrEmpty(news.newsDefId)) continue;
-                if (news.weight <= 0) continue;
-                if (!IsWithinDayWindow(news, day)) continue;
-                if (!RequirementMatches(news.requiresNodeId, nodeId)) continue;
-
-                if (requireAnomalyAny)
-                {
-                    if (!IsRequirementAny(news.requiresAnomalyId)) continue;
-                }
-                else
-                {
-                    if (!IsRequirementAny(news.requiresAnomalyId))
-                    {
-                        if (string.IsNullOrEmpty(anomalyId)) continue;
-                        if (!string.Equals(news.requiresAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)) continue;
-                    }
-                }
-
-                if (news.limitNum > 0 && firedCounts.TryGetValue(news.newsDefId, out var fired) && fired >= news.limitNum)
-                    continue;
-
-                if (news.cd > 0 && lastFiredDay.TryGetValue(news.newsDefId, out var lastDay) && day - lastDay < news.cd)
-                    continue;
-
-                matched.Add(news);
-            }
-
-            return matched;
-        }
-
-        private static bool TryPickWeighted(IReadOnlyList<EventDef> candidates, Random rng, out EventDef picked)
-        {
-            picked = null;
-            if (candidates == null || candidates.Count == 0) return false;
-
-            int totalWeight = 0;
-            foreach (var ev in candidates)
-            {
-                if (ev == null || ev.weight <= 0) continue;
-                totalWeight += ev.weight;
-            }
-
-            if (totalWeight <= 0) return false;
-
-            int roll = rng.Next(totalWeight);
-            foreach (var ev in candidates)
-            {
-                if (ev == null || ev.weight <= 0) continue;
-                roll -= ev.weight;
-                if (roll < 0)
-                {
-                    picked = ev;
-                    return true;
-                }
-            }
-
-            picked = candidates.FirstOrDefault(ev => ev != null && ev.weight > 0);
-            return picked != null;
-        }
-
-        private static bool TryPickWeightedNews(IReadOnlyList<NewsDef> candidates, Random rng, out NewsDef picked)
-        {
-            picked = null;
-            if (candidates == null || candidates.Count == 0) return false;
-
-            int totalWeight = 0;
-            foreach (var news in candidates)
-            {
-                if (news == null || news.weight <= 0) continue;
-                totalWeight += news.weight;
-            }
-
-            if (totalWeight <= 0) return false;
-
-            int roll = rng.Next(totalWeight);
-            int originalRoll = roll;
-            foreach (var news in candidates)
-            {
-                if (news == null || news.weight <= 0) continue;
-                roll -= news.weight;
-                if (roll < 0)
-                {
-                    picked = news;
-                    Debug.Log($"[News] TryPickWeightedNews totalWeight={totalWeight} roll={originalRoll} picked={picked.newsDefId}");
-                    return true;
-                }
-            }
-
-            picked = candidates.FirstOrDefault(news => news != null && news.weight > 0);
-            Debug.Log($"[News] TryPickWeightedNews totalWeight={totalWeight} roll={originalRoll} picked={(picked?.newsDefId ?? "null")} fallback=true");
-            return picked != null;
-        }
-
-        private static void UpdateEventFireTracking(int day, string eventDefId, Dictionary<string, int> firedCounts, Dictionary<string, int> lastFiredDay)
-        {
-            if (string.IsNullOrEmpty(eventDefId)) return;
-            if (firedCounts != null)
-            {
-                firedCounts.TryGetValue(eventDefId, out var fired);
-                firedCounts[eventDefId] = fired + 1;
-            }
-
-            lastFiredDay?.TryGetValue(eventDefId, out _);
-            if (lastFiredDay != null) lastFiredDay[eventDefId] = day;
-        }
-
-        private static void UpdateNewsFireTracking(int day, string newsDefId, Dictionary<string, int> firedCounts, Dictionary<string, int> lastFiredDay)
-        {
-            if (string.IsNullOrEmpty(newsDefId)) return;
-            if (firedCounts != null)
-            {
-                firedCounts.TryGetValue(newsDefId, out var fired);
-                firedCounts[newsDefId] = fired + 1;
-            }
-
-            lastFiredDay?.TryGetValue(newsDefId, out _);
-            if (lastFiredDay != null) lastFiredDay[newsDefId] = day;
-        }
-
-        private static bool IsWithinDayWindow(EventDef def, int day)
-        {
-            if (def == null) return false;
-            if (def.minDay > 0 && day < def.minDay) return false;
-            if (def.maxDay > 0 && day > def.maxDay) return false;
-            return true;
-        }
-
-        private static bool IsWithinDayWindow(NewsDef def, int day)
-        {
-            if (def == null) return false;
-            if (def.minDay > 0 && day < def.minDay) return false;
-            if (def.maxDay > 0 && day > def.maxDay) return false;
-            return true;
-        }
-
-        private static bool RequirementMatches(string requirement, string value)
-        {
-            if (IsRequirementAny(requirement)) return true;
-            if (string.IsNullOrEmpty(value)) return false;
-            return string.Equals(requirement, value, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsRequirementAny(string requirement)
-            => string.IsNullOrWhiteSpace(requirement) || string.Equals(requirement, RequirementAny, StringComparison.OrdinalIgnoreCase);
-
-        private static string GetTaskTypeKey(TaskType type)
-        {
-            return type switch
-            {
-                TaskType.Investigate => "TaskInvestigate",
-                TaskType.Contain => "TaskContain",
-                TaskType.Manage => "TaskManage",
-                _ => RequirementAny,
-            };
-        }
 
         // =====================
         // Task completion rules
@@ -1074,46 +355,13 @@ namespace Core
 
                 if (hasTarget)
                 {
-                    s.News.Add($"- {node.Name} 调查完成：发现异常 {anomalyId}");
                     bool added = AddKnown(node, task.SourceAnomalyId);
                     Debug.Log($"[AnomalyDiscovered] day={s.Day} nodeId={node.Id} anomalyDefId={task.SourceAnomalyId} via=InvestigateTarget added={(added ? 1 : 0)}");
 
-                    // Emit fact for investigation completion
-                    EmitFact(
-                        s,
-                        type: "InvestigateCompleted",
-                        nodeId: node.Id,
-                        anomalyId: anomalyId,
-                        severity: CalculateSeverityFromThreatLevel(level),
-                        tags: new List<string> { "task", "investigate", "completed" },
-                        payload: new Dictionary<string, object>
-                        {
-                            { "nodeName", node.Name },
-                            { "anomalyClass", anomaly?.@class ?? "Unknown" },
-                            { "taskId", task.Id }
-                        },
-                        source: "CompleteTask"
-                    );
                 }
                 else
                 {
-                    s.News.Add($"- {node.Name} 调查完成：未发现异常");
-
-                    // Emit fact for no-result investigation
-                    EmitFact(
-                        s,
-                        type: "InvestigateNoResult",
-                        nodeId: node.Id,
-                        anomalyId: null,
-                        severity: 1,
-                        tags: new List<string> { "task", "investigate", "completed", "no-result" },
-                        payload: new Dictionary<string, object>
-                        {
-                            { "nodeName", node.Name },
-                            { "taskId", task.Id }
-                        },
-                        source: "CompleteTask"
-                    );
+                    Debug.Log("no target");
                 }
 
                 // ===== EXP Reward for Investigate =====
@@ -1155,28 +403,8 @@ namespace Core
 
                 Debug.Log($"[WorldPanic] day={s.Day} source=ContainComplete relief={relief} before={beforePanic:0.##} after={s.WorldPanic:0.##}");
 
-                s.News.Add($"- {node.Name} 收容成功（+$ {reward}, WorldPanic -{relief}）");
                 // 收容成功：将该 anomalyId 加入“已收藏异常”（用于后续管理）。
                 EnsureManagedAnomalyRecorded(node, anomalyId, anomaly);
-
-                // Emit fact for containment completion
-                EmitFact(
-                    s,
-                    type: "ContainCompleted",
-                    nodeId: node.Id,
-                    anomalyId: anomalyId,
-                    severity: Math.Max(2, CalculateSeverityFromThreatLevel(level)),
-                    tags: new List<string> { "task", "contain", "completed", "success" },
-                    payload: new Dictionary<string, object>
-                    {
-                        { "nodeName", node.Name },
-                        { "anomalyClass", anomaly?.@class ?? "Unknown" },
-                        { "reward", reward },
-                        { "panicRelief", relief },
-                        { "taskId", task.Id }
-                    },
-                    source: "CompleteTask"
-                );
 
                 // 若无进行中的收容任务，则节点可视为“清空异常”。
                 bool hasActiveContainTask = node.Tasks != null && node.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain);
@@ -1655,7 +883,7 @@ namespace Core
                         if (totalExp > 0)
                         {
                             int perAgentExp = (int)Math.Ceiling(totalExp / (double)squad.Count);
-                            if (perAgentExp > 0)
+                            if (totalExp > 0 && perAgentExp > 0)
                             {
                                 foreach (var a in squad)
                                 {
@@ -1673,7 +901,6 @@ namespace Core
                 if (nodeTotal > 0)
                 {
                     totalAllNodes += nodeTotal;
-                    s.News.Add($"- {node.Name} 管理产出：+{nodeTotal} 负熵");
                 }
 
                 if (node.Status == NodeStatus.Secured && nodeTotal > 0)
@@ -1864,26 +1091,10 @@ namespace Core
                     continue;
 
                 EnsureActiveAnomaly(node, anomalyId, registry);
-                s.News.Add($"- {node.Name} 出现异常迹象：{anomalyId}");
                 spawned++;
 
                 // Emit fact for anomaly spawn
                 var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyId);
-                int severity = 3;
-                EmitFact(
-                    s,
-                    type: "AnomalySpawned",
-                    nodeId: node.Id,
-                    anomalyId: anomalyId,
-                    severity: severity,
-                    tags: new List<string> { "anomaly", "spawn" },
-                    payload: new Dictionary<string, object>
-                    {
-                        { "nodeName", node.Name },
-                        { "anomalyClass", anomalyDef?.@class ?? "Unknown" }
-                    },
-                    source: "GenerateScheduledAnomalies"
-                );
             }
 
             if (spawned < genNum)
@@ -1949,18 +1160,7 @@ namespace Core
                     switch (task.Type)
                     {
                         case TaskType.Investigate:
-                            if (!string.IsNullOrEmpty(task.TargetNewsId))
-                            {
-                                // Has a specific news target
-                                var newsDef = registry?.GetNewsDefById(task.TargetNewsId);
-                                string newsTitle = newsDef?.title ?? task.TargetNewsId;
-                                busyText = $"在{node.Name}调查《{newsTitle}》";
-                            }
-                            else
-                            {
-                                // Generic investigation
-                                busyText = $"在{node.Name}随意调查";
-                            }
+                            busyText = $"在{node.Name}调查";
                             break;
 
                         case TaskType.Contain:
@@ -2036,81 +1236,8 @@ namespace Core
             return Math.Min(5, Math.Max(1, severity));
         }
 
-        /// <summary>
-        /// Emit a fact into the game state's fact system.
-        /// Facts are stored for 60 days and can be converted to news.
-        /// </summary>
-        public static void EmitFact(
-            GameState state,
-            string type,
-            string nodeId = null,
-            string anomalyId = null,
-            int severity = 1,
-            List<string> tags = null,
-            Dictionary<string, object> payload = null,
-            string source = null)
-        {
-            if (state?.FactSystem == null)
-            {
-                Debug.LogWarning("[Fact] Cannot emit fact: FactSystem is null");
-                return;
-            }
 
-            // Validate fact type against FactTypes table
-            var registry = Data.DataRegistry.Instance;
-            if (registry?.FactTypesById != null && !string.IsNullOrEmpty(type))
-            {
-                if (!registry.FactTypesById.ContainsKey(type))
-                {
-                    Debug.LogWarning($"[Fact] Unknown factType='{type}' not in FactTypes table. Add to GameData/Local/game_data.xlsx > FactTypes sheet to resolve this warning.");
-                }
-            }
-
-            var fact = FactInstanceFactory.Create(
-                type: type,
-                day: state.Day,
-                nodeId: nodeId,
-                anomalyId: anomalyId,
-                severity: severity,
-                tags: tags,
-                payload: payload,
-                source: source
-            );
-
-            state.FactSystem.Facts.Add(fact);
-
-            // Log fact emission
-            string tagsStr = tags != null && tags.Count > 0 ? string.Join(",", tags) : "none";
-            string payloadStr = payload != null && payload.Count > 0
-                ? string.Join(",", payload.Select(kv => $"{kv.Key}={kv.Value}"))
-                : "none";
-
-            Debug.Log($"[Fact] EMIT day={state.Day} factId={fact.FactId} type={type} nodeId={nodeId ?? "none"} anomalyId={anomalyId ?? "none"} severity={severity} tags=[{tagsStr}] payload=[{payloadStr}] source={source ?? "none"}");
-        }
-
-        /// <summary>
-        /// Clean up old facts beyond retention period (default 60 days).
-        /// Call this at the start of each day.
-        /// </summary>
-        public static void PruneFacts(GameState state)
-        {
-            if (state?.FactSystem?.Facts == null) return;
-
-            int retentionDays = state.FactSystem.RetentionDays;
-            int cutoffDay = state.Day - retentionDays;
-
-            int beforeCount = state.FactSystem.Facts.Count;
-            state.FactSystem.Facts.RemoveAll(f => f != null && f.Day < cutoffDay);
-            int afterCount = state.FactSystem.Facts.Count;
-
-            if (beforeCount != afterCount)
-            {
-                Debug.Log($"[Fact] PRUNE day={state.Day} cutoffDay={cutoffDay} removed={beforeCount - afterCount} remaining={afterCount}");
-            }
-
-            // Clean up tracking data for pruned facts
-            FactNewsGenerator.CleanupPrunedFactTracking(state);
-        }
+      
 
         // =====================
         // Math helpers

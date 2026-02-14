@@ -8,10 +8,6 @@
 //
 // Notes:
 // - Busy check still uses GameControllerTaskExt.AreAgentsBusy (global task scan).
-// - Contain requires node.Containables.Count > 0; target selection picks a containable not already targeted by an active contain task when possible.
-// - UI still uses ConfirmDialog for info prompts.
-// <EXPORT_BLOCK>
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,22 +22,16 @@ public class UIPanelRoot : MonoBehaviour
     [Header("Prefabs (请把 Assets/Prefabs/UI 下的文件拖进来)")]
     [SerializeField] private HUD hudPrefab; // HUD Prefab
     [SerializeField] private NodePanelView nodePanelPrefab;
-    [SerializeField] private EventPanel eventPanelPrefab;
-    [SerializeField] private NewsPanel newsPanelPrefab;
-    [SerializeField] private GameObject NewspaperPanelPrefab;
     [SerializeField] private AgentPickerView agentPickerPrefab;
     [SerializeField] private ConfirmDialog confirmDialogPrefab;
-    [SerializeField] private GameObject managePanelPrefab; // 管理面板 Prefab（你新建的管理界面）
+    [SerializeField] private GameObject managePanelPrefab; // 绠＄悊闈㈡澘 Prefab锛堜綘鏂板缓鐨勭鐞嗙晫闈級
     [SerializeField] private RecruitPanel recruitPanelPrefab;
     [SerializeField] private RosterPanel rosterPanelPrefab;
 
 
-    // --- 运行时实例 (自动生成) ---
+    // --- 杩愯鏃跺疄渚?(鑷姩鐢熸垚) ---
     private HUD _hud;
     private NodePanelView _nodePanel;
-    private EventPanel _eventPanel;
-    private NewsPanel _newsPanel;
-    private GameObject _newspaperPanelInstance;
     private AgentPickerView _agentPicker;
     private ConfirmDialog _confirmDialog;
     private GameObject _managePanel;
@@ -103,9 +93,6 @@ public class UIPanelRoot : MonoBehaviour
         // 1. If node panel is open, refresh it
         if (_nodePanel != null && _nodePanel.gameObject.activeSelf)
             _nodePanel.Refresh();
-
-        // 2. Try auto-open event
-        TryAutoOpenEvent();
     }
 
     // ================== NODE PANEL ==================
@@ -267,26 +254,14 @@ public class UIPanelRoot : MonoBehaviour
                 var task = gc.CreateInvestigateTask(nodeId);
                 if (task == null)
                 {
-                    ShowInfo("派遣失败", "创建任务失败");
+                    ShowInfo("娲鹃仯澶辫触", "鍒涘缓浠诲姟澶辫触");
                     return;
                 }
 
-                string targetNewsId = string.IsNullOrEmpty(targetId) ? null : targetId;
-                task.TargetNewsId = targetNewsId;
-
-                string sourceAnomalyId = null;
                 if (!string.IsNullOrEmpty(targetAnomalyId))
                 {
-                    sourceAnomalyId = targetAnomalyId;
-                    task.SourceAnomalyId = sourceAnomalyId;
+                    task.SourceAnomalyId = targetAnomalyId;
                     task.InvestigateTargetLocked = true;
-                }
-                else if (!string.IsNullOrEmpty(targetNewsId))
-                {
-                    var news = gc.State?.NewsLog?.FirstOrDefault(n => n != null && n.Id == targetNewsId);
-                    sourceAnomalyId = news?.SourceAnomalyId;
-                    task.SourceAnomalyId = sourceAnomalyId;
-                    Debug.Log($"[InvestigateBindNews] taskId={task.Id} newsId={targetNewsId} srcAnom={sourceAnomalyId} nodeId={nodeId}");
                 }
 
                 gc.AssignTask(task.Id, agentIds);
@@ -510,30 +485,6 @@ public class UIPanelRoot : MonoBehaviour
 
     // ================== OTHERS ==================
 
-    public void OpenNews()
-    {
-        if (NewspaperPanelPrefab)
-        {
-            OpenNewspaperPanel();
-            return;
-        }
-
-        OpenNewsPanel();
-    }
-
-    void EnsureNewsPanel()
-    {
-        if (_newsPanel) return;
-        if (!newsPanelPrefab)
-        {
-            Debug.LogWarning("[UIPanelRoot] NewsPanel prefab 未配置！");
-            return;
-        }
-
-        _newsPanel = Instantiate(newsPanelPrefab, transform);
-        _newsPanel.gameObject.SetActive(false);
-    }
-
     void EnsureAgentPicker()
     {
         if (_agentPicker) return;
@@ -545,54 +496,6 @@ public class UIPanelRoot : MonoBehaviour
 
         _agentPicker = Instantiate(agentPickerPrefab, transform);
         _agentPicker.gameObject.SetActive(false);
-    }
-
-    void OpenNewsPanel()
-    {
-        EnsureNewsPanel();
-        if (_newsPanel)
-        {
-            _newsPanel.Show();
-            _newsPanel.transform.SetAsLastSibling();
-            PushModal(_newsPanel.gameObject, "open news");
-            RefreshModalStack("open news", _newsPanel.gameObject);
-        }
-    }
-
-    void EnsureNewspaperPanel()
-    {
-        if (_newspaperPanelInstance) return;
-        if (!NewspaperPanelPrefab)
-        {
-            Debug.LogError("[UIPanelRoot] NewspaperPanelPrefab 未配置！");
-            return;
-        }
-
-        _newspaperPanelInstance = Instantiate(NewspaperPanelPrefab, transform);
-        if (_newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>() == null)
-        {
-            _newspaperPanelInstance.AddComponent<UI.NewspaperPanelView>();
-        }
-        _newspaperPanelInstance.SetActive(false);
-    }
-
-    public void OpenNewspaperPanel()
-    {
-        EnsureNewspaperPanel();
-        if (_newspaperPanelInstance)
-        {
-            _newspaperPanelInstance.SetActive(true);
-            var view = _newspaperPanelInstance.GetComponent<UI.NewspaperPanelView>();
-            if (view != null) view.Render();
-            _newspaperPanelInstance.transform.SetAsLastSibling();
-            PushModal(_newspaperPanelInstance, "open_newspaper");
-            RefreshModalStack("open_newspaper", _newspaperPanelInstance);
-        }
-    }
-
-    public void HideNewspaperPanel()
-    {
-        if (_newspaperPanelInstance) CloseModal(_newspaperPanelInstance, "close newspaper");
     }
 
     // ================== ROSTER ==================
@@ -668,74 +571,16 @@ public class UIPanelRoot : MonoBehaviour
         if (_recruitPanel) CloseModal(_recruitPanel.gameObject, "close recruit");
     }
 
-    public void OpenNodeEvent(string nodeId)
-    {
-        if (GameController.I == null || string.IsNullOrEmpty(nodeId)) return;
-        var node = GameController.I.GetNode(nodeId);
-        if (node == null || node.PendingEvents == null || node.PendingEvents.Count == 0) return;
-
-        if (!_eventPanel && eventPanelPrefab) _eventPanel = Instantiate(eventPanelPrefab, transform);
-        if (!_eventPanel) return;
-
-        var ev = node.PendingEvents[0];
-        Debug.Log($"[EventUI] OpenNodeEvent node={nodeId} eventInstanceId={ev.EventInstanceId} pending={node.PendingEvents.Count}");
-        _eventPanel.Show(ev, optionId =>
-        {
-            var res = GameController.I.ResolveEvent(nodeId, ev.EventInstanceId, optionId);
-            return res.text;
-        }, onClose: null);
-        _eventPanel.gameObject.SetActive(true);
-        _eventPanel.transform.SetAsLastSibling();
-        PushModal(_eventPanel.gameObject, "open event");
-        RefreshModalStack("open event", _eventPanel.gameObject);
-    }
-
-    void TryAutoOpenEvent()
-    {
-        // Auto-open is disabled. Events should only be opened via manual entry points.
-        return;
-    }
-
-    private bool TryGetFirstPendingEvent(out string nodeId, out EventInstance ev)
-    {
-        nodeId = null;
-        ev = null;
-
-        foreach (var n in GameController.I.State.Cities)
-        {
-            if (n?.PendingEvents == null || n.PendingEvents.Count == 0) continue;
-            ev = n.PendingEvents[0];
-            nodeId = n.Id;
-            return !string.IsNullOrEmpty(nodeId) && ev != null;
-        }
-
-        return false;
-    }
-
-    public void CloseEvent()
-    {
-        if (_eventPanel) CloseModal(_eventPanel.gameObject, "close event");
-    }
-
-    // ================== COMPATIBILITY ==================
-
-    public void AssignInvestigate_A1() => Debug.Log("Old button clicked");
-    public void AssignInvestigate_A2() => Debug.Log("Old button clicked");
-    public void AssignInvestigate_A3() => Debug.Log("Old button clicked");
-    public void AssignContain_A1() => Debug.Log("Old button clicked");
-    public void AssignContain_A2() => Debug.Log("Old button clicked");
-    public void AssignContain_A3() => Debug.Log("Old button clicked");
-
     public void CloseAll()
     {
-        ForceCancelPickerIfNeeded(true);
-        if (_nodePanel) CloseModal(_nodePanel.gameObject, "close all");
-        if (_eventPanel) CloseModal(_eventPanel.gameObject, "close all");
+        if (_confirmDialog) CloseModal(_confirmDialog.gameObject, "close all");
+        if (_agentPicker) CloseModal(_agentPicker.gameObject, "close all");
         if (_managePanel) CloseModal(_managePanel, "close all");
         if (_recruitPanel) CloseModal(_recruitPanel.gameObject, "close all");
-        if (_newspaperPanelInstance) CloseModal(_newspaperPanelInstance, "close all");
-        if (_newsPanel) CloseModal(_newsPanel.gameObject, "close all");
-        if (_confirmDialog) CloseModal(_confirmDialog.gameObject, "close all");
+        if (_rosterPanel) CloseModal(_rosterPanel.gameObject, "close all");
+        if (_nodePanel) CloseModal(_nodePanel.gameObject, "close all");
+
+        _modalStack.Clear();
     }
 
     // ================== HELPERS ==================

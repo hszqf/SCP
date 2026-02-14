@@ -136,9 +136,8 @@ public class GameController : MonoBehaviour
         _initialized = true;
 
         var registry = DataRegistry.Instance;
-        Sim.OnIgnorePenaltyApplied += HandleIgnorePenaltyApplied;
 
-        // ---- 初始全局状态（从 Balance 表读取）----
+        // ---- 鍒濆鍏ㄥ眬鐘舵€侊紙浠?Balance 琛ㄨ鍙栵級----
         int startMoney = registry.GetBalanceIntWithWarn("StartMoney", 0);
         float startWorldPanic = registry.GetBalanceFloatWithWarn("StartWorldPanic", 0f);
         int clampMoneyMin = registry.GetBalanceIntWithWarn("ClampMoneyMin", 0);
@@ -197,8 +196,6 @@ public class GameController : MonoBehaviour
         // ---- 初始异常生成（AnomaliesGen day=1）----
         Sim.GenerateScheduledAnomalies(State, _rng, registry, State.Day);
 
-        NewsGenerator.EnsureBootstrapNews(State, registry);
-
         Notify();
         OnInitialized?.Invoke();
         Debug.Log("[Boot] GameController initialized and OnInitialized event fired");
@@ -208,7 +205,7 @@ public class GameController : MonoBehaviour
     {
         if (I == this)
         {
-            Sim.OnIgnorePenaltyApplied -= HandleIgnorePenaltyApplied;
+            I = null;
         }
     }
 
@@ -238,22 +235,6 @@ public class GameController : MonoBehaviour
         if (IsGameOver) return;
         IsGameOver = true;
         Debug.Log($"[GameOver] {reason}");
-    }
-
-    public (bool success, string text) ResolveEvent(string nodeId, string eventId, string optionId)
-    {
-        var res = Sim.ResolveEvent(State, nodeId, eventId, optionId, _rng);
-        Notify();
-        RefreshMapNodes();
-        return res;
-    }
-
-    // Legacy wrapper: locate node by eventId across all nodes.
-    public (bool success, string text) ResolveEvent(string eventId, string optionId)
-    {
-        var node = State.Cities.FirstOrDefault(n => n?.PendingEvents != null && n.PendingEvents.Any(e => e != null && e.EventInstanceId == eventId));
-        if (node == null) return (false, "事件不存在");
-        return ResolveEvent(node.Id, eventId, optionId);
     }
 
     public bool TryHireAgent(int cost, out AgentState agent)
@@ -590,11 +571,6 @@ public class GameController : MonoBehaviour
     {
         AnomalySpawner.I?.RefreshMapNodes();
         UIPanelRoot.I?.RefreshNodePanel();
-    }
-
-    private void HandleIgnorePenaltyApplied()
-    {
-        RefreshMapNodes();
     }
 
     // =====================

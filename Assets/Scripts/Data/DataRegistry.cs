@@ -11,115 +11,27 @@ using UnityEngine.Networking;
 
 namespace Data
 {
-    public enum BlockPolicy
-    {
-        None,
-        BlockOriginTask,
-        BlockAllTasksOnNode,
-    }
 
-    public enum IgnoreApplyMode
-    {
-        ApplyOnceThenRemove,
-        ApplyDailyKeep,
-        NeverAuto,
-    }
-
-    public enum AffectScopeKind
-    {
-        OriginTask,
-        Node,
-        Global,
-        TaskType,
-    }
-
-    public enum EffectOpType
-    {
-        Add,
-        Mul,
-        Set,
-        ClampAdd,
-    }
-
-    public readonly struct AffectScope
-    {
-        public AffectScope(AffectScopeKind kind, TaskType? taskType = null)
-        {
-            Kind = kind;
-            TaskType = taskType;
-        }
-
-        public AffectScopeKind Kind { get; }
-        public TaskType? TaskType { get; }
-        public string Raw => Kind == AffectScopeKind.TaskType && TaskType.HasValue ? $"TaskType:{TaskType.Value}" : Kind.ToString();
-
-        public override string ToString() => Raw;
-    }
-
-    public sealed class EffectOp
-    {
-        public string EffectId;
-        public AffectScope Scope;
-        public string StatKey;
-        public EffectOpType Op;
-        public float Value;
-        public float? Min;
-        public float? Max;
-        public string Comment;
-    }
 
     public sealed class DataRegistry
     {
         private const string GameDataFileName = "game_data.json";
         private const string RequirementAny = "ANY";
-        private const string RandomDailySource = "RandomDaily";
 
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
         private readonly HashSet<TaskType> _taskDefMissingWarned = new();
-        private bool _warnedMissingEventRequiresNodeId;
-        private bool _warnedMissingEventRequiresAnomalyId;
-        private bool _warnedMissingEventRequiresTaskType;
-        private bool _warnedMissingEventSource;
-        private bool _warnedMissingEventP;
-        private bool _warnedMissingEventMinDay;
-        private bool _warnedMissingEventMaxDay;
-        private bool _warnedMissingEventCd;
-        private bool _warnedMissingEventLimitNum;
-        private bool _warnedMissingNewsRequiresNodeId;
-        private bool _warnedMissingNewsRequiresAnomalyId;
-        private bool _warnedMissingNewsSource;
-        private bool _warnedMissingNewsP;
-        private bool _warnedMissingNewsWeight;
-        private bool _warnedMissingNewsMinDay;
-        private bool _warnedMissingNewsMaxDay;
-        private bool _warnedMissingNewsCd;
-        private bool _warnedMissingNewsLimitNum;
         private bool _hasTaskDefsTable;
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
         public Dictionary<TaskType, TaskDef> TaskDefsByType { get; private set; } = new();
         public Dictionary<string, TaskDef> TaskDefsById { get; private set; } = new();
-        public Dictionary<string, EventDef> EventsById { get; private set; } = new();
-        public Dictionary<string, List<EventOptionDef>> OptionsByEventId { get; private set; } = new();
-        public Dictionary<string, Dictionary<string, EventOptionDef>> OptionsByEventAndId { get; private set; } = new();
-        public Dictionary<string, NewsDef> NewsDefsById { get; private set; } = new();
-        public List<NewsDef> NewsDefs { get; private set; } = new();
-        public Dictionary<string, EffectDef> EffectsById { get; private set; } = new();
-        public Dictionary<string, List<EffectOp>> EffectOpsByEffectId { get; private set; } = new();
+
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
         public TableRegistry Tables { get; private set; } = new();
         public List<AnomaliesGenDef> AnomaliesGen { get; private set; } = new();
-        public Dictionary<string, MediaProfileDef> MediaProfilesById { get; private set; } = new();
-        public List<MediaProfileDef> MediaProfiles { get; private set; } = new();
-        public Dictionary<string, FactTemplateDef> FactTemplatesById { get; private set; } = new();
-        public List<FactTemplateDef> FactTemplates { get; private set; } = new();
-        public Dictionary<string, string> FactTypesById { get; private set; } = new();
-        public List<string> FactTypes { get; private set; } = new();
-
-        public IgnoreApplyMode DefaultIgnoreApplyMode { get; private set; } = IgnoreApplyMode.ApplyDailyKeep;
 
         public int GetAnomaliesGenNumForDay(int day)
         {
@@ -271,222 +183,57 @@ namespace Data
                 });
             }
 
+            // --- TaskDefs: build dictionaries by id and by TaskType ---
+            TaskDefsById = new Dictionary<string, TaskDef>(StringComparer.Ordinal);
+            TaskDefsByType = new Dictionary<TaskType, TaskDef>();
+            foreach (var row in Tables.GetRows("TaskDefs"))
+            {
+                if (row == null) continue;
+                var id = GetRowString(row, "taskDefId");
+                if (string.IsNullOrEmpty(id)) continue;
+
+                var def = new TaskDef
+                {
+                    taskDefId = id,
+                    taskType = GetRowString(row, "taskType"),
+                    name = GetRowString(row, "name"),
+                    agentSlotsMin = GetRowInt(row, "agentSlotsMin"),
+                    agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
+                };
+
+                // store by id
+                TaskDefsById[id] = def;
+
+                // try map to enum type
+                var typeStr = def.taskType;
+                if (!string.IsNullOrEmpty(typeStr))
+                {
+                    if (Enum.TryParse(typeof(TaskType), typeStr, true, out var enumObj) && enumObj is TaskType tt)
+                    {
+                        if (!TaskDefsByType.ContainsKey(tt))
+                        {
+                            TaskDefsByType[tt] = def;
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[TaskDefs] Duplicate TaskDefs entry for taskType={tt} (ids: existing={TaskDefsByType[tt].taskDefId} new={id}). Using first.");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[TaskDefs] Unknown taskType value '{typeStr}' in TaskDefs row id={id}.");
+                    }
+                }
+            }
+
             if (AnomaliesById.TryGetValue("AN_001", out var sampleAnomaly))
             {
                 Debug.Log($"[DataSample] AN_001 invHp={sampleAnomaly.invHp} invSan={sampleAnomaly.invSan} conHp={sampleAnomaly.conHp} conSan={sampleAnomaly.conSan} manHp={sampleAnomaly.manHp} manSan={sampleAnomaly.manSan}");
                 Debug.Log($"[DataSample] AN_001 invReq={FormatIntArray(sampleAnomaly.invReq)} conReq={FormatIntArray(sampleAnomaly.conReq)} manReq={FormatIntArray(sampleAnomaly.manReq)}");
             }
 
-            TaskDefsByType = new Dictionary<TaskType, TaskDef>();
-            TaskDefsById = new Dictionary<string, TaskDef>();
-            foreach (var row in Tables.GetRows("TaskDefs"))
-            {
-                var taskTypeRaw = GetRowString(row, "taskType");
-                if (string.IsNullOrEmpty(taskTypeRaw)) continue;
-                if (!TryParseTaskType(taskTypeRaw, out var type, out _)) continue;
-                var taskDef = new TaskDef
-                {
-                    taskDefId = GetRowString(row, "taskDefId"),
-                    taskType = taskTypeRaw,
-                    name = GetRowString(row, "name"),
-                    agentSlotsMin = GetRowInt(row, "agentSlotsMin"),
-                    agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
-                };
-                TaskDefsByType[type] = taskDef;
-                if (!string.IsNullOrEmpty(taskDef.taskDefId))
-                {
-                    TaskDefsById[taskDef.taskDefId] = taskDef;
-                }
-            }
+            Debug.Log($"[TaskDefs] loaded ids={TaskDefsById.Count} byType={TaskDefsByType.Count}");
 
-            EventsById = new Dictionary<string, EventDef>();
-            foreach (var row in Tables.GetRows("Events"))
-            {
-                var eventDefId = GetRowString(row, "eventDefId");
-                if (string.IsNullOrEmpty(eventDefId)) continue;
-                EventsById[eventDefId] = new EventDef
-                {
-                    eventDefId = eventDefId,
-                    source = GetEventStringWithDefault(row, "source", "RandomDaily", ref _warnedMissingEventSource, "RandomDaily"),
-                    weight = GetRowInt(row, "weight"),
-                    title = GetRowString(row, "title"),
-                    desc = GetRowString(row, "desc"),
-                    blockPolicy = GetRowString(row, "blockPolicy"),
-                    defaultAffects = GetRowStringList(row, "defaultAffects"),
-                    autoResolveAfterDays = GetRowInt(row, "autoResolveAfterDays"),
-                    ignoreApplyMode = GetRowString(row, "ignoreApplyMode"),
-                    ignoreEffectId = GetRowString(row, "ignoreEffectId"),
-                    requiresNodeId = NormalizeRequirement(GetEventStringWithDefault(row, "requiresNodeId", RequirementAny, ref _warnedMissingEventRequiresNodeId, "ANY")),
-                    requiresAnomalyId = NormalizeRequirement(GetEventStringWithDefault(row, "requiresAnomalyId", RequirementAny, ref _warnedMissingEventRequiresAnomalyId, "ANY")),
-                    requiresTaskType = NormalizeRequirement(GetEventStringWithDefault(row, "requiresTaskType", RequirementAny, ref _warnedMissingEventRequiresTaskType, "ANY")),
-                    p = GetEventFloatWithDefault(row, "p", 0f, ref _warnedMissingEventP),
-                    minDay = GetEventIntWithDefault(row, "minDay", 0, ref _warnedMissingEventMinDay),
-                    maxDay = GetEventIntWithDefault(row, "maxDay", 0, ref _warnedMissingEventMaxDay),
-                    cd = GetEventIntWithDefault(row, "CD", 0, ref _warnedMissingEventCd),
-                    limitNum = GetEventIntWithDefault(row, "limitNum", 0, ref _warnedMissingEventLimitNum),
-                };
-            }
-
-            NewsDefsById = new Dictionary<string, NewsDef>();
-            NewsDefs = new List<NewsDef>();
-            foreach (var row in Tables.GetRows("NewsDefs"))
-            {
-                var newsDefId = GetRowString(row, "newsDefId");
-                if (string.IsNullOrEmpty(newsDefId)) continue;
-                var def = new NewsDef
-                {
-                    newsDefId = newsDefId,
-                    source = GetNewsStringWithDefault(row, "source", "RandomDaily", ref _warnedMissingNewsSource, "RandomDaily"),
-                    weight = GetNewsIntWithDefault(row, "weight", 1, ref _warnedMissingNewsWeight),
-                    p = Mathf.Clamp01(GetNewsFloatWithDefault(row, "p", 1f, ref _warnedMissingNewsP)),
-                    minDay = GetNewsIntWithDefault(row, "minDay", 0, ref _warnedMissingNewsMinDay),
-                    maxDay = GetNewsIntWithDefault(row, "maxDay", 0, ref _warnedMissingNewsMaxDay),
-                    cd = GetNewsIntWithDefault(row, "CD", 0, ref _warnedMissingNewsCd),
-                    limitNum = GetNewsIntWithDefault(row, "limitNum", 0, ref _warnedMissingNewsLimitNum),
-                    requiresNodeId = NormalizeRequirement(GetNewsStringWithDefault(row, "requiresNodeId", RequirementAny, ref _warnedMissingNewsRequiresNodeId, "ANY")),
-                    requiresAnomalyId = NormalizeRequirement(GetNewsStringWithDefault(row, "requiresAnomalyId", RequirementAny, ref _warnedMissingNewsRequiresAnomalyId, "ANY")),
-                    title = GetRowString(row, "title"),
-                    desc = GetRowString(row, "desc"),
-                };
-                NewsDefsById[newsDefId] = def;
-                NewsDefs.Add(def);
-            }
-
-            if (NewsDefsById.Count > 0)
-            {
-                int randomDailyCount = NewsDefsById.Values.Count(def =>
-                    def != null && string.Equals(def.source, RandomDailySource, StringComparison.OrdinalIgnoreCase));
-                Debug.Log($"[NewsDefs] rows={NewsDefsById.Count} (source RandomDaily={randomDailyCount})");
-            }
-
-            OptionsByEventId = new Dictionary<string, List<EventOptionDef>>();
-            OptionsByEventAndId = new Dictionary<string, Dictionary<string, EventOptionDef>>();
-            foreach (var row in Tables.GetRows("EventOptions"))
-            {
-                var eventDefId = GetRowString(row, "eventDefId");
-                var optionId = GetRowString(row, "optionId");
-                if (string.IsNullOrEmpty(eventDefId) || string.IsNullOrEmpty(optionId)) continue;
-                var option = new EventOptionDef
-                {
-                    eventDefId = eventDefId,
-                    optionId = optionId,
-                    text = GetRowString(row, "text"),
-                    resultText = GetRowString(row, "resultText"),
-                    affects = GetRowStringList(row, "affects"),
-                    effectId = GetRowString(row, "effectId"),
-                };
-
-                if (!OptionsByEventId.TryGetValue(eventDefId, out var list))
-                {
-                    list = new List<EventOptionDef>();
-                    OptionsByEventId[eventDefId] = list;
-                }
-                list.Add(option);
-
-                if (!OptionsByEventAndId.TryGetValue(eventDefId, out var dict))
-                {
-                    dict = new Dictionary<string, EventOptionDef>();
-                    OptionsByEventAndId[eventDefId] = dict;
-                }
-                dict[optionId] = option;
-            }
-
-            EffectsById = new Dictionary<string, EffectDef>();
-            foreach (var row in Tables.GetRows("Effects"))
-            {
-                var effectId = GetRowString(row, "effectId");
-                if (string.IsNullOrEmpty(effectId)) continue;
-                EffectsById[effectId] = new EffectDef
-                {
-                    effectId = effectId,
-                    comment = GetRowString(row, "comment"),
-                };
-            }
-
-            EffectOpsByEffectId = new Dictionary<string, List<EffectOp>>();
-            foreach (var row in Tables.GetRows("EffectOps"))
-            {
-                var effectId = GetRowString(row, "effectId");
-                if (string.IsNullOrEmpty(effectId)) continue;
-                var rowModel = new EffectOpRow
-                {
-                    effectId = effectId,
-                    scope = GetRowString(row, "scope"),
-                    statKey = GetRowString(row, "statKey"),
-                    op = GetRowString(row, "op"),
-                    value = GetRowFloat(row, "value"),
-                    min = GetRowFloatNullable(row, "min"),
-                    max = GetRowFloatNullable(row, "max"),
-                    comment = GetRowString(row, "comment"),
-                };
-                if (!TryParseEffectOp(rowModel, out var ops)) continue;
-
-                if (!EffectOpsByEffectId.TryGetValue(effectId, out var list))
-                {
-                    list = new List<EffectOp>();
-                    EffectOpsByEffectId[effectId] = list;
-                }
-                list.AddRange(ops);
-            }
-
-            LogGroupIndexSummary("EventOptions", "eventDefId", OptionsByEventId);
-            LogGroupIndexSummary("EffectOps", "effectId", EffectOpsByEffectId);
-
-            // Load MediaProfiles
-            MediaProfilesById = new Dictionary<string, MediaProfileDef>();
-            MediaProfiles = new List<MediaProfileDef>();
-            foreach (var row in Tables.GetRows("MediaProfiles"))
-            {
-                var profileId = GetRowString(row, "profileId");
-                if (string.IsNullOrEmpty(profileId))
-                {
-                    Debug.LogWarning("[DataRegistry] MediaProfiles: Skipping row with empty profileId");
-                    continue;
-                }
-                var profile = new MediaProfileDef
-                {
-                    profileId = profileId,
-                    name = GetRowString(row, "name"),
-                    tone = GetRowString(row, "tone"),
-                    weight = GetRowInt(row, "weight", 1),
-                };
-                MediaProfilesById[profileId] = profile;
-                MediaProfiles.Add(profile);
-            }
-
-            // Load FactTemplates
-            FactTemplatesById = new Dictionary<string, FactTemplateDef>();
-            FactTemplates = new List<FactTemplateDef>();
-            foreach (var row in Tables.GetRows("FactTemplates"))
-            {
-                var templateId = GetRowString(row, "templateId");
-                if (string.IsNullOrEmpty(templateId))
-                {
-                    Debug.LogWarning("[DataRegistry] FactTemplates: Skipping row with empty templateId");
-                    continue;
-                }
-                var template = new FactTemplateDef
-                {
-                    factType = GetRowString(row, "factType"),
-                    mediaProfileId = GetRowString(row, "mediaProfileId"),
-                    severityMin = GetRowInt(row, "severityMin", 1),
-                    severityMax = GetRowInt(row, "severityMax", 5),
-                };
-                FactTemplatesById[templateId] = template;
-                FactTemplates.Add(template);
-            }
-
-            // Load FactTypes
-            FactTypesById = new Dictionary<string, string>();
-            FactTypes = new List<string>();
-            foreach (var row in Tables.GetRows("FactTypes"))
-            {
-                var typeId = GetRowString(row, "typeId");
-                if (string.IsNullOrEmpty(typeId)) continue;
-                var description = GetRowString(row, "description");
-                FactTypesById[typeId] = description;
-                FactTypes.Add(typeId);
-            }
         }
 
         private void LogSummary()
@@ -500,17 +247,7 @@ namespace Data
                 dataVersion = GetRowString(row, "dataVersion", dataVersion);
             }
 
-            int eventsCount = GetTableRowCountWithWarn("Events");
-            int optionsCount = GetTableRowCountWithWarn("EventOptions");
-            int newsCount = GetTableRowCountWithWarn("NewsDefs");
-            int effectsCount = GetTableRowCountWithWarn("Effects");
-            int opsCount = GetTableRowCountWithWarn("EffectOps");
-            int mediaProfilesCount = MediaProfiles?.Count ?? 0;
-            int factTemplatesCount = FactTemplates?.Count ?? 0;
-            int factTypesCount = FactTypes?.Count ?? 0;
-
-            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion} events={eventsCount} options={optionsCount} news={newsCount} effects={effectsCount} ops={opsCount}");
-            Debug.Log($"[Data] mediaProfiles={mediaProfilesCount} factTemplates={factTemplatesCount} factTypes={factTypesCount}");
+            Debug.Log($"[Data] schema={schema} dataVersion={dataVersion}");
         }
 
         private void LogTablesSanity()
@@ -533,32 +270,12 @@ namespace Data
                 "invhpDmg", "invsanDmg", "conhpDmg", "consanDmg", "manhpDmg", "mansanDmg",
                 "worldPanicPerDayUncontained", "maintenanceCostPerDay",
             });
+            CheckTableColumns("TaskDefs", new[] { "taskDefId", "taskType", "name", "agentSlotsMin", "agentSlotsMax" });
             CheckTableColumns("AnomaliesGen", new[]
             {
                 "day", "AnomaliesGenNum",
             });
-            CheckTableColumns("Events", new[]
-            {
-                "eventDefId", "source", "weight", "title", "desc", "blockPolicy",
-                "defaultAffects", "autoResolveAfterDays", "ignoreApplyMode", "ignoreEffectId",
-                "requiresNodeId", "requiresAnomalyId", "requiresTaskType",
-                "p", "minDay", "maxDay", "CD", "limitNum",
-            });
-            CheckTableColumns("NewsDefs", new[]
-            {
-                "newsDefId", "source", "weight", "title", "desc",
-                "requiresNodeId", "requiresAnomalyId",
-                "p", "minDay", "maxDay", "CD", "limitNum",
-            });
-            CheckTableColumns("EventOptions", new[]
-            {
-                "rowId", "eventDefId", "optionId", "text", "resultText", "affects", "effectId",
-            });
-            CheckTableColumns("Effects", new[] { "effectId" });
-            CheckTableColumns("EffectOps", new[]
-            {
-                "rowId", "effectId", "scope", "statKey", "op", "value", "min", "max",
-            });
+
         }
 
         private void CheckTableColumns(string tableName, IEnumerable<string> requiredColumns)
@@ -575,10 +292,6 @@ namespace Data
                 .ToList() ?? new List<string>();
             var normalizedColumns = new HashSet<string>(columnNames.Select(NormalizeColumnName), StringComparer.Ordinal);
 
-            if (IsRowIdOptionalForKey(tableName, table))
-            {
-                normalizedColumns.Add(NormalizeColumnName("rowId"));
-            }
 
             var missing = requiredColumns
                 .Where(name => !normalizedColumns.Contains(NormalizeColumnName(name)))
@@ -593,18 +306,6 @@ namespace Data
         private static string NormalizeColumnName(string name)
             => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
 
-        private static bool IsRowIdOptionalForKey(string tableName, GameDataTable table)
-        {
-            if (table?.columns == null || table.columns.Count == 0) return false;
-            if (!string.Equals(tableName, "EventOptions", StringComparison.Ordinal) &&
-                !string.Equals(tableName, "EffectOps", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            var firstColumn = table.columns[0]?.name;
-            return string.Equals(NormalizeColumnName(firstColumn), "key", StringComparison.Ordinal);
-        }
 
         private int GetTableRowCountWithWarn(string tableName)
         {
@@ -630,110 +331,10 @@ namespace Data
             return TableRegistry.TryCoerceString(raw, out var value) ? value ?? fallback : fallback;
         }
 
-        private string GetEventStringWithDefault(Dictionary<string, object> row, string column, string fallback, ref bool warned, string fallbackLabel)
-        {
-            if (!TableHasColumn("Events", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallbackLabel}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceString(raw, out var value) || string.IsNullOrWhiteSpace(value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallbackLabel}");
-                }
-                return fallback;
-            }
-
-            return value;
-        }
-
-        private string GetNewsStringWithDefault(Dictionary<string, object> row, string column, string fallback, ref bool warned, string fallbackLabel)
-        {
-            if (!TableHasColumn("NewsDefs", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallbackLabel}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceString(raw, out var value) || string.IsNullOrWhiteSpace(value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallbackLabel}");
-                }
-                return fallback;
-            }
-
-            return value;
-        }
-
         private static int GetRowInt(Dictionary<string, object> row, string column, int fallback = 0)
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
             return TableRegistry.TryCoerceInt(raw, out var value) ? value : fallback;
-        }
-
-        private int GetEventIntWithDefault(Dictionary<string, object> row, string column, int fallback, ref bool warned)
-        {
-            if (!TableHasColumn("Events", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceInt(raw, out var value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            return value;
-        }
-
-        private int GetNewsIntWithDefault(Dictionary<string, object> row, string column, int fallback, ref bool warned)
-        {
-            if (!TableHasColumn("NewsDefs", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceInt(raw, out var value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            return value;
         }
 
         private static int? GetRowIntNullable(Dictionary<string, object> row, string column)
@@ -746,56 +347,6 @@ namespace Data
         {
             if (row == null || !row.TryGetValue(column, out var raw)) return fallback;
             return TableRegistry.TryCoerceFloat(raw, out var value) ? value : fallback;
-        }
-
-        private float GetEventFloatWithDefault(Dictionary<string, object> row, string column, float fallback, ref bool warned)
-        {
-            if (!TableHasColumn("Events", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing event field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceFloat(raw, out var value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty event field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            return value;
-        }
-
-        private float GetNewsFloatWithDefault(Dictionary<string, object> row, string column, float fallback, ref bool warned)
-        {
-            if (!TableHasColumn("NewsDefs", column))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] missing news field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            if (row == null || !row.TryGetValue(column, out var raw) || !TableRegistry.TryCoerceFloat(raw, out var value))
-            {
-                if (!warned)
-                {
-                    warned = true;
-                    Debug.LogWarning($"[DataWarn] empty news field {column}; defaulting to {fallback}");
-                }
-                return fallback;
-            }
-
-            return value;
         }
 
         private static float? GetRowFloatNullable(Dictionary<string, object> row, string column)
@@ -873,54 +424,7 @@ namespace Data
             return TableRegistry.CoerceStringList(raw);
         }
 
-        private bool TryParseEffectOp(EffectOpRow row, out List<EffectOp> ops)
-        {
-            ops = new List<EffectOp>();
-            if (!TryParseEffectOpType(row.op, out var opType, out _)) return false;
-            if (!TryParseAffectScopes(row.scope, out var scopes, out _)) return false;
-
-            foreach (var scope in scopes)
-            {
-                ops.Add(new EffectOp
-                {
-                    EffectId = row.effectId,
-                    Scope = scope,
-                    StatKey = row.statKey,
-                    Op = opType,
-                    Value = row.value,
-                    Min = row.min,
-                    Max = row.max,
-                    Comment = row.comment,
-                });
-            }
-            return true;
-        }
-
-        private string NormalizeRequirement(string raw)
-            => string.IsNullOrWhiteSpace(raw) ? RequirementAny : raw.Trim();
-
-        private bool TableHasColumn(string tableName, string columnName)
-        {
-            if (Tables == null || string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(columnName)) return false;
-            if (!Tables.TryGetTable(tableName, out var table) || table?.columns == null) return false;
-            return table.columns.Any(col => string.Equals(col?.name, columnName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public bool TryGetEvent(string eventDefId, out EventDef def)
-            => EventsById.TryGetValue(eventDefId, out def);
-
-        public bool TryGetOption(string eventDefId, string optionId, out EventOptionDef option)
-        {
-            option = null;
-            if (!OptionsByEventAndId.TryGetValue(eventDefId, out var dict)) return false;
-            return dict.TryGetValue(optionId, out option);
-        }
-
-        public NewsDef GetNewsDefById(string newsDefId)
-            => !string.IsNullOrEmpty(newsDefId) && NewsDefsById.TryGetValue(newsDefId, out var def) ? def : null;
-
-        public bool TryGetTaskDef(TaskType type, out TaskDef def)
-            => TaskDefsByType.TryGetValue(type, out def);
+     
 
         public TaskDef GetTaskDefById(string taskDefId)
             => !string.IsNullOrEmpty(taskDefId) && TaskDefsById.TryGetValue(taskDefId, out var def) ? def : null;
@@ -949,13 +453,6 @@ namespace Data
             }
 
             return (fallbackMin, fallbackMax);
-        }
-
-        public IgnoreApplyMode GetIgnoreApplyMode(EventDef def)
-        {
-            if (def != null && TryParseIgnoreApplyMode(def.ignoreApplyMode, out var mode, out _))
-                return mode;
-            return DefaultIgnoreApplyMode;
         }
 
         private void WarnMissingTaskDef(TaskType type)
@@ -1171,145 +668,6 @@ namespace Data
                     var text = Convert.ToString(raw, CultureInfo.InvariantCulture);
                     return float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
             }
-        }
-
-        public static bool TryParseTaskType(string raw, out TaskType type, out string error)
-        {
-            error = null;
-            type = TaskType.Investigate;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "TaskType empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out type)) return true;
-            error = $"Invalid TaskType: {raw}";
-            return false;
-        }
-
-        public static bool TryParseBlockPolicy(string raw, out BlockPolicy policy, out string error)
-        {
-            error = null;
-            policy = BlockPolicy.None;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "BlockPolicy empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out policy)) return true;
-            error = $"Invalid BlockPolicy: {raw}";
-            return false;
-        }
-
-        public static bool TryParseIgnoreApplyMode(string raw, out IgnoreApplyMode mode, out string error)
-        {
-            error = null;
-            mode = IgnoreApplyMode.ApplyDailyKeep;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "IgnoreApplyMode empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out mode)) return true;
-            error = $"Invalid IgnoreApplyMode: {raw}";
-            return false;
-        }
-
-        public static bool TryParseEffectOpType(string raw, out EffectOpType opType, out string error)
-        {
-            error = null;
-            opType = EffectOpType.Add;
-            if (string.IsNullOrEmpty(raw))
-            {
-                error = "EffectOpType empty";
-                return false;
-            }
-
-            if (Enum.TryParse(raw, true, out opType)) return true;
-            error = $"Invalid EffectOpType: {raw}";
-            return false;
-        }
-
-        public static bool TryParseAffectScopes(IEnumerable<string> raws, out List<AffectScope> scopes, out string error)
-        {
-            scopes = new List<AffectScope>();
-            error = null;
-            if (raws == null)
-            {
-                error = "AffectScope empty";
-                return false;
-            }
-
-            foreach (var raw in raws)
-            {
-                if (string.IsNullOrWhiteSpace(raw)) continue;
-                if (!TryParseAffectScope(raw, out var scope, out error)) return false;
-                scopes.Add(scope);
-            }
-
-            if (scopes.Count == 0)
-            {
-                error = "AffectScope empty";
-                return false;
-            }
-            return true;
-        }
-
-        public static bool TryParseAffectScopes(string raw, out List<AffectScope> scopes, out string error)
-        {
-            scopes = new List<AffectScope>();
-            error = null;
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                error = "AffectScope empty";
-                return false;
-            }
-
-            var parts = raw.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
-            {
-                if (!TryParseAffectScope(part.Trim(), out var scope, out error)) return false;
-                scopes.Add(scope);
-            }
-
-            if (scopes.Count == 0)
-            {
-                error = "AffectScope empty";
-                return false;
-            }
-
-            return true;
-        }
-
-        public static bool TryParseAffectScope(string raw, out AffectScope scope, out string error)
-        {
-            error = null;
-            scope = new AffectScope(AffectScopeKind.Node);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                error = "AffectScope empty";
-                return false;
-            }
-
-            if (raw.StartsWith("TaskType:", StringComparison.OrdinalIgnoreCase))
-            {
-                var typeRaw = raw.Substring("TaskType:".Length);
-                if (!TryParseTaskType(typeRaw, out var taskType, out error)) return false;
-                scope = new AffectScope(AffectScopeKind.TaskType, taskType);
-                return true;
-            }
-
-            if (Enum.TryParse(raw, true, out AffectScopeKind kind))
-            {
-                scope = new AffectScope(kind);
-                return true;
-            }
-
-            error = $"Invalid AffectScope: {raw}";
-            return false;
         }
     }
 }

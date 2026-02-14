@@ -16,7 +16,6 @@ public class HUD : MonoBehaviour
 
     [Header("Buttons (bind in code, clear Inspector OnClick)")]
     [SerializeField] private Button endDayButton;
-    [SerializeField] private Button newsButton;
     [SerializeField] private Button recruitButton;
 
     private void Awake()
@@ -42,7 +41,6 @@ public class HUD : MonoBehaviour
     public void SetControlsInteractable(bool enabled)
     {
         if (endDayButton) endDayButton.interactable = enabled;
-        if (newsButton) newsButton.interactable = enabled;
         if (recruitButton) recruitButton.interactable = enabled;
     }
 
@@ -62,12 +60,6 @@ public class HUD : MonoBehaviour
         {
             var t = panel.Find("End Day");
             if (t) endDayButton = t.GetComponent<Button>();
-        }
-
-        if (!newsButton && panel)
-        {
-            var t = panel.Find("NewsBT");
-            if (t) newsButton = t.GetComponent<Button>();
         }
 
         if (!recruitButton && panel)
@@ -105,12 +97,6 @@ public class HUD : MonoBehaviour
             endDayButton.onClick.AddListener(OnEndDayClicked);
         }
 
-        if (newsButton)
-        {
-            newsButton.onClick.RemoveAllListeners();
-            newsButton.onClick.AddListener(OnNewsClicked);
-        }
-
         if (recruitButton)
         {
             recruitButton.onClick.RemoveAllListeners();
@@ -131,12 +117,6 @@ public class HUD : MonoBehaviour
         DispatchAnimationSystem.I?.PlayPending();
     }
 
-    void OnNewsClicked()
-    {
-        if (UIPanelRoot.I == null) return;
-        UIPanelRoot.I.OpenNews();
-    }
-
     void OnRecruitClicked()
     {
         if (UIPanelRoot.I == null) return;
@@ -154,13 +134,7 @@ public class HUD : MonoBehaviour
 
         if (debugText)
         {
-            int ev = 0;
-            if (s.Cities != null)
-            {
-                foreach (var node in s.Cities)
-                    ev += node?.PendingEvents?.Count ?? 0;
-            }
-            debugText.text = $"Events: {ev}";
+            debugText.text = string.Empty;
         }
 
         // 里程碑0：HUD 只负责展示，不负责“弹窗逻辑”

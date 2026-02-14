@@ -14,9 +14,6 @@ namespace Core
     // Keep for legacy UI and map display. In N-task model, task state is derived from NodeState.Tasks.
     public enum NodeStatus { Calm, Secured }
 
-    // Legacy event kind (PendingEvent). New node events use EventInstance.
-    public enum EventKind { Investigate, Contain }
-
     public enum TaskType { Investigate, Contain, Manage }
     public enum TaskState { Active, Completed, Cancelled }
 
@@ -103,9 +100,6 @@ namespace Core
         // Only for containment tasks: which containable we are trying to contain.
         public string TargetContainableId;
 
-        // Investigate: which news clue we are targeting (empty => generic investigation).
-        public string TargetNewsId;
-
         // Investigate/Contain: anomaly id associated with this task (optional).
         public string SourceAnomalyId;
 
@@ -150,8 +144,6 @@ namespace Core
 
         public int LocalPanic = 0;
         public int Population = 10;
-        public List<EventInstance> PendingEvents = new();
-        public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
     }
 
     [Serializable]
@@ -173,94 +165,6 @@ namespace Core
         public int SpawnDay;
 
         public List<NodeTask> Tasks = new();
-        public List<EventInstance> PendingEvents = new();
-        public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
-    }
-
-    [Serializable]
-    public class DecisionOption
-    {
-        public string Id;
-        public string Text;
-
-        // "Perception" / "Operation" / "Resistance" / "Power"
-        public string CheckAttr;
-        public int Threshold;
-        public float BaseSuccess = 0.5f;
-
-        public int MoneyOnSuccess = 0;
-        public int MoneyOnFail = 0;
-        public int PanicOnSuccess = 0;
-        public int PanicOnFail = 0;
-
-        public float ProgressDeltaOnSuccess = 0.02f;
-        public float ProgressDeltaOnFail = -0.06f;
-    }
-
-    [Serializable]
-    public class PendingEvent
-    {
-        public string Id;
-        public string NodeId;
-        public EventKind Kind;
-
-        public string Title;
-        public string Desc;
-
-        public List<DecisionOption> Options = new();
-    }
-
-    // ===== Fact System =====
-    // FactInstance: Runtime structure for game events/facts that can be converted to news
-    [Serializable]
-    public class FactInstance
-    {
-        public string FactId;
-        public int Day;
-        public string Type; // e.g., "AnomalySpawned", "TaskCompleted", "EventTriggered"
-        public string NodeId;
-        public string AnomalyId;
-        public int Severity; // 1-5
-        public List<string> Tags = new();
-        public Dictionary<string, object> Payload = new(); // Flexible data storage
-        public string Source; // Optional: describes the origin of this fact
-        public bool Reported; // Whether this fact has been used to generate news
-    }
-
-    // FactState: Container for all facts with retention management
-    [Serializable]
-    public class FactState
-    {
-        public List<FactInstance> Facts = new();
-        public int RetentionDays = 60; // Keep facts for 60 days
-    }
-
-    public static class FactInstanceFactory
-    {
-        public static FactInstance Create(
-            string type,
-            int day,
-            string nodeId = null,
-            string anomalyId = null,
-            int severity = 1,
-            List<string> tags = null,
-            Dictionary<string, object> payload = null,
-            string source = null)
-        {
-            return new FactInstance
-            {
-                FactId = $"FACT_{Guid.NewGuid():N}",
-                Type = type,
-                Day = day,
-                NodeId = nodeId,
-                AnomalyId = anomalyId,
-                Severity = severity,
-                Tags = tags ?? new List<string>(),
-                Payload = payload ?? new Dictionary<string, object>(),
-                Source = source,
-                Reported = false
-            };
-        }
     }
 
     [Serializable]
@@ -288,18 +192,7 @@ namespace Core
 
         public List<AgentState> Agents = new();
 
-        public List<string> News = new();
-        public List<NewsInstance> NewsLog = new();
-
-        public Dictionary<string, int> EventFiredCounts = new();
-        public Dictionary<string, int> EventLastFiredDay = new();
-        public Dictionary<string, int> NewsFiredCounts = new();
-        public Dictionary<string, int> NewsLastFiredDay = new();
-
         public RecruitPoolState RecruitPool = new RecruitPoolState();
-
-        // Fact system: stores game facts for news generation
-        public FactState FactSystem = new FactState();
     }
 }
 // </EXPORT_BLOCK>
