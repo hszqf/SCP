@@ -44,6 +44,20 @@ public class Anomaly : MonoBehaviour
         Refresh();
     }
 
+    private void OnEnable()
+    {
+        EnsureRefs();
+        if (GameController.I != null)
+            GameController.I.OnStateChanged += Refresh;
+        Refresh();
+    }
+
+    private void OnDisable()
+    {
+        if (GameController.I != null)
+            GameController.I.OnStateChanged -= Refresh;
+    }
+
     private void EnsureRefs()
     {
         if (!icon)
@@ -309,6 +323,7 @@ public class Anomaly : MonoBehaviour
         var gc = GameController.I;
         if (gc?.State?.Cities == null)
         {
+            Debug.Log("1");
             agentGridRoot.gameObject.SetActive(false);
             return;
         }
@@ -316,6 +331,8 @@ public class Anomaly : MonoBehaviour
         var node = gc.State.Cities.Find(n => n != null && n.Id == _nodeId);
         if (node == null)
         {
+            Debug.Log("2");
+
             agentGridRoot.gameObject.SetActive(false);
             return;
         }
@@ -323,6 +340,8 @@ public class Anomaly : MonoBehaviour
         var agentIds = CollectArrivedAgentIds(node);
         if (agentIds.Count == 0)
         {
+            Debug.Log("3");
+
             agentGridRoot.gameObject.SetActive(false);
             return;
         }
@@ -406,7 +425,6 @@ public class Anomaly : MonoBehaviour
             sprite = Resources.Load<Sprite>($"{AvatarResourcePath}/{agentId}");
         if (sprite == null && !string.IsNullOrEmpty(displayName))
             sprite = Resources.Load<Sprite>($"{AvatarResourcePath}/{displayName}");
-        if (sprite != null) return sprite;
 
         var pool = GetAvatarPool();
         if (pool.Length == 0) return null;

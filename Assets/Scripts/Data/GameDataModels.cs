@@ -8,7 +8,6 @@ namespace Data
     {
         public MetaRow meta = new();
         public Dictionary<string, BalanceValue> balance = new();
-        public List<NodeDef> nodes = new();
         public List<AnomalyDef> anomalies = new();
         public List<TaskDef> taskDefs = new();
         public List<EventDef> events = new();
@@ -38,23 +37,11 @@ namespace Data
     }
 
     [Serializable]
-    public class NodeDef
-    {
-        public string nodeId;
-        public string name;
-        public int startPopulation;
-        public int unlocked = 1;
-        public int type = 1;
-        public float[] location;
-    }
-
-    [Serializable]
     public class AnomalyDef
     {
         public string anomalyId;
         public string name;
         public string @class;
-        public int baseThreat;
         public int baseDays;
         public int actPeopleKill;
         public float range;

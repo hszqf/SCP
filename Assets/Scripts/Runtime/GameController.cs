@@ -154,6 +154,12 @@ public class GameController : MonoBehaviour
 
         // ---- 初始节点（从场景 City 组件读取）----
         var cities = FindObjectsByType<City>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .Where(c => c != null)
+            .ToList();
+
+        EnsureCityIds(cities);
+
+        cities = cities
             .Where(c => c != null && !string.IsNullOrEmpty(c.CityId))
             .OrderBy(c => c.CityId)
             .ToList();
@@ -632,6 +638,43 @@ public class GameController : MonoBehaviour
         if (t == null) return;
         AssignTask(t.Id, agentIds);
     }
+
+    private static void EnsureCityIds(List<City> cities)
+    {
+        if (cities == null || cities.Count == 0) return;
+
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int counter = 1;
+
+        foreach (var city in cities.OrderBy(c => c?.CityId))
+        {
+            if (city == null) continue;
+
+            var id = city.CityId;
+            if (string.IsNullOrEmpty(id) || used.Contains(id))
+            {
+                id = GenerateNextCityId(used, ref counter);
+                city.SetCityId(id, true);
+                Debug.Log($"[Boot] CityId assigned: {id}");
+            }
+
+            used.Add(id);
+        }
+    }
+
+    private static string GenerateNextCityId(HashSet<string> usedIds, ref int counter)
+    {
+        while (true)
+        {
+            string id = $"N{counter}";
+            if (!usedIds.Contains(id))
+            {
+                counter++;
+                return id;
+            }
+            counter++;
+        }
+    }
 }
 
 /// <summary>
@@ -639,7 +682,6 @@ public class GameController : MonoBehaviour
 /// - 预定占用：派遣=占用（progress==0 也占用）。busy 判定遍历所有节点所有 Active 任务。
 /// - progress==0：不允许在选人面板改派；必须先取消该任务。
 /// - progress>0：不允许更换；必须撤退该任务。
-
 ///
 /// 注意：为了兼容旧 UI（尚未支持任务列表），TryAssignInvestigate/TryAssignContain 只操作“当前任务”（每类取一条）。
 /// 等 NodePanelView 升级为任务列表后，再引入基于 taskId 的 UI 调度。

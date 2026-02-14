@@ -33,7 +33,6 @@ public class AnomalySpawner : MonoBehaviour
         if (GameController.I != null)
         {
             GameController.I.OnInitialized -= OnGameControllerInitialized;
-            GameController.I.OnStateChanged -= Refresh;
         }
     }
 
@@ -74,8 +73,6 @@ public class AnomalySpawner : MonoBehaviour
             Debug.Log("[AnomalySpawner] Subscribing to OnInitialized event");
             GameController.I.OnInitialized += OnGameControllerInitialized;
         }
-
-        GameController.I.OnStateChanged += Refresh;
     }
 
     private void Start()
@@ -100,7 +97,6 @@ public class AnomalySpawner : MonoBehaviour
                 Debug.Log("[AnomalySpawner] Waiting for GameController to initialize...");
                 GameController.I.OnInitialized += OnGameControllerInitialized;
             }
-            GameController.I.OnStateChanged += Refresh;
         }
         else
         {
@@ -130,11 +126,6 @@ public class AnomalySpawner : MonoBehaviour
     public void RefreshMapNodes()
     {
         Build();
-    }
-
-    private void Refresh()
-    {
-        RefreshMapNodes();
     }
 
     private void RefreshAnomalies()
@@ -179,12 +170,14 @@ public class AnomalySpawner : MonoBehaviour
                 toKeep.Add(key);
                 offsetKeysToKeep.Add(offsetKey);
 
+
                 if (!_anomalies.TryGetValue(key, out var anomaly) || anomaly == null)
                 {
                     var go = Instantiate(anomalyPrefab, anomalyLayer);
                     anomaly = go.GetComponent<Anomaly>();
                     if (anomaly == null) anomaly = go.AddComponent<Anomaly>();
                     _anomalies[key] = anomaly;
+
                 }
 
                 var rt = anomaly.transform as RectTransform;

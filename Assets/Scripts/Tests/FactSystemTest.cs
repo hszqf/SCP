@@ -157,7 +157,7 @@ namespace Tests
                 },
                 NewsLog = new List<NewsInstance>(),
                 News = new List<string>(),
-                Nodes = new List<NodeState>()
+                Cities = new List<NodeState>()
             };
         }
 

@@ -119,9 +119,6 @@ namespace Data
         public Dictionary<string, string> FactTypesById { get; private set; } = new();
         public List<string> FactTypes { get; private set; } = new();
 
-        public int LocalPanicHighThreshold { get; private set; } = 6;
-        public double RandomEventBaseProb { get; private set; } = 0.15d;
-        public int DefaultAutoResolveAfterDays { get; private set; } = 0;
         public IgnoreApplyMode DefaultIgnoreApplyMode { get; private set; } = IgnoreApplyMode.ApplyDailyKeep;
 
         public int GetAnomaliesGenNumForDay(int day)
@@ -238,7 +235,6 @@ namespace Data
                     anomalyId = anomalyId,
                     name = GetRowString(row, "name"),
                     @class = GetRowString(row, "class"),
-                    baseThreat = GetRowInt(row, "baseThreat"),
                     baseDays = GetRowInt(row, "baseDays"),
                     actPeopleKill = GetRowInt(row, "actPeopleKill"),
                     range = GetRowFloat(row, "range"),
@@ -491,14 +487,6 @@ namespace Data
                 FactTypesById[typeId] = description;
                 FactTypes.Add(typeId);
             }
-
-            LocalPanicHighThreshold = GetBalanceInt("LocalPanicHighThreshold", LocalPanicHighThreshold);
-            RandomEventBaseProb = GetBalanceFloat("RandomEventBaseProb", (float)RandomEventBaseProb);
-            DefaultAutoResolveAfterDays = GetBalanceInt("DefaultAutoResolveAfterDays", DefaultAutoResolveAfterDays);
-
-            var defaultIgnoreApplyModeRaw = GetBalanceString("DefaultIgnoreApplyMode", DefaultIgnoreApplyMode.ToString());
-            if (TryParseIgnoreApplyMode(defaultIgnoreApplyModeRaw, out var parsedMode, out _))
-                DefaultIgnoreApplyMode = parsedMode;
         }
 
         private void LogSummary()
@@ -541,7 +529,7 @@ namespace Data
             CheckTableColumns("Balance", new[] { "key", "p1", "p2", "p3" });
             CheckTableColumns("Anomalies", new[]
             {
-                "anomalyId", "name", "class", "baseThreat", "baseDays", "actPeopleKill", "range", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
+                "anomalyId", "name", "class", "baseDays", "actPeopleKill", "range", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
                 "invhpDmg", "invsanDmg", "conhpDmg", "consanDmg", "manhpDmg", "mansanDmg",
                 "worldPanicPerDayUncontained", "maintenanceCostPerDay",
             });
@@ -968,12 +956,6 @@ namespace Data
             if (def != null && TryParseIgnoreApplyMode(def.ignoreApplyMode, out var mode, out _))
                 return mode;
             return DefaultIgnoreApplyMode;
-        }
-
-        public int GetAutoResolveAfterDays(EventDef def)
-        {
-            if (def != null && def.autoResolveAfterDays > 0) return def.autoResolveAfterDays;
-            return DefaultAutoResolveAfterDays;
         }
 
         private void WarnMissingTaskDef(TaskType type)

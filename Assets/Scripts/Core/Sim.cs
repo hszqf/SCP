@@ -1066,7 +1066,7 @@ namespace Core
                 bool hasTarget = !string.IsNullOrEmpty(task.SourceAnomalyId);
                 string anomalyId = hasTarget ? task.SourceAnomalyId : null;
                 var anomaly = hasTarget && registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
-                int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
+                int level = Math.Max(1, node.AnomalyLevel);
 
                 // 调查完成不会自动收容
                 node.Status = NodeStatus.Calm;
@@ -1144,7 +1144,7 @@ namespace Core
                     ? task.SourceAnomalyId
                     : GetOrCreateAnomalyForNode(node, registry, rng);
                 var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
-                int level = anomaly != null ? Math.Max(1, anomaly.baseThreat) : Math.Max(1, node.AnomalyLevel);
+                int level =  Math.Max(1, node.AnomalyLevel);
                 int reward = 200 + 50 * level;
 
                 s.Money += reward;
@@ -1756,7 +1756,7 @@ namespace Core
             var existing = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyId == anomalyId);
             if (existing != null)
             {
-                existing.Level = Math.Max(existing.Level, anomaly?.baseThreat ?? 1);
+                existing.Level = Math.Max(existing.Level, 1);
                 if (!string.IsNullOrEmpty(anomaly?.@class)) existing.AnomalyClass = anomaly.@class;
                 return;
             }
@@ -1765,7 +1765,7 @@ namespace Core
             {
                 Id = $"MANAGED_{anomalyId}_{Guid.NewGuid().ToString("N")[..6]}",
                 Name = anomaly != null ? anomaly.name : $"已收容异常（{node.Name}）",
-                Level = Math.Max(1, anomaly?.baseThreat ?? 1),
+                Level = 1,
                 AnomalyId = anomalyId,
                 AnomalyClass = anomaly?.@class,
                 Favorited = true,
@@ -1800,7 +1800,7 @@ namespace Core
 
             if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly))
             {
-                node.AnomalyLevel = Math.Max(node.AnomalyLevel, Math.Max(1, anomaly.baseThreat));
+                node.AnomalyLevel = Math.Max(node.AnomalyLevel, 1);
             }
         }
 
@@ -1869,7 +1869,7 @@ namespace Core
 
                 // Emit fact for anomaly spawn
                 var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyId);
-                int severity = anomalyDef != null ? CalculateSeverityFromThreatLevel(anomalyDef.baseThreat) : 3;
+                int severity = 3;
                 EmitFact(
                     s,
                     type: "AnomalySpawned",
