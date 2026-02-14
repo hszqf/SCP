@@ -138,34 +138,43 @@ namespace Core
         public float X;
         public float Y;
 
-        // Node-level status is now coarse. Tasks are in Tasks list.
+        // Legacy: node-scoped status during migration.
         public NodeStatus Status = NodeStatus.Calm;
 
         public bool HasAnomaly = false;
         public int AnomalyLevel = 0;
         public List<string> ActiveAnomalyIds = new();
-        // 已发现/已知异常（Investigate 完成后写入）；口径为 anomalyDefId（如 AN_002）
         public List<string> KnownAnomalyDefIds = new();
-
-
-        // 收容产出：已收容目标列表（收容完成后写入）
-        public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
-
-
-        // ===== NEW: Unlimited tasks =====
+        public List<ManagedAnomalyState> ManagedAnomalies = new();
         public List<NodeTask> Tasks = new();
 
-        // ===== Node-scoped state =====
         public int LocalPanic = 0;
         public int Population = 10;
         public List<EventInstance> PendingEvents = new();
         public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
+    }
 
-        // ===== Legacy fields (temporary) =====
-        // Kept so existing UI/code can compile during migration. Do not use for new features.
-        public List<string> AssignedAgentIds = new List<string>(); // legacy squad
-        public float InvestigateProgress = 0f; // legacy 0..1
-        public float ContainProgress = 0f;     // legacy 0..1
+    [Serializable]
+    public class CityState : NodeState
+    {
+    }
+
+    [Serializable]
+    public class AnomalyState
+    {
+        public string Id;
+        public string AnomalyDefId;
+        public bool IsKnown;
+        public bool IsContained;
+        public bool IsManaged;
+        public ManagedAnomalyState ManagedState;
+        public float X;
+        public float Y;
+        public int SpawnDay;
+
+        public List<NodeTask> Tasks = new();
+        public List<EventInstance> PendingEvents = new();
+        public bool HasPendingEvent => PendingEvents != null && PendingEvents.Count > 0;
     }
 
     [Serializable]
@@ -267,14 +276,18 @@ namespace Core
         // 新货币：负熵（由“管理异常”系统每日产出）
         public int NegEntropy = 0;
 
-        // 已收藏/已收容异常的长期管理状态（Legacy/Deprecated）
-        // Node-scoped source of truth is NodeState.ManagedAnomalies.
-        public List<ManagedAnomalyState> ManagedAnomalies = new List<ManagedAnomalyState>();
+        public List<NodeState> Cities = new();
+        public List<AnomalyState> Anomalies = new();
 
-        public List<NodeState> Nodes = new();
+        [Obsolete("Use Cities instead.")]
+        public List<NodeState> Nodes
+        {
+            get => Cities;
+            set => Cities = value;
+        }
+
         public List<AgentState> Agents = new();
 
-        public List<PendingEvent> PendingEvents = new();
         public List<string> News = new();
         public List<NewsInstance> NewsLog = new();
 

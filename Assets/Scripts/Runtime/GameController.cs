@@ -152,44 +152,38 @@ public class GameController : MonoBehaviour
         State.Agents.Add(new AgentState { Id = "A2", Name = "Bob", Perception = 4, Operation = 7, Resistance = 5, Power = 6, AvatarSeed = "A2".GetHashCode() });
         State.Agents.Add(new AgentState { Id = "A3", Name = "Chen", Perception = 5, Operation = 5, Resistance = 7, Power = 4, AvatarSeed = "A3".GetHashCode() });
 
-        // ---- 初始节点（从 DataRegistry 读取，坐标仍由代码提供）----
-        var nodeCoords = new Dictionary<string, (float x, float y)>
-        {
-            ["N1"] = (0.35f, 0.42f),
-            ["N2"] = (0.62f, 0.33f),
-            ["N3"] = (0.48f, 0.58f),
-        };
+        // ---- 初始节点（从场景 City 组件读取）----
+        var cities = FindObjectsOfType<City>(true)
+            .Where(c => c != null && !string.IsNullOrEmpty(c.CityId))
+            .OrderBy(c => c.CityId)
+            .ToList();
 
-        foreach (var nodeDef in DataRegistry.Instance.NodesById.Values.OrderBy(n => n.nodeId))
+        if (cities.Count == 0)
         {
-            if (nodeDef.unlocked <= 0) continue;
-            var coord = nodeCoords.TryGetValue(nodeDef.nodeId, out var c) ? c : (x: 0.5f, y: 0.5f);
-            if (nodeDef.location != null && nodeDef.location.Length >= 2)
-                coord = (nodeDef.location[0], nodeDef.location[1]);
+            Debug.LogWarning("[Boot] No City components found in scene; no nodes initialized.");
+        }
+
+        foreach (var city in cities)
+        {
             var nodeState = new NodeState
             {
-                Id = nodeDef.nodeId,
-                Name = nodeDef.name,
-                Unlocked = nodeDef.unlocked > 0,
-                Type = nodeDef.type,
-                Location = nodeDef.location,
-                X = coord.x,
-                Y = coord.y,
+                Id = city.CityId,
+                Name = city.CityName,
+                Unlocked = city.Unlocked,
+                Type = city.CityType,
                 LocalPanic = 0,
-                Population = Math.Max(0, nodeDef.startPopulation),
+                Population = Math.Max(0, city.Population),
                 ActiveAnomalyIds = new List<string>(),
             };
-            nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
-            if (nodeState.HasAnomaly)
+
+            var rt = city.transform as RectTransform;
+            if (rt != null)
             {
-                foreach (var anomalyId in nodeState.ActiveAnomalyIds)
-                {
-                    if (DataRegistry.Instance.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
-                    {
-                        nodeState.AnomalyLevel = Math.Max(nodeState.AnomalyLevel, Math.Max(1, anomalyDef.baseThreat));
-                    }
-                }
+                nodeState.X = rt.anchoredPosition.x;
+                nodeState.Y = rt.anchoredPosition.y;
             }
+
+            nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
 
             State.Nodes.Add(nodeState);
         }
@@ -588,7 +582,7 @@ public class GameController : MonoBehaviour
 
     private void RefreshMapNodes()
     {
-        MapNodeSpawner.I?.RefreshMapNodes();
+        AnomalySpawner.I?.RefreshMapNodes();
         UIPanelRoot.I?.RefreshNodePanel();
     }
 

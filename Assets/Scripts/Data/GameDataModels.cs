@@ -57,6 +57,7 @@ namespace Data
         public int baseThreat;
         public int baseDays;
         public int actPeopleKill;
+        public float range;
         public int invExp;
         public int conExp;
         public int manExpPerDay;

@@ -99,7 +99,6 @@ namespace Data
         private bool _hasTaskDefsTable;
 
         public GameDataRoot Root { get; private set; }
-        public Dictionary<string, NodeDef> NodesById { get; private set; } = new();
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
         public Dictionary<TaskType, TaskDef> TaskDefsByType { get; private set; } = new();
         public Dictionary<string, TaskDef> TaskDefsById { get; private set; } = new();
@@ -229,22 +228,6 @@ namespace Data
             LogTablesSanity();
             _hasTaskDefsTable = Tables.TryGetTable("TaskDefs", out _);
 
-            NodesById = new Dictionary<string, NodeDef>();
-            foreach (var row in Tables.GetRows("Nodes"))
-            {
-                var nodeId = GetRowString(row, "nodeId");
-                if (string.IsNullOrEmpty(nodeId)) continue;
-                NodesById[nodeId] = new NodeDef
-                {
-                    nodeId = nodeId,
-                    name = GetRowString(row, "name"),
-                    startPopulation = GetRowInt(row, "startPopulation"),
-                    unlocked = GetRowInt(row, "unlocked", 1),
-                    type = GetRowInt(row, "type", 1),
-                    location = GetRowFloatList(row, "location"),
-                };
-            }
-
             AnomaliesById = new Dictionary<string, AnomalyDef>();
             foreach (var row in Tables.GetRows("Anomalies"))
             {
@@ -258,6 +241,7 @@ namespace Data
                     baseThreat = GetRowInt(row, "baseThreat"),
                     baseDays = GetRowInt(row, "baseDays"),
                     actPeopleKill = GetRowInt(row, "actPeopleKill"),
+                    range = GetRowFloat(row, "range"),
                     invExp = GetRowInt(row, "invExp"),
                     conExp = GetRowInt(row, "conExp"),
                     manExpPerDay = GetRowInt(row, "manExpPerDay"),
@@ -555,13 +539,9 @@ namespace Data
 
             CheckTableColumns("Meta", new[] { "schemaVersion", "dataVersion" });
             CheckTableColumns("Balance", new[] { "key", "p1", "p2", "p3" });
-            CheckTableColumns("Nodes", new[]
-            {
-                "nodeId", "name", "startPopulation", "unlocked", "type", "location",
-            });
             CheckTableColumns("Anomalies", new[]
             {
-                "anomalyId", "name", "class", "baseThreat", "baseDays", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
+                "anomalyId", "name", "class", "baseThreat", "baseDays", "actPeopleKill", "range", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
                 "invhpDmg", "invsanDmg", "conhpDmg", "consanDmg", "manhpDmg", "mansanDmg",
                 "worldPanicPerDayUncontained", "maintenanceCostPerDay",
             });

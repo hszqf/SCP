@@ -204,7 +204,7 @@ namespace Core
             // 2) 不处理的后果（按 IgnoreApplyMode 执行）
             ApplyIgnorePenaltyOnDayEnd(s, registry);
 
-            // 2.5) 事件自动关闭（按 autoResolveAfterDays）
+            // 2.5) 事件自动关闭（按 autoResolvecountDownDays）
             AutoResolvePendingEventsOnDayEnd(s, registry);
 
             // 3) RandomDaily 事件生成
@@ -273,19 +273,38 @@ namespace Core
             }
 
             int totalPopLoss = 0;
-            foreach (var node in s.Nodes)
-            {
-                if (node == null || node.ActiveAnomalyIds == null || node.ActiveAnomalyIds.Count == 0) continue;
+            var popLossByNode = new Dictionary<string, int>();
 
-                int popLoss = 0;
-                foreach (var anomalyId in node.ActiveAnomalyIds)
+            foreach (var originNode in s.Nodes)
+            {
+                if (originNode == null || originNode.ActiveAnomalyIds == null || originNode.ActiveAnomalyIds.Count == 0)
+                    continue;
+
+                foreach (var anomalyId in originNode.ActiveAnomalyIds)
                 {
                     if (string.IsNullOrEmpty(anomalyId)) continue;
                     int kill = registry.GetAnomalyIntWithWarn(anomalyId, "actPeopleKill", 0);
-                    if (kill > 0) popLoss += kill;
-                }
+                    if (kill <= 0) continue;
 
-                if (popLoss <= 0) continue;
+                    float range = registry.GetAnomalyFloatWithWarn(anomalyId, "range", 0f);
+                    foreach (var targetNode in s.Nodes)
+                    {
+                        if (targetNode == null || targetNode.Type == 0) continue;
+                        if (!IsNodeWithinRange(originNode, targetNode, range)) continue;
+
+                        if (popLossByNode.TryGetValue(targetNode.Id, out var current))
+                            popLossByNode[targetNode.Id] = current + kill;
+                        else
+                            popLossByNode[targetNode.Id] = kill;
+                    }
+                }
+            }
+
+            foreach (var node in s.Nodes)
+            {
+                if (node == null) continue;
+                if (!popLossByNode.TryGetValue(node.Id, out var popLoss) || popLoss <= 0) continue;
+
                 int before = node.Population;
                 node.Population = Mathf.Max(0, before - popLoss);
                 int applied = before - node.Population;
@@ -1333,6 +1352,28 @@ namespace Core
         // Helpers
         // =====================
 
+        private static bool IsNodeWithinRange(NodeState origin, NodeState target, float range)
+        {
+            if (origin == null || target == null) return false;
+            if (range <= 0f)
+                return string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase);
+
+            var originPos = ResolveNodeLocation01(origin);
+            var targetPos = ResolveNodeLocation01(target);
+            return Vector2.Distance(originPos, targetPos) <= range;
+        }
+
+        private static Vector2 ResolveNodeLocation01(NodeState node)
+        {
+            if (node?.Location != null && node.Location.Length >= 2)
+                return new Vector2(node.Location[0], node.Location[1]);
+
+            if (node != null && node.Type == 0 && Mathf.Abs(node.X) < 0.0001f && Mathf.Abs(node.Y) < 0.0001f)
+                return new Vector2(0.5f, 0.5f);
+
+            return node != null ? new Vector2(node.X, node.Y) : new Vector2(0.5f, 0.5f);
+        }
+
         static List<AgentState> GetAssignedAgents(GameState s, List<string> assignedIds)
         {
             if (assignedIds == null || assignedIds.Count == 0) return new List<AgentState>();
@@ -1795,7 +1836,7 @@ namespace Core
 
             var nodes = s.Nodes?.Where(n => n != null).ToList();
             if (nodes == null || nodes.Count == 0) return 0;
-            nodes = nodes.Where(n => n != null && n.Type != 0).ToList();
+            nodes = nodes.Where(n => n != null && n.Type != 0 && n.Unlocked).ToList();
             if (nodes.Count == 0) return 0;
 
             int spawned = 0;
@@ -2040,10 +2081,10 @@ namespace Core
 
             // Log fact emission
             string tagsStr = tags != null && tags.Count > 0 ? string.Join(",", tags) : "none";
-            string payloadStr = payload != null && payload.Count > 0 
-                ? string.Join(",", payload.Select(kv => $"{kv.Key}={kv.Value}")) 
+            string payloadStr = payload != null && payload.Count > 0
+                ? string.Join(",", payload.Select(kv => $"{kv.Key}={kv.Value}"))
                 : "none";
-            
+
             Debug.Log($"[Fact] EMIT day={state.Day} factId={fact.FactId} type={type} nodeId={nodeId ?? "none"} anomalyId={anomalyId ?? "none"} severity={severity} tags=[{tagsStr}] payload=[{payloadStr}] source={source ?? "none"}");
         }
 
@@ -2066,7 +2107,7 @@ namespace Core
             {
                 Debug.Log($"[Fact] PRUNE day={state.Day} cutoffDay={cutoffDay} removed={beforeCount - afterCount} remaining={afterCount}");
             }
-            
+
             // Clean up tracking data for pruned facts
             FactNewsGenerator.CleanupPrunedFactTracking(state);
         }
