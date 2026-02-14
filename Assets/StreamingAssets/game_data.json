@@ -228,6 +228,26 @@
         {
           "name": "manNegentropyPerDay",
           "type": "int"
+        },
+        {
+          "name": "desc1",
+          "type": "string"
+        },
+        {
+          "name": "desc2",
+          "type": "string"
+        },
+        {
+          "name": "desc3",
+          "type": "string"
+        },
+        {
+          "name": "desc4",
+          "type": "string"
+        },
+        {
+          "name": "desc5",
+          "type": "string"
         }
       ],
       "rows": [
@@ -267,7 +287,12 @@
           "invExp": 5,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_002",
@@ -305,7 +330,12 @@
           "invExp": 2,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_003",
@@ -343,7 +373,12 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_004",
@@ -381,7 +416,12 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_005",
@@ -419,7 +459,12 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_006",
@@ -457,7 +502,12 @@
           "invExp": 1,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_007",
@@ -495,7 +545,12 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_008",
@@ -533,7 +588,12 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_009",
@@ -571,7 +631,12 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_010",
@@ -609,7 +674,12 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_011",
@@ -647,7 +717,12 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_012",
@@ -685,7 +760,12 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_013",
@@ -723,7 +803,12 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_014",
@@ -761,7 +846,12 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_015",
@@ -799,7 +889,12 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_016",
@@ -837,7 +932,12 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_017",
@@ -875,7 +975,12 @@
           "invExp": 1,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_018",
@@ -913,7 +1018,12 @@
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_019",
@@ -951,7 +1061,12 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_020",
@@ -989,7 +1104,12 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_021",
@@ -1027,7 +1147,12 @@
           "invExp": 1,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_022",
@@ -1065,7 +1190,12 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_023",
@@ -1103,7 +1233,12 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_024",
@@ -1141,7 +1276,12 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_025",
@@ -1179,7 +1319,12 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_026",
@@ -1217,7 +1362,12 @@
           "invExp": 4,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_027",
@@ -1255,7 +1405,12 @@
           "invExp": 5,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_028",
@@ -1293,7 +1448,12 @@
           "invExp": 5,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_029",
@@ -1331,7 +1491,12 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_030",
@@ -1369,7 +1534,12 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_031",
@@ -1407,7 +1577,12 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_032",
@@ -1445,7 +1620,12 @@
           "invExp": 4,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_033",
@@ -1483,7 +1663,12 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_034",
@@ -1521,7 +1706,12 @@
           "invExp": 5,
           "conExp": 2,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_035",
@@ -1559,7 +1749,12 @@
           "invExp": 2,
           "conExp": 1,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_036",
@@ -1597,7 +1792,12 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_037",
@@ -1635,7 +1835,12 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_038",
@@ -1673,7 +1878,12 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_039",
@@ -1711,7 +1921,12 @@
           "invExp": 4,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_040",
@@ -1749,7 +1964,12 @@
           "invExp": 4,
           "conExp": 5,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_041",
@@ -1787,7 +2007,12 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_042",
@@ -1825,7 +2050,12 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_043",
@@ -1863,7 +2093,12 @@
           "invExp": 1,
           "conExp": 3,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_044",
@@ -1901,7 +2136,12 @@
           "invExp": 5,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_045",
@@ -1939,7 +2179,12 @@
           "invExp": 3,
           "conExp": 1,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_046",
@@ -1977,7 +2222,12 @@
           "invExp": 3,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_047",
@@ -2015,7 +2265,12 @@
           "invExp": 1,
           "conExp": 2,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_048",
@@ -2053,7 +2308,12 @@
           "invExp": 5,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_049",
@@ -2091,7 +2351,12 @@
           "invExp": 3,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_050",
@@ -2129,7 +2394,12 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_051",
@@ -2167,7 +2437,12 @@
           "invExp": 5,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_052",
@@ -2205,7 +2480,12 @@
           "invExp": 2,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_053",
@@ -2243,7 +2523,12 @@
           "invExp": 4,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_054",
@@ -2281,7 +2566,12 @@
           "invExp": 1,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_055",
@@ -2319,7 +2609,12 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_056",
@@ -2357,7 +2652,12 @@
           "invExp": 2,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_057",
@@ -2395,7 +2695,12 @@
           "invExp": 3,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_058",
@@ -2433,7 +2738,12 @@
           "invExp": 2,
           "conExp": 1,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_059",
@@ -2471,7 +2781,12 @@
           "invExp": 2,
           "conExp": 2,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_060",
@@ -2509,7 +2824,12 @@
           "invExp": 2,
           "conExp": 4,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 12
+          "manNegentropyPerDay": 12,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_061",
@@ -2547,7 +2867,12 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_062",
@@ -2585,7 +2910,12 @@
           "invExp": 1,
           "conExp": 5,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_063",
@@ -2623,7 +2953,12 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 1,
-          "manNegentropyPerDay": 6
+          "manNegentropyPerDay": 6,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_064",
@@ -2661,7 +2996,12 @@
           "invExp": 3,
           "conExp": 4,
           "manExpPerDay": 2,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         },
         {
           "anomalyId": "AN_065",
@@ -2699,7 +3039,12 @@
           "invExp": 4,
           "conExp": 3,
           "manExpPerDay": 3,
-          "manNegentropyPerDay": 3
+          "manNegentropyPerDay": 3,
+          "desc1": "test",
+          "desc2": "test",
+          "desc3": "test",
+          "desc4": "test",
+          "desc5": "test"
         }
       ]
     },

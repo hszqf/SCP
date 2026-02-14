@@ -257,7 +257,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         _taskUiCached = (_invCardRoot != null || _conCardRoot != null);
     }
 
-    private void RefreshTaskCardsSummary(NodeState node)
+    private void RefreshTaskCardsSummary(CityState node)
     {
         // If task cards are not present (prefab not patched / different variant), do nothing.
         if (_invTitle == null && _invStatus == null && _invPeople == null && _conTitle == null && _conStatus == null && _conPeople == null)
@@ -304,7 +304,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             {
                 bool hasSquad = invMain.AssignedAgentIds != null && invMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && invMain.Progress <= EPS) _invStatus.text = "状态：待开始";
-                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(invMain) * 100)}%）";
+                else if (hasSquad) _invStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(node, invMain) * 100)}%）";
                 else _invStatus.text = "状态：未指派";
 
                 if (inv.Count > 1) _invStatus.text += $"（+{inv.Count - 1}）";
@@ -324,7 +324,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             {
                 bool hasSquad = conMain.AssignedAgentIds != null && conMain.AssignedAgentIds.Count > 0;
                 if (hasSquad && conMain.Progress <= EPS) _conStatus.text = "状态：待开始";
-                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(conMain) * 100)}%）";
+                else if (hasSquad) _conStatus.text = $"状态：进行中（{(int)(GetTaskProgress01(node, conMain) * 100)}%）";
                 else _conStatus.text = "状态：未指派";
 
                 if (con.Count > 1) _conStatus.text += $"（+{con.Count - 1}）";
@@ -504,7 +504,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         _taskListCached = true;
     }
 
-    private bool RefreshTaskListIfPresent(NodeState node)
+    private bool RefreshTaskListIfPresent(CityState node)
     {
         if (_taskListContent == null || _taskRowTemplate == null) return false;
 
@@ -566,7 +566,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             bool hasSquad = t.AssignedAgentIds != null && t.AssignedAgentIds.Count > 0;
             if (status)
             {
-                status.text = BuildTaskStatusText(t, hasSquad);
+                status.text = BuildTaskStatusText(node, t, hasSquad);
             }
 
             if (people)
@@ -693,7 +693,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         };
     }
 
-    private static int GetContainableCount(NodeState node)
+    private static int GetContainableCount(CityState node)
     {
         if (node?.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return 0;
 
@@ -715,7 +715,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return count;
     }
 
-    private static string ResolveContainableName(NodeState node, string containableId)
+    private static string ResolveContainableName(CityState node, string containableId)
     {
         if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return "";
         var registry = DataRegistry.Instance;
@@ -728,7 +728,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return defId;
     }
 
-    private static string BuildAnomalyStatusText(NodeState node)
+    private static string BuildAnomalyStatusText(CityState node)
     {
         if (node == null) return "异常：无";
 
@@ -771,7 +771,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return "异常：" + string.Join("，", parts);
     }
 
-    private static string ResolveManagedAnomalyName(NodeState node, string managedAnomalyId)
+    private static string ResolveManagedAnomalyName(CityState node, string managedAnomalyId)
     {
         if (node == null || node.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return "";
         if (!string.IsNullOrEmpty(managedAnomalyId))
@@ -790,7 +790,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return task.TaskDefId ?? "";
     }
 
-    private static string BuildTaskStatusText(NodeTask t, bool hasSquad)
+    private static string BuildTaskStatusText(CityState node, NodeTask t, bool hasSquad)
     {
         if (t.State == TaskState.Completed) return "状态：已完成";
         if (t.State == TaskState.Cancelled) return "状态：已取消";
@@ -801,9 +801,9 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         if (t.Type == TaskType.Manage)
             return "状态：管理中";
 
-        if (t.Progress <= EPS) return "状态：待开始";
-
-        return $"状态：进行中（{(int)(GetTaskProgress01(t) * 100)}%）";
+        float p01 = GetTaskProgress01(node, t);
+        if (p01 <= EPS) return "状态：待开始";
+        return $"状态：进行中（{(int)(p01 * 100)}%）";
     }
 
     private static TaskActionMode GetActionMode(NodeTask t, bool hasSquad)
@@ -817,12 +817,36 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         return (t.Progress > EPS) ? TaskActionMode.Retreat : TaskActionMode.Cancel;
     }
 
-    private static float GetTaskProgress01(NodeTask task)
+    private static float GetTaskProgress01(CityState node, NodeTask task)
     {
         if (task == null) return 0f;
         if (task.Type == TaskType.Manage) return 0f;
         int baseDays = GetTaskBaseDays(task);
-        float progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+        string anomalyId = task.SourceAnomalyId;
+        if (string.IsNullOrEmpty(anomalyId))
+        {
+            anomalyId = node?.ActiveAnomalyIds?.FirstOrDefault(id => !string.IsNullOrEmpty(id));
+        }
+
+        float progress = 0f;
+        if (!string.IsNullOrEmpty(anomalyId))
+        {
+            var state = GameController.I?.State;
+            var anomalyState = state?.Anomalies?.FirstOrDefault(a => a != null && string.Equals(a.AnomalyDefId, anomalyId, StringComparison.OrdinalIgnoreCase));
+            if (anomalyState != null)
+            {
+                if (task.Type == TaskType.Investigate)
+                    progress = anomalyState.InvestigateProgress;
+                else if (task.Type == TaskType.Contain)
+                    progress = anomalyState.ContainProgress;
+            }
+        }
+
+        if (progress <= 0f)
+        {
+            progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+        }
+
         return Mathf.Clamp01(progress / baseDays);
     }
 
@@ -853,7 +877,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     // Dispatch buttons
     // ----------------------
 
-    private void UpdateDispatchButtons(NodeState n, int containableCount, bool hasContainables)
+    private void UpdateDispatchButtons(CityState n, int containableCount, bool hasContainables)
     {
         if (n == null) return;
 
@@ -873,7 +897,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         Debug.Log($"[NodePanelContainGate] nodeId={_nodeId} containableCount={containableCount} hasContainables={hasContainables} canContain={canContain} btn={(containButton ? containButton.interactable : false)}");
     }
 
-    private void UpdateManageButton(NodeState n)
+    private void UpdateManageButton(CityState n)
     {
         if (!manageButton) return;
         if (n == null)

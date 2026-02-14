@@ -676,7 +676,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         return TryGetNodeLocalPoint(anomalyRT, out localPoint);
     }
 
-    private static string ResolveTaskAnomalyId(NodeState node, NodeTask task)
+    private static string ResolveTaskAnomalyId(CityState node, NodeTask task)
     {
         if (node == null || task == null) return null;
 

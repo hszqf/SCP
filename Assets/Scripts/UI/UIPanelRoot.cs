@@ -365,7 +365,7 @@ public class UIPanelRoot : MonoBehaviour
         );
     }
 
-    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(NodeState node, DataRegistry registry, string targetAnomalyId)
+    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(CityState node, DataRegistry registry, string targetAnomalyId)
     {
         var targets = new List<AnomalyManagePanel.TargetEntry>();
         if (!string.IsNullOrEmpty(targetAnomalyId))
@@ -395,7 +395,7 @@ public class UIPanelRoot : MonoBehaviour
         return targets;
     }
 
-    private List<AnomalyManagePanel.TargetEntry> BuildContainTargets(NodeState node, DataRegistry registry)
+    private List<AnomalyManagePanel.TargetEntry> BuildContainTargets(CityState node, DataRegistry registry)
     {
         var targets = new List<AnomalyManagePanel.TargetEntry>();
         var known = node?.KnownAnomalyDefIds;
@@ -424,7 +424,7 @@ public class UIPanelRoot : MonoBehaviour
         return targets;
     }
 
-    private string EnsureContainableForAnomaly(NodeState node, DataRegistry registry, string anomalyId)
+    private string EnsureContainableForAnomaly(CityState node, DataRegistry registry, string anomalyId)
     {
         if (node == null || string.IsNullOrEmpty(anomalyId)) return null;
         node.KnownAnomalyDefIds ??= new List<string>();
@@ -750,7 +750,7 @@ public class UIPanelRoot : MonoBehaviour
     }
 
     // Pick a containable that is not already targeted by an active containment task when possible.
-    string PickNextContainableId(NodeState node)
+    string PickNextContainableId(CityState node)
     {
         if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return null;
 

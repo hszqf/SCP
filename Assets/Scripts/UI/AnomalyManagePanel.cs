@@ -202,7 +202,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         UpdateHeader();
     }
 
-    private static List<ManagedAnomalyState> GetFavoritedAnomalies(NodeState node)
+    private static List<ManagedAnomalyState> GetFavoritedAnomalies(CityState node)
     {
         if (node?.ManagedAnomalies == null) return new List<ManagedAnomalyState>();
         return node.ManagedAnomalies
@@ -508,13 +508,13 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     // Data helpers
     // --------------------
 
-    private static ManagedAnomalyState FindManagedAnomaly(NodeState node, string anomalyId)
+    private static ManagedAnomalyState FindManagedAnomaly(CityState node, string anomalyId)
     {
         if (node?.ManagedAnomalies == null || string.IsNullOrEmpty(anomalyId)) return null;
         return node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == anomalyId);
     }
 
-    private static NodeTask FindManageTask(NodeState node, string anomalyId)
+    private static NodeTask FindManageTask(CityState node, string anomalyId)
     {
         if (node?.Tasks == null || string.IsNullOrEmpty(anomalyId)) return null;
 
@@ -526,7 +526,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         return node.Tasks.LastOrDefault(t => t != null && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
     }
 
-    private static int GetCurrentManagerCount(NodeState node, string anomalyId)
+    private static int GetCurrentManagerCount(CityState node, string anomalyId)
     {
         int mgr = 0;
         var mtForLabel = FindManageTask(node, anomalyId);

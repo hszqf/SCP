@@ -170,11 +170,42 @@ namespace Core
                     }
                     float before = t.Progress;
                     t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, baseDays);
-                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} progress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+
+                    // Persist progress onto the anomaly so it survives task cancellation.
+                    if (!string.IsNullOrEmpty(anomalyId))
+                    {
+                        var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
+                        if (anomalyState != null)
+                        {
+                            if (t.Type == TaskType.Investigate)
+                            {
+                                anomalyState.InvestigateProgress = Mathf.Clamp(anomalyState.InvestigateProgress + effDelta, 0f, baseDays);
+                            }
+                            else if (t.Type == TaskType.Contain)
+                            {
+                                anomalyState.ContainProgress = Mathf.Clamp(anomalyState.ContainProgress + effDelta, 0f, baseDays);
+                            }
+                        }
+                    }
+
+                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} taskProgress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
 
                     ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
 
-                    if (t.Progress >= baseDays)
+                    bool reached = false;
+                    if (!string.IsNullOrEmpty(anomalyId))
+                    {
+                        var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
+                        if (anomalyState != null)
+                        {
+                            if (t.Type == TaskType.Investigate && anomalyState.InvestigateProgress >= baseDays)
+                                reached = true;
+                            else if (t.Type == TaskType.Contain && anomalyState.ContainProgress >= baseDays)
+                                reached = true;
+                        }
+                    }
+
+                    if (reached)
                     {
                         CompleteTask(s, n, t, rng, registry);
                     }
@@ -318,7 +349,7 @@ namespace Core
         // Task completion rules
         // =====================
 
-        static void CompleteTask(GameState s, NodeState node, NodeTask task, Random rng, DataRegistry registry)
+        static void CompleteTask(GameState s, CityState node, NodeTask task, Random rng, DataRegistry registry)
         {
             string baseAnomalyId = GetTaskAnomalyId(node, task);
             AnomalyDef baseAnomalyDef = null;
@@ -334,6 +365,18 @@ namespace Core
             task.Progress = baseDays;
             task.State = TaskState.Completed;
             task.CompletedDay = s.Day;
+
+            if (!string.IsNullOrEmpty(baseAnomalyId))
+            {
+                var anomalyState = GetOrCreateAnomalyState(s, node, baseAnomalyId);
+                if (anomalyState != null)
+                {
+                    if (task.Type == TaskType.Investigate)
+                        anomalyState.IsKnown = true;
+                    if (task.Type == TaskType.Contain)
+                        anomalyState.IsContained = true;
+                }
+            }
 
             // Store assigned agents before clearing for HP/SAN impact
             var assignedAgents = task.AssignedAgentIds != null ? new List<string>(task.AssignedAgentIds) : new List<string>();
@@ -390,7 +433,7 @@ namespace Core
                 // 只用 anomalyId 进行收容
                 string anomalyId = !string.IsNullOrEmpty(task.SourceAnomalyId)
                     ? task.SourceAnomalyId
-                    : GetOrCreateAnomalyForNode(node, registry, rng);
+                    : GetOrCreateAnomalyForNode(s, node, registry, rng);
                 var anomaly = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
                 int level =  Math.Max(1, node.AnomalyLevel);
                 int reward = 200 + 50 * level;
@@ -580,7 +623,7 @@ namespace Core
         // Helpers
         // =====================
 
-        private static bool IsNodeWithinRange(NodeState origin, NodeState target, float range)
+        private static bool IsNodeWithinRange(CityState origin, CityState target, float range)
         {
             if (origin == null || target == null) return false;
             if (range <= 0f)
@@ -591,7 +634,7 @@ namespace Core
             return Vector2.Distance(originPos, targetPos) <= range;
         }
 
-        private static Vector2 ResolveNodeLocation01(NodeState node)
+        private static Vector2 ResolveNodeLocation01(CityState node)
         {
             if (node?.Location != null && node.Location.Length >= 2)
                 return new Vector2(node.Location[0], node.Location[1]);
@@ -638,7 +681,7 @@ namespace Core
             return new[] { p, r, o, pow };
         }
 
-        private static void TryLockGenericInvestigateTarget(GameState s, NodeState node, NodeTask task, List<AgentState> squad, DataRegistry registry, Random rng)
+        private static void TryLockGenericInvestigateTarget(GameState s, CityState node, NodeTask task, List<AgentState> squad, DataRegistry registry, Random rng)
         {
             if (task == null || node == null || squad == null || registry == null || rng == null) return;
 
@@ -728,7 +771,7 @@ namespace Core
             return baseDays > 0 ? baseDays : 1;
         }
 
-        static string GetTaskAnomalyId(NodeState node, NodeTask task)
+        static string GetTaskAnomalyId(CityState node, NodeTask task)
         {
             if (node == null || task == null) return null;
 
@@ -913,7 +956,7 @@ namespace Core
                 s.NegEntropy += totalAllNodes;
         }
 
-        private static void ApplyDailyTaskImpact(GameState s, NodeState node, NodeTask task, AnomalyDef anomalyDef, string anomalyId)
+        private static void ApplyDailyTaskImpact(GameState s, CityState node, NodeTask task, AnomalyDef anomalyDef, string anomalyId)
         {
             if (s == null || node == null || task == null || anomalyDef == null) return;
             if (task.Type != TaskType.Investigate && task.Type != TaskType.Contain) return;
@@ -975,7 +1018,7 @@ namespace Core
             }
         }
 
-        static void EnsureManagedAnomalyRecorded(NodeState node, string anomalyId, AnomalyDef anomaly)
+        static void EnsureManagedAnomalyRecorded(CityState node, string anomalyId, AnomalyDef anomaly)
         {
             if (node.ManagedAnomalies == null) node.ManagedAnomalies = new List<ManagedAnomalyState>();
             if (string.IsNullOrEmpty(anomalyId)) return;
@@ -1001,7 +1044,7 @@ namespace Core
             });
         }
 
-        private static bool TryGetOriginTask(GameState s, string taskId, out NodeState node)
+        private static bool TryGetOriginTask(GameState s, string taskId, out CityState node)
         {
             node = null;
             if (string.IsNullOrEmpty(taskId) || s?.Cities == null) return false;
@@ -1019,7 +1062,7 @@ namespace Core
             return false;
         }
 
-        private static void EnsureActiveAnomaly(NodeState node, string anomalyId, DataRegistry registry)
+        private static void EnsureActiveAnomaly(GameState state, CityState node, string anomalyId, DataRegistry registry)
         {
             if (node.ActiveAnomalyIds == null) node.ActiveAnomalyIds = new List<string>();
             if (!node.ActiveAnomalyIds.Contains(anomalyId)) node.ActiveAnomalyIds.Add(anomalyId);
@@ -1029,9 +1072,37 @@ namespace Core
             {
                 node.AnomalyLevel = Math.Max(node.AnomalyLevel, 1);
             }
+
+            var anomalyState = GetOrCreateAnomalyState(state, node, anomalyId);
+            if (anomalyState != null && string.IsNullOrEmpty(anomalyState.NodeId))
+                anomalyState.NodeId = node.Id;
         }
 
-        private static string GetOrCreateAnomalyForNode(NodeState node, DataRegistry registry, Random rng)
+        private static AnomalyState GetOrCreateAnomalyState(GameState state, CityState node, string anomalyId)
+        {
+            if (state == null || string.IsNullOrEmpty(anomalyId)) return null;
+            state.Anomalies ??= new List<AnomalyState>();
+
+            var existing = state.Anomalies.FirstOrDefault(a => a != null && string.Equals(a.AnomalyDefId, anomalyId, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                if (node != null && string.IsNullOrEmpty(existing.NodeId))
+                    existing.NodeId = node.Id;
+                return existing;
+            }
+
+            var created = new AnomalyState
+            {
+                Id = "AN_STATE_" + Guid.NewGuid().ToString("N")[..8],
+                AnomalyDefId = anomalyId,
+                NodeId = node?.Id,
+                SpawnDay = state.Day,
+            };
+            state.Anomalies.Add(created);
+            return created;
+        }
+
+        private static string GetOrCreateAnomalyForNode(GameState state, CityState node, DataRegistry registry, Random rng)
         {
             if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0)
                 return node.ActiveAnomalyIds[0];
@@ -1039,13 +1110,16 @@ namespace Core
             var anomalyId = PickRandomAnomalyId(registry, rng);
             if (!string.IsNullOrEmpty(anomalyId))
             {
-                EnsureActiveAnomaly(node, anomalyId, registry);
+                EnsureActiveAnomaly(state, node, anomalyId, registry);
                 return anomalyId;
             }
 
             return null;
         }
 
+        /// <summary>
+        /// Picks a random anomaly ID from the registry that is not currently active or managed in the game state.
+        /// </summary>
         private static string PickRandomAnomalyId(DataRegistry registry, Random rng)
         {
             var all = registry.AnomaliesById.Keys.ToList();
@@ -1090,7 +1164,8 @@ namespace Core
                 if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Contains(anomalyId))
                     continue;
 
-                EnsureActiveAnomaly(node, anomalyId, registry);
+                EnsureActiveAnomaly(s, node, anomalyId, registry);
+                GetOrCreateAnomalyState(s, node, anomalyId);
                 spawned++;
 
                 // Emit fact for anomaly spawn
@@ -1113,7 +1188,7 @@ namespace Core
         // Anomaly discovery helper
         // =====================
 
-        private static bool AddKnown(NodeState node, string anomalyDefId)
+        private static bool AddKnown(CityState node, string anomalyDefId)
         {
             if (node == null || string.IsNullOrEmpty(anomalyDefId)) return false;
             node.KnownAnomalyDefIds ??= new List<string>();

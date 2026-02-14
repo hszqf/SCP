@@ -119,7 +119,7 @@ namespace Core
     }
 
     [Serializable]
-    public class NodeState
+    public class CityState
     {
         public string Id;
         public string Name;
@@ -146,16 +146,13 @@ namespace Core
         public int Population = 10;
     }
 
-    [Serializable]
-    public class CityState : NodeState
-    {
-    }
 
     [Serializable]
     public class AnomalyState
     {
         public string Id;
         public string AnomalyDefId;
+        public string NodeId;
         public bool IsKnown;
         public bool IsContained;
         public bool IsManaged;
@@ -164,7 +161,8 @@ namespace Core
         public float Y;
         public int SpawnDay;
 
-        public List<NodeTask> Tasks = new();
+        public float InvestigateProgress;
+        public float ContainProgress;
     }
 
     [Serializable]
@@ -180,15 +178,8 @@ namespace Core
         // 新货币：负熵（由“管理异常”系统每日产出）
         public int NegEntropy = 0;
 
-        public List<NodeState> Cities = new();
+        public List<CityState> Cities = new();
         public List<AnomalyState> Anomalies = new();
-
-        [Obsolete("Use Cities instead.")]
-        public List<NodeState> Nodes
-        {
-            get => Cities;
-            set => Cities = value;
-        }
 
         public List<AgentState> Agents = new();
 

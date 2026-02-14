@@ -166,6 +166,11 @@ namespace Data
                     consanDmg = GetRowInt(row, "consanDmg"),
                     manhpDmg = GetRowInt(row, "manhpDmg"),
                     mansanDmg = GetRowInt(row, "mansanDmg"),
+                    desc1 = GetRowString(row, "desc1"),
+                    desc2 = GetRowString(row, "desc2"),
+                    desc3 = GetRowString(row, "desc3"),
+                    desc4 = GetRowString(row, "desc4"),
+                    desc5 = GetRowString(row, "desc5"),
                     invReq = GetRowIntArray4(row, "invReq", anomalyId),
                     conReq = GetRowIntArray4(row, "conReq", anomalyId),
                     manReq = GetRowIntArray4(row, "manReq", anomalyId),
@@ -183,56 +188,12 @@ namespace Data
                 });
             }
 
-            // --- TaskDefs: build dictionaries by id and by TaskType ---
-            TaskDefsById = new Dictionary<string, TaskDef>(StringComparer.Ordinal);
-            TaskDefsByType = new Dictionary<TaskType, TaskDef>();
-            foreach (var row in Tables.GetRows("TaskDefs"))
-            {
-                if (row == null) continue;
-                var id = GetRowString(row, "taskDefId");
-                if (string.IsNullOrEmpty(id)) continue;
-
-                var def = new TaskDef
-                {
-                    taskDefId = id,
-                    taskType = GetRowString(row, "taskType"),
-                    name = GetRowString(row, "name"),
-                    agentSlotsMin = GetRowInt(row, "agentSlotsMin"),
-                    agentSlotsMax = GetRowInt(row, "agentSlotsMax"),
-                };
-
-                // store by id
-                TaskDefsById[id] = def;
-
-                // try map to enum type
-                var typeStr = def.taskType;
-                if (!string.IsNullOrEmpty(typeStr))
-                {
-                    if (Enum.TryParse(typeof(TaskType), typeStr, true, out var enumObj) && enumObj is TaskType tt)
-                    {
-                        if (!TaskDefsByType.ContainsKey(tt))
-                        {
-                            TaskDefsByType[tt] = def;
-                        }
-                        else
-                        {
-                            Debug.LogWarning($"[TaskDefs] Duplicate TaskDefs entry for taskType={tt} (ids: existing={TaskDefsByType[tt].taskDefId} new={id}). Using first.");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[TaskDefs] Unknown taskType value '{typeStr}' in TaskDefs row id={id}.");
-                    }
-                }
-            }
-
             if (AnomaliesById.TryGetValue("AN_001", out var sampleAnomaly))
             {
                 Debug.Log($"[DataSample] AN_001 invHp={sampleAnomaly.invHp} invSan={sampleAnomaly.invSan} conHp={sampleAnomaly.conHp} conSan={sampleAnomaly.conSan} manHp={sampleAnomaly.manHp} manSan={sampleAnomaly.manSan}");
                 Debug.Log($"[DataSample] AN_001 invReq={FormatIntArray(sampleAnomaly.invReq)} conReq={FormatIntArray(sampleAnomaly.conReq)} manReq={FormatIntArray(sampleAnomaly.manReq)}");
             }
 
-            Debug.Log($"[TaskDefs] loaded ids={TaskDefsById.Count} byType={TaskDefsByType.Count}");
 
         }
 
@@ -269,8 +230,8 @@ namespace Data
                 "anomalyId", "name", "class", "baseDays", "actPeopleKill", "range", "invExp", "conExp", "manExpPerDay", "manNegentropyPerDay",
                 "invhpDmg", "invsanDmg", "conhpDmg", "consanDmg", "manhpDmg", "mansanDmg",
                 "worldPanicPerDayUncontained", "maintenanceCostPerDay",
+                "desc1", "desc2", "desc3", "desc4", "desc5",
             });
-            CheckTableColumns("TaskDefs", new[] { "taskDefId", "taskType", "name", "agentSlotsMin", "agentSlotsMax" });
             CheckTableColumns("AnomaliesGen", new[]
             {
                 "day", "AnomaliesGenNum",

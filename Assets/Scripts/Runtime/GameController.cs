@@ -170,7 +170,7 @@ public class GameController : MonoBehaviour
 
         foreach (var city in cities)
         {
-            var nodeState = new NodeState
+            var nodeState = new CityState
             {
                 Id = city.CityId,
                 Name = city.CityName,
@@ -211,7 +211,7 @@ public class GameController : MonoBehaviour
 
     public void Notify() => OnStateChanged?.Invoke();
 
-    public NodeState GetNode(string nodeId)
+    public CityState GetNode(string nodeId)
         => State.Cities.FirstOrDefault(n => n.Id == nodeId);
 
     public AgentState GetAgent(string agentId)
@@ -482,7 +482,7 @@ public class GameController : MonoBehaviour
         return t;
     }
 
-    public bool TryGetTask(string taskId, out NodeState node, out NodeTask task)
+    public bool TryGetTask(string taskId, out CityState node, out NodeTask task)
     {
         node = null;
         task = null;

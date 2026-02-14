@@ -237,7 +237,7 @@ public class AnomalySpawner : MonoBehaviour
         }
     }
 
-    private Vector2 ResolveNodeAnchoredPosition(NodeState node)
+    private Vector2 ResolveNodeAnchoredPosition(CityState node)
     {
         if (node == null || nodeLayer == null) return Vector2.zero;
 
@@ -278,7 +278,7 @@ public class AnomalySpawner : MonoBehaviour
         return $"{nodeId}:{anomalyId}";
     }
 
-    private static Vector2 ResolveNodeLocation(NodeState node)
+    private static Vector2 ResolveNodeLocation(CityState node)
     {
         if (node?.Location != null && node.Location.Length >= 2)
             return new Vector2(node.Location[0], node.Location[1]);
@@ -344,7 +344,7 @@ public class AnomalySpawner : MonoBehaviour
         var nodes = GameController.I?.State?.Cities;
         if (nodes != null)
         {
-            var candidates = new List<NodeState>();
+            var candidates = new List<CityState>();
             foreach (var n in nodes)
             {
                 if (n == null || !n.Unlocked) continue;

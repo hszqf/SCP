@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Core;
 using Data;
 using TMPro;
@@ -104,21 +105,15 @@ public class Anomaly : MonoBehaviour
             nameSuffix = "(未收容)";
         }
 
-        if (_isKnown && TryGetRevealProgress01(node, _anomalyId, out var revealProgress))
+        if (!_isKnown)
         {
-            progress01 = revealProgress;
-            progressPrefix = "调查中：";
-            displayKnown = revealProgress >= 1f;
-        }
-        else if (!_isKnown)
-        {
-            progress01 = GetUnknownAnomalyProgress01(node, _anomalyId);
+            progress01 = GetInvestigateProgress01(gc.State, node, _anomalyId);
             if (progress01 > 0f)
                 progressPrefix = "调查中：";
         }
-        else
+        else if (!_isContained)
         {
-            progress01 = GetContainProgress01(node, _anomalyId);
+            progress01 = GetContainProgress01(gc.State, node, _anomalyId);
             if (progress01 > 0f)
             {
                 progressPrefix = "收容中：";
@@ -253,7 +248,7 @@ public class Anomaly : MonoBehaviour
         return _rangeSprite;
     }
 
-    private ManagedAnomalyState ResolveManagedAnomaly(NodeState node)
+    private ManagedAnomalyState ResolveManagedAnomaly(CityState node)
     {
         if (node?.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return null;
         if (!string.IsNullOrEmpty(_managedAnomalyId))
@@ -269,6 +264,8 @@ public class Anomaly : MonoBehaviour
         if (root == null || string.IsNullOrEmpty(_nodeId)) return;
 
         var node = GameController.I?.GetNode(_nodeId);
+        var anomalyState = FindAnomalyState(GameController.I?.State, node, _anomalyId);
+        LogAnomalyDescriptions(node, anomalyState, _anomalyId);
         var managed = ResolveManagedAnomaly(node);
         if (managed != null)
         {
@@ -361,7 +358,7 @@ public class Anomaly : MonoBehaviour
         }
     }
 
-    private List<string> CollectArrivedAgentIds(NodeState node)
+    private List<string> CollectArrivedAgentIds(CityState node)
     {
         var result = new List<string>();
         if (node?.Tasks == null) return result;
@@ -385,7 +382,7 @@ public class Anomaly : MonoBehaviour
         return result;
     }
 
-    private bool IsTaskForThisAnomaly(NodeState node, NodeTask task)
+    private bool IsTaskForThisAnomaly(CityState node, NodeTask task)
     {
         if (task.Type == TaskType.Manage)
         {
@@ -400,7 +397,7 @@ public class Anomaly : MonoBehaviour
         return !string.IsNullOrEmpty(taskAnomalyId) && string.Equals(taskAnomalyId, _anomalyId, System.StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ResolveTaskAnomalyId(NodeState node, NodeTask task)
+    private static string ResolveTaskAnomalyId(CityState node, NodeTask task)
     {
         if (task == null || node == null) return null;
         if (!string.IsNullOrEmpty(task.SourceAnomalyId)) return task.SourceAnomalyId;
@@ -457,51 +454,16 @@ public class Anomaly : MonoBehaviour
         return _cachedAvatars;
     }
 
-    private static float GetUnknownAnomalyProgress01(NodeState node, string anomalyId)
+    private static float GetInvestigateProgress01(GameState state, CityState node, string anomalyId)
     {
-        if (node == null) return 0f;
-        if (string.IsNullOrEmpty(anomalyId)) return 0f;
-        if (node.Tasks == null) return 0f;
-
-        float best = 0f;
-        foreach (var task in node.Tasks)
-        {
-            if (task == null || task.State != TaskState.Active || task.Type != TaskType.Investigate) continue;
-            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) continue;
-            if (!string.Equals(task.SourceAnomalyId, anomalyId, System.StringComparison.OrdinalIgnoreCase)) continue;
-
-            float progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
-            if (progress <= 0f) continue;
-
-            int baseDays = GetTaskBaseDays(task);
-            float progress01 = baseDays > 0 ? Mathf.Clamp01(progress / baseDays) : 0f;
-            if (progress01 > best) best = progress01;
-        }
-
-        return best;
+        if (state == null || string.IsNullOrEmpty(anomalyId)) return 0f;
+        var anomalyState = FindAnomalyState(state, node, anomalyId);
+        if (anomalyState == null) return 0f;
+        int baseDays = GetAnomalyBaseDays(anomalyId);
+        return baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress / baseDays) : 0f;
     }
 
-    private static bool TryGetRevealProgress01(NodeState node, string anomalyId, out float progress01)
-    {
-        progress01 = 0f;
-        if (node == null || string.IsNullOrEmpty(anomalyId)) return false;
-        if (node.Tasks == null) return false;
-
-        foreach (var task in node.Tasks)
-        {
-            if (task == null || task.Type != TaskType.Investigate) continue;
-            if (!string.Equals(task.SourceAnomalyId, anomalyId, System.StringComparison.OrdinalIgnoreCase)) continue;
-            if (task.VisualProgress < 0f) continue;
-
-            int baseDays = GetTaskBaseDays(task);
-            progress01 = baseDays > 0 ? Mathf.Clamp01(task.VisualProgress / baseDays) : 0f;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsManagingAnomaly(NodeState node, string anomalyId)
+    private static bool IsManagingAnomaly(CityState node, string anomalyId)
     {
         if (node == null || string.IsNullOrEmpty(anomalyId)) return false;
         if (node.Tasks == null) return false;
@@ -520,36 +482,65 @@ public class Anomaly : MonoBehaviour
         return false;
     }
 
-    private static float GetContainProgress01(NodeState node, string anomalyId)
+    private static float GetContainProgress01(GameState state, CityState node, string anomalyId)
     {
-        if (node == null || string.IsNullOrEmpty(anomalyId)) return 0f;
-        if (node.Tasks == null) return 0f;
-
-        float best = 0f;
-        foreach (var task in node.Tasks)
-        {
-            if (task == null || task.State != TaskState.Active || task.Type != TaskType.Contain) continue;
-            if (!string.Equals(task.SourceAnomalyId, anomalyId, System.StringComparison.OrdinalIgnoreCase)) continue;
-            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) continue;
-
-            float progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
-            if (progress <= 0f) continue;
-            int baseDays = GetTaskBaseDays(task);
-            float progress01 = baseDays > 0 ? Mathf.Clamp01(progress / baseDays) : 0f;
-            if (progress01 > best) best = progress01;
-        }
-
-        return best;
+        if (state == null || string.IsNullOrEmpty(anomalyId)) return 0f;
+        var anomalyState = FindAnomalyState(state, node, anomalyId);
+        if (anomalyState == null) return 0f;
+        int baseDays = GetAnomalyBaseDays(anomalyId);
+        return baseDays > 0 ? Mathf.Clamp01(anomalyState.ContainProgress / baseDays) : 0f;
     }
 
-    private static int GetTaskBaseDays(NodeTask task)
+    private static int GetAnomalyBaseDays(string anomalyId)
     {
-        if (task == null) return 1;
+        if (string.IsNullOrEmpty(anomalyId)) return 1;
         var registry = DataRegistry.Instance;
-        if (task.Type == TaskType.Investigate && task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId) && task.InvestigateNoResultBaseDays > 0)
-            return task.InvestigateNoResultBaseDays;
-        string anomalyId = task.SourceAnomalyId;
-        if (string.IsNullOrEmpty(anomalyId) || registry == null) return 1;
+        if (registry == null) return 1;
         return Mathf.Max(1, registry.GetAnomalyBaseDaysWithWarn(anomalyId, 1));
+    }
+
+    private static AnomalyState FindAnomalyState(GameState state, CityState node, string anomalyId)
+    {
+        if (state?.Anomalies == null || string.IsNullOrEmpty(anomalyId)) return null;
+        var found = state.Anomalies.FirstOrDefault(a => a != null && string.Equals(a.AnomalyDefId, anomalyId, System.StringComparison.OrdinalIgnoreCase));
+        if (found != null) return found;
+        return null;
+    }
+
+    private static void LogAnomalyDescriptions(CityState node, AnomalyState anomalyState, string anomalyId)
+    {
+        if (string.IsNullOrEmpty(anomalyId)) return;
+        var registry = DataRegistry.Instance;
+        if (registry == null || !registry.AnomaliesById.TryGetValue(anomalyId, out var def) || def == null)
+            return;
+
+        var entries = new List<string>
+        {
+            def.desc1,
+            def.desc2,
+            def.desc3,
+            def.desc4,
+            def.desc5,
+        };
+
+        var filtered = entries.Where(e => !string.IsNullOrEmpty(e)).ToList();
+        if (filtered.Count == 0) return;
+
+        float progress01 = 0f;
+        if (anomalyState != null)
+        {
+            int baseDays = GetAnomalyBaseDays(anomalyId);
+            progress01 = baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress / baseDays) : 0f;
+        }
+
+        int total = filtered.Count;
+        int unlocked = Mathf.Clamp(Mathf.FloorToInt(progress01 * total + 0.0001f), 0, total);
+
+        for (int i = 0; i < filtered.Count; i++)
+        {
+            var raw = filtered[i] ?? string.Empty;
+            var content = i < unlocked ? raw : new string('■', raw.Length);
+            Debug.Log($"[AnomalyDesc] anomaly={anomalyId} {i + 1}.{content}");
+        }
     }
 }

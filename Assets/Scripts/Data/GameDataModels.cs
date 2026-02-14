@@ -56,6 +56,11 @@ namespace Data
         public int consanDmg;
         public int manhpDmg;
         public int mansanDmg;
+        public string desc1;
+        public string desc2;
+        public string desc3;
+        public string desc4;
+        public string desc5;
         public int[] invReq = new int[4];
         public int[] conReq = new int[4];
         public int[] manReq = new int[4];
