@@ -192,7 +192,13 @@ namespace Core
                         }
                     }
 
-                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} taskProgress={t.Progress:0.00}/{requiredDays} (requiredDays={requiredDays})");
+
+                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
+                    {
+                        var a = !string.IsNullOrEmpty(anomalyId) ? GetOrCreateAnomalyState(s, n, anomalyId) : null;
+                        float ap = (a == null) ? -1f : (t.Type == TaskType.Investigate ? a.InvestigateProgress : a.ContainProgress);
+                        Debug.Log($"[ReachDbg] day={s.Day} task={t.Id} type={t.Type} anomalyId={anomalyId} taskProg={t.Progress:0.###} requiredDays={requiredDays} anomalyProg01={ap:0.###}");
+                    }
 
                     ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
 
