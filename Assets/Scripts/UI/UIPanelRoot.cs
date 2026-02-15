@@ -578,7 +578,7 @@ public class UIPanelRoot : MonoBehaviour
                 CloseModal(_managePanel, "assign_confirm");
                 RefreshNodePanel();
             },
-            modeLabel: "Manage"
+            modeLabel: "Operate"
         );
 
         // AnomalyManagePanel.ShowGeneric will auto-select the single provided target.

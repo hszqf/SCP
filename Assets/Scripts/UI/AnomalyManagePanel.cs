@@ -34,6 +34,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Manage,
         Investigate,
         Contain,
+        Operate,
         Generic
     }
 
@@ -159,6 +160,10 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
     public void RefreshUI()
     {
+        // Left target list has been removed from UI.
+        // Do not rebuild targets here; ShowGeneric is the source of truth.
+        return;
+
         // Only refresh in Manage mode; other modes use ShowGenericInternal
         if (_mode != AssignPanelMode.Manage) return;
 
@@ -239,9 +244,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         ClearSelectionState();
         // Map incoming mode label to internal AssignPanelMode so slot can be derived.
-        if (string.Equals(modeLabel, "Manage", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Manage;
-        else if (string.Equals(modeLabel, "Investigate", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Investigate;
+        if (string.Equals(modeLabel, "Investigate", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Investigate;
         else if (string.Equals(modeLabel, "Contain", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Contain;
+        else if (string.Equals(modeLabel, "Operate", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Operate;
         else _mode = AssignPanelMode.Generic;
         _onConfirm = onConfirm;
         _slotsMin = agentSlotsMin;
@@ -258,6 +263,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             confirmButton.gameObject.SetActive(false);
 
         var safeTargets = targets ?? new List<TargetEntry>();
+        // If there's exactly one target, auto-select it immediately so agent list can bind correctly.
+        if (safeTargets != null && safeTargets.Count == 1)
+            _selectedTargetId = safeTargets[0].id;
         if (string.IsNullOrEmpty(_selectedTargetId) || !safeTargets.Any(x => x != null && x.id == _selectedTargetId))
             _selectedTargetId = safeTargets.FirstOrDefault()?.id;
 
@@ -288,6 +296,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         {
             case AssignPanelMode.Investigate: return AssignmentSlot.Investigate;
             case AssignPanelMode.Contain:     return AssignmentSlot.Contain;
+            case AssignPanelMode.Operate:     return AssignmentSlot.Operate;
             case AssignPanelMode.Manage:      return AssignmentSlot.Operate;
             default:                          return AssignmentSlot.Operate;
         }
@@ -403,16 +412,13 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             if (ag.IsDead || ag.IsInsane) continue;
 
-            // Move selected check earlier so selected agents remain visible even if busy
-            bool selected = _selectedAgentIds.Contains(ag.Id);
-
             // Determine global busy state early (for Base filtering)
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
 
             // If agent is at Base, only include if truly idle (not busy elsewhere)
             if (ag.LocationKind == AgentLocationKind.Base)
             {
-                if (busyTask && !selected) continue; // excluded from candidate list when busy, but allow already-selected
+                if (busyTask) continue; // excluded from candidate list when busy
                 // else allow
             }
             else
@@ -426,6 +432,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                     continue; // not relevant -> do not display
                 }
             }
+
+            bool selected = _selectedAgentIds.Contains(ag.Id);
 
             bool unusable = ag.IsDead || ag.IsInsane;
 
@@ -579,7 +587,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         // Sync legacy task system minimally (do not close panel)
         SyncLegacyTask(slot, _selectedTargetId, ids);
 
-        RefreshUI();
+        // Do not rebuild left targets (legacy Manage RefreshUI). Only refresh agent list & confirm state.
+        RebuildAgentList();
+        RefreshConfirmState();
         gc.Notify();
     }
 
