@@ -28,6 +28,9 @@ namespace Core
                 return false;
             }
 
+            // canonical key (use AnomalyState.Id as single source-of-truth)
+            var canonicalKey = anomaly.Id;
+
             var list = anomaly.GetRoster(slot);
             if (list == null)
             {
@@ -108,7 +111,7 @@ namespace Core
                     // If already at this anomaly, skip enqueue
                     if (existing.LocationKind == AgentLocationKind.AtAnomaly &&
                         !string.IsNullOrEmpty(existing.LocationAnomalyKey) &&
-                        existing.LocationAnomalyKey == anomalyKey)
+                        existing.LocationAnomalyKey == canonicalKey)
                     {
                         continue;
                     }
@@ -119,7 +122,7 @@ namespace Core
                 {
                     TokenId = Guid.NewGuid().ToString("N"),
                     AgentId = id,
-                    AnomalyKey = anomalyKey,
+                    AnomalyKey = canonicalKey,
                     Slot = slot,
                     Type = MovementTokenType.Dispatch,
                     State = MovementTokenState.Pending,
@@ -137,7 +140,7 @@ namespace Core
                     if (!((existing.LocationKind == AgentLocationKind.AtAnomaly ||
                            existing.LocationKind == AgentLocationKind.TravellingToAnomaly) &&
                           !string.IsNullOrEmpty(existing.LocationAnomalyKey) &&
-                          existing.LocationAnomalyKey == anomalyKey &&
+                          existing.LocationAnomalyKey == canonicalKey &&
                           existing.LocationSlot == slot))
                     {
                         // Not at/travelling to this anomaly+slot -> skip enqueue
@@ -150,7 +153,7 @@ namespace Core
                 {
                     TokenId = Guid.NewGuid().ToString("N"),
                     AgentId = id,
-                    AnomalyKey = anomalyKey,
+                    AnomalyKey = canonicalKey,
                     Slot = slot,
                     Type = MovementTokenType.Recall,
                     State = MovementTokenState.Pending,
@@ -172,7 +175,7 @@ namespace Core
                         // If already at this anomaly, no travel needed (slot change / re-confirm)
                         if (ag.LocationKind == AgentLocationKind.AtAnomaly &&
                             !string.IsNullOrEmpty(ag.LocationAnomalyKey) &&
-                            ag.LocationAnomalyKey == anomalyKey)
+                            ag.LocationAnomalyKey == canonicalKey)
                         {
                             ag.LocationKind = AgentLocationKind.AtAnomaly;
                         }
@@ -181,7 +184,7 @@ namespace Core
                             ag.LocationKind = AgentLocationKind.TravellingToAnomaly;
                         }
 
-                        ag.LocationAnomalyKey = anomalyKey;
+                        ag.LocationAnomalyKey = canonicalKey;
                         ag.LocationSlot = slot;
                     }
                     else if (oldSet.Contains(ag.Id))
@@ -189,11 +192,11 @@ namespace Core
                         if ((ag.LocationKind == AgentLocationKind.AtAnomaly ||
                              ag.LocationKind == AgentLocationKind.TravellingToAnomaly) &&
                             !string.IsNullOrEmpty(ag.LocationAnomalyKey) &&
-                            ag.LocationAnomalyKey == anomalyKey &&
+                            ag.LocationAnomalyKey == canonicalKey &&
                             ag.LocationSlot == slot)
                         {
                             ag.LocationKind = AgentLocationKind.TravellingToBase;
-                            ag.LocationAnomalyKey = anomalyKey; // keep until animation completes
+                            ag.LocationAnomalyKey = canonicalKey; // keep until animation completes
                             ag.LocationSlot = slot;
                         }
                     }
@@ -206,7 +209,7 @@ namespace Core
             return true;
         }
 
-        private static AnomalyState FindAnomaly(GameState s, string key)
+        public static AnomalyState FindAnomaly(GameState s, string key)
         {
             if (s.Anomalies == null) return null;
 
@@ -215,9 +218,10 @@ namespace Core
                 var a = s.Anomalies[i];
                 if (a == null) continue;
 
-                // Support both legacy Id and new-arch AnomalyId
+                // Support legacy Id, new-arch AnomalyId and AnomalyDefId
                 if (a.Id == key) return a;
                 if (!string.IsNullOrEmpty(a.AnomalyId) && a.AnomalyId == key) return a;
+                if (!string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == key) return a;
                 if (a.ManagedState != null && !string.IsNullOrEmpty(a.ManagedState.Id) && a.ManagedState.Id == key)
                     return a;
             }
