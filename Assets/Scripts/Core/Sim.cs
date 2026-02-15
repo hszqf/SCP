@@ -193,20 +193,77 @@ namespace Core
                     ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
 
                     bool reached = false;
-                    if (!string.IsNullOrEmpty(anomalyId))
+                    // Previously completion checked AnomalyState.InvestigateProgress/ContainProgress;
+                    // migrate to derive completion from the task's own Progress to avoid relying on AnomalyState fields.
+                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
                     {
-                        var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
-                        if (anomalyState != null)
-                        {
-                            if (t.Type == TaskType.Investigate && anomalyState.InvestigateProgress >= baseDays)
-                                reached = true;
-                            else if (t.Type == TaskType.Contain && anomalyState.ContainProgress >= baseDays)
-                                reached = true;
-                        }
+                        if (t.Progress >= baseDays)
+                            reached = true;
                     }
 
                     if (reached)
                     {
+                        // When a task reaches completion, immediately recall assigned agents from the
+                        // corresponding anomaly roster (generate Recall movement tokens) so UI/dispatch
+                        // systems see TravellingToBase/Recall tokens in the same frame.
+                        if (!string.IsNullOrEmpty(anomalyId))
+                        {
+                            var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
+                            if (anomalyState != null)
+                            {
+                                try
+                                {
+                                    string err;
+                                    if (t.Type == TaskType.Investigate)
+                                    {
+                                        DispatchSystem.TrySetRoster(s, anomalyState.Id, AssignmentSlot.Investigate, Array.Empty<string>(), out err);
+                                        if (!string.IsNullOrEmpty(err))
+                                            Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyState.Id} err={err}");
+
+                                        // Advance anomaly phase if applicable: Investigating -> Containing
+                                        if (anomalyState.Phase == AnomalyPhase.Investigating || anomalyState.Phase == AnomalyPhase.Discovered)
+                                            anomalyState.Phase = AnomalyPhase.Containing;
+                                    }
+                                    else if (t.Type == TaskType.Contain)
+                                    {
+                                        DispatchSystem.TrySetRoster(s, anomalyState.Id, AssignmentSlot.Contain, Array.Empty<string>(), out err);
+                                        if (!string.IsNullOrEmpty(err))
+                                            Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyState.Id} err={err}");
+
+                                        // Advance anomaly phase: Containing -> Contained
+                                        if (anomalyState.Phase == AnomalyPhase.Containing || anomalyState.Phase == AnomalyPhase.Investigating || anomalyState.Phase == AnomalyPhase.Discovered)
+                                            anomalyState.Phase = AnomalyPhase.Contained;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.LogException(ex);
+                                }
+                            }
+                        }
+
+                        // Sync legacy task system: ensure no other active tasks for the same anomaly keep agents busy.
+                        if (n?.Tasks != null)
+                        {
+                            for (int ti2 = 0; ti2 < n.Tasks.Count; ti2++)
+                            {
+                                var other = n.Tasks[ti2];
+                                if (other == null) continue;
+                                if (other == t) continue; // skip the task we're about to complete
+                                if (other.State != TaskState.Active) continue;
+
+                                // If the other task targets the same anomaly (by SourceAnomalyId), cancel it to avoid busy residue.
+                                if (!string.IsNullOrEmpty(anomalyId) && string.Equals(other.SourceAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)
+                                    && (other.Type == TaskType.Investigate || other.Type == TaskType.Contain))
+                                {
+                                    if (other.AssignedAgentIds != null) other.AssignedAgentIds.Clear();
+                                    other.Progress = 0f;
+                                    other.State = TaskState.Cancelled;
+                                    Debug.Log($"[LegacySync] day={s.Day} node={n.Id} cancelled task={other.Id} type={other.Type} reason=DuplicateAnomalyCompletion");
+                                }
+                            }
+                        }
+
                         CompleteTask(s, n, t, rng, registry);
                     }
                 }

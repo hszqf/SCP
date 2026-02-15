@@ -233,6 +233,9 @@ public class GameController : MonoBehaviour
         }
         
         Sim.StepDay(State, _rng);
+        // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
+        // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
+        Core.PhaseCompletionRecallSystem.Apply(this);
         Notify();
         RefreshMapNodes();
     }
