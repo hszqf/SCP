@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using System.Linq;
 using Core;
 using Data;
@@ -30,6 +30,7 @@ public class Anomaly : MonoBehaviour
     private static Sprite _rangeSprite;
 
     private string _nodeId;
+    private string _canonicalAnomalyKey;
     private string _anomalyId;
     private string _managedAnomalyId;
     private bool _isKnown;
@@ -40,6 +41,12 @@ public class Anomaly : MonoBehaviour
         _nodeId = nodeId;
         _anomalyId = anomalyId;
         _managedAnomalyId = managedAnomalyId;
+
+        // compute canonical anomaly key if possible
+        var gcBind = GameController.I;
+        var preferKeyBind = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
+        var anomBind = gcBind != null ? Core.DispatchSystem.FindAnomaly(gcBind.State, preferKeyBind) : null;
+        _canonicalAnomalyKey = anomBind != null ? anomBind.Id : preferKeyBind;
 
         EnsureRefs();
         Refresh();
@@ -88,6 +95,11 @@ public class Anomaly : MonoBehaviour
         _isContained = managed != null;
         _isKnown = _isContained || (node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId));
 
+        // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
+        var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
+        var anom = Core.DispatchSystem.FindAnomaly(gc.State, preferKey);
+        _canonicalAnomalyKey = anom != null ? anom.Id : preferKey;
+
         bool displayKnown = _isKnown;
         float progress01 = 0f;
         string progressPrefix = string.Empty;
@@ -98,25 +110,25 @@ public class Anomaly : MonoBehaviour
 
         if (_isContained)
         {
-            nameSuffix = isManaging ? "(¹ÜÀíÖÐ)" : "(ÒÑÊÕÈÝ)";
+            nameSuffix = isManaging ? "(ç®¡ç†ä¸­)" : "(å·²æ”¶å®¹)";
         }
         else if (_isKnown)
         {
-            nameSuffix = "(Î´ÊÕÈÝ)";
+            nameSuffix = "(æœªæ”¶å®¹)";
         }
 
         if (!_isKnown)
         {
             progress01 = GetInvestigateProgress01(gc.State, node, _anomalyId);
             if (progress01 > 0f)
-                progressPrefix = "µ÷²éÖÐ£º";
+                progressPrefix = "è°ƒæŸ¥ä¸­ï¼š";
         }
         else if (!_isContained)
         {
             progress01 = GetContainProgress01(gc.State, node, _anomalyId);
             if (progress01 > 0f)
             {
-                progressPrefix = "ÊÕÈÝÖÐ£º";
+                progressPrefix = "æ”¶å®¹ä¸­ï¼š";
                 hideNameWhileProgress = true;
             }
         }
@@ -361,26 +373,29 @@ public class Anomaly : MonoBehaviour
     private List<string> CollectArrivedAgentIds(CityState node)
     {
         var result = new List<string>();
-        if (node?.Tasks == null) return result;
 
-        foreach (var task in node.Tasks)
+        var gc = GameController.I;
+        var state = gc?.State;
+        if (state?.Agents == null) return result;
+        if (string.IsNullOrEmpty(_canonicalAnomalyKey)) return result;
+
+        for (int i = 0; i < state.Agents.Count; i++)
         {
-            if (task == null || task.State != TaskState.Active) continue;
-            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) continue;
-            if (task.Progress <= 0f && task.VisualProgress <= 0f) continue;
-            if (DispatchAnimationSystem.I != null && DispatchAnimationSystem.I.IsTaskInTransit(task.Id)) continue;
+            var ag = state.Agents[i];
+            if (ag == null || string.IsNullOrEmpty(ag.Id)) continue;
+            if (ag.IsDead || ag.IsInsane) continue;
 
-            if (!IsTaskForThisAnomaly(node, task)) continue;
+            // only show agents whose location is at this anomaly
+            if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
+            if (!string.Equals(ag.LocationAnomalyKey, _canonicalAnomalyKey, System.StringComparison.OrdinalIgnoreCase)) continue;
 
-            foreach (var agentId in task.AssignedAgentIds)
-            {
-                if (string.IsNullOrEmpty(agentId)) continue;
-                if (!result.Contains(agentId)) result.Add(agentId);
-            }
+            result.Add(ag.Id);
         }
 
         return result;
     }
+
+
 
     private bool IsTaskForThisAnomaly(CityState node, NodeTask task)
     {
@@ -539,7 +554,7 @@ public class Anomaly : MonoBehaviour
         for (int i = 0; i < filtered.Count; i++)
         {
             var raw = filtered[i] ?? string.Empty;
-            var content = i < unlocked ? raw : new string('¡ö', raw.Length);
+            var content = i < unlocked ? raw : new string('â– ', raw.Length);
             Debug.Log($"[AnomalyDesc] anomaly={anomalyId} {i + 1}.{content}");
         }
     }

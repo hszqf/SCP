@@ -834,6 +834,9 @@ public class DispatchAnimationSystem : MonoBehaviour
         if (gc.State != null && gc.State.MovementLockCount > 0)
             gc.State.MovementLockCount -= 1;
 
+        // Notify the controller that state has changed after token completion/unlock
+        gc?.Notify();
+
         _playingToken = null;
         _tokenCo = null;
     }
