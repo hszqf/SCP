@@ -262,6 +262,9 @@ public class GameController : MonoBehaviour
 
             // New: invoke settlement sub-systems in fixed order (no-op for now)
             Settlement.AnomalyWorkSystem.Apply(gc, state, result);
+            // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
+            // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
+            Core.PhaseCompletionRecallSystem.Apply(gc);
             Settlement.AnomalyBehaviorSystem.Apply(gc, state, result);
             Settlement.CityEconomySystem.Apply(gc, state, result);
             Settlement.BaseRecoverySystem.Apply(gc, state, result);
@@ -282,9 +285,7 @@ public class GameController : MonoBehaviour
             }
             
 
-            // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
-            // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
-            Core.PhaseCompletionRecallSystem.Apply(gc);
+
             result?.Log("Stage_EndDay_Core executed");
         }
     }
