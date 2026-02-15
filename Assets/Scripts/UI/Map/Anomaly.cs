@@ -36,6 +36,9 @@ public class Anomaly : MonoBehaviour
     private bool _isKnown;
     private bool _isContained;
 
+    // registration key actually registered in MapEntityRegistry
+    private string _regKeyCanonical;
+
     public void Bind(string nodeId, string anomalyId, string managedAnomalyId)
     {
         _nodeId = nodeId;
@@ -76,6 +79,8 @@ public class Anomaly : MonoBehaviour
 
         EnsureRefs();
         Refresh();
+        // registration moved to Refresh() only to avoid duplicate registration from Bind+Refresh
+        // RegisterToRegistry();
     }
 
     private void OnEnable()
@@ -90,6 +95,15 @@ public class Anomaly : MonoBehaviour
     {
         if (GameController.I != null)
             GameController.I.OnStateChanged -= Refresh;
+
+        var reg = MapEntityRegistry.I;
+        if (reg == null) return;
+
+        if (!string.IsNullOrEmpty(_regKeyCanonical))
+        {
+            reg.UnregisterAnomaly(_regKeyCanonical, this);
+            _regKeyCanonical = null;
+        }
     }
 
     private void EnsureRefs()
@@ -148,6 +162,9 @@ public class Anomaly : MonoBehaviour
             }
         }
         _canonicalAnomalyKey = anom != null ? anom.Id : preferKey;
+
+        // register with MapEntityRegistry so other systems can resolve world positions
+        RegisterToRegistry();
 
         bool displayKnown = _isKnown;
         float progress01 = 0f;
@@ -638,5 +655,24 @@ public class Anomaly : MonoBehaviour
             var content = i < unlocked ? raw : new string('■', raw.Length);
             Debug.Log($"[AnomalyDesc] anomaly={anomalyId} {i + 1}.{content}");
         }
+    }
+
+    // register anomaly views with the MapEntityRegistry for world position lookup
+    private void RegisterToRegistry()
+    {
+        var reg = MapEntityRegistry.I;
+        if (reg == null) return;
+
+        var newKey = _canonicalAnomalyKey;
+        if (string.Equals(_regKeyCanonical, newKey, System.StringComparison.OrdinalIgnoreCase))
+            return; // idempotent
+
+        if (!string.IsNullOrEmpty(_regKeyCanonical))
+            reg.UnregisterAnomaly(_regKeyCanonical, this);
+
+        if (!string.IsNullOrEmpty(newKey))
+            reg.RegisterAnomaly(newKey, this);
+
+        _regKeyCanonical = newKey;
     }
 }

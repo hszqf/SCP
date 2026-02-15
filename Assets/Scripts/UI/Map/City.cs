@@ -39,7 +39,15 @@ public class City : MonoBehaviour
 
         if (DispatchAnimationSystem.I != null)
             DispatchAnimationSystem.I.RegisterNode(cityId, rt);
+
+        // register with map entity registry for quick lookup
+        MapEntityRegistry.I?.RegisterCity(this);
     }
 
+    private void OnDisable()
+    {
+        // unregister from registry
+        MapEntityRegistry.I?.UnregisterCity(this);
+    }
 
 }

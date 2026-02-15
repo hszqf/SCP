@@ -18,12 +18,21 @@ namespace Settlement
             if (anomalies == null || anomalies.Count == 0 || cities == null || cities.Count == 0)
                 return;
 
+            if (MapEntityRegistry.I == null)
+            {
+                Debug.LogWarning("[Settle][AnomBehavior] MapEntityRegistry missing, skipping anomaly behavior");
+                r?.Log("[Settle][AnomBehavior] MapEntityRegistry missing, skipped all anomalies");
+                return;
+            }
+
+            int missingAnomPosWarns = 0;
+            const int MissingAnomPosWarnLimit = 3;
+
             // Iterate anomalies by SpawnSeq ascending
             foreach (var a in anomalies.OrderBy(x => x.SpawnSeq))
             {
                 if (a == null) continue;
 
-                var anomPos = a.Position;
                 float radius = GetAnomalyRadius(state, a);
                 if (radius <= 0f)
                 {
@@ -32,27 +41,59 @@ namespace Settlement
                     continue;
                 }
 
+                // Resolve anomaly world position using canonical key only (a.Id)
+                Vector3 anomPos3 = default;
+                if (!MapEntityRegistry.I.TryGetAnomalyWorldPos(a.Id, out anomPos3))
+                {
+                    if (missingAnomPosWarns < MissingAnomPosWarnLimit)
+                    {
+                        Debug.LogWarning($"[Settle][AnomBehavior] can't resolve world pos for anom={a.Id} def={a.AnomalyDefId} (tried key '{a.Id}')");
+                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} missing worldPos");
+                        missingAnomPosWarns++;
+                    }
+                    // skip this anomaly if we can't resolve a world position
+                    continue;
+                }
+
+                var anomPos = (Vector2)anomPos3;
+
+                int hitCount = 0;
+                int skippedNotRegistered = 0;
+
                 // Check all cities for being within radius
                 foreach (var city in cities)
                 {
                     if (city == null) continue;
 
-                    Vector2 cityPos = Vector2.zero;
-                    if (city.Location != null && city.Location.Length >= 2)
+                    var cityKey = city.Id.ToString();
+
+                    Vector3 cityPos3;
+                    if (!MapEntityRegistry.I.TryGetCityWorldPos(cityKey, out cityPos3))
                     {
-                        cityPos = new Vector2(city.Location[0], city.Location[1]);
-                    }
-                    else
-                    {
-                        cityPos = new Vector2(city.X, city.Y);
+                        // city not registered/visible, skip without spamming warnings
+                        skippedNotRegistered++;
+                        continue;
                     }
 
-                    if (Vector2.Distance(anomPos, cityPos) <= radius)
+                    var cityPos = (Vector2)cityPos3;
+                    float dist = Vector2.Distance(anomPos, cityPos);
+                    if (dist <= radius)
                     {
-                        int deltaPop = 1; // placeholder for future formula
-                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCity={city.Id} deltaPop={deltaPop} radius={radius}");
+                        hitCount++;
+                        // still only logging; population change is deferred
+                        // log city name when available
+                        string cityName;
+                        if (MapEntityRegistry.I.TryGetCityView(cityKey, out var cityView) && cityView != null)
+                            cityName = cityView.CityName;
+                        else
+                            cityName = string.IsNullOrEmpty(city.Name) ? cityKey : city.Name;
+
+                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCityName={cityName} dist={dist:0.#} radius={radius}");
                     }
                 }
+
+                // Per-anomaly summary log
+                r?.Log($"[Settle][AnomBehavior] anom={a.Id} radius={radius} hitCount={hitCount} skippedNotRegistered={skippedNotRegistered}");
             }
         }
 
