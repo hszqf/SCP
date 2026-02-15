@@ -797,7 +797,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
 
         if (!hasSquad) return "状态：未指派";
 
-        // Manage tasks: no "待开始" concept; once assigned, it is immediately "管理中".
+        // Manage tasks: no "待开始" concept; once assigned, it is immediately "管理中"。
         if (t.Type == TaskType.Manage)
             return "状态：管理中";
 
@@ -821,7 +821,9 @@ public class NodePanelView : MonoBehaviour, IModalClosable
     {
         if (task == null) return 0f;
         if (task.Type == TaskType.Manage) return 0f;
+
         int baseDays = GetTaskBaseDays(task);
+
         string anomalyId = task.SourceAnomalyId;
         if (string.IsNullOrEmpty(anomalyId))
         {
@@ -829,6 +831,8 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         }
 
         float progress = 0f;
+        bool fromAnomalyState = false;
+
         if (!string.IsNullOrEmpty(anomalyId))
         {
             var state = GameController.I?.State;
@@ -836,18 +840,26 @@ public class NodePanelView : MonoBehaviour, IModalClosable
             if (anomalyState != null)
             {
                 if (task.Type == TaskType.Investigate)
+                {
                     progress = anomalyState.InvestigateProgress;
+                    fromAnomalyState = true;
+                }
                 else if (task.Type == TaskType.Contain)
+                {
                     progress = anomalyState.ContainProgress;
+                    fromAnomalyState = true;
+                }
             }
         }
 
-        if (progress <= 0f)
+        if (fromAnomalyState)
         {
-            progress = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+            return Mathf.Clamp01(progress);
         }
 
-        return Mathf.Clamp01(progress / baseDays);
+        // Legacy fallback (migration): use task.VisualProgress or task.Progress and preserve old baseDays normalization
+        float legacy = task.VisualProgress >= 0f ? task.VisualProgress : task.Progress;
+        return Mathf.Clamp01(legacy / baseDays);
     }
 
     private static int GetTaskBaseDays(NodeTask task)

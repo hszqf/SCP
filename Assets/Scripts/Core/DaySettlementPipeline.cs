@@ -1,0 +1,23 @@
+using System.Collections.Generic;
+using Core;
+
+public sealed class DaySettlementPipeline
+{
+    private readonly List<IDaySettlementStage> _stages;
+
+    public DaySettlementPipeline(List<IDaySettlementStage> stages)
+    {
+        _stages = stages;
+    }
+
+    public DayEndResult Run(GameController gc)
+    {
+        var result = new DayEndResult();
+        var state = gc.State;
+        for (int i = 0; i < _stages.Count; i++)
+        {
+            _stages[i].Execute(gc, state, result);
+        }
+        return result;
+    }
+}

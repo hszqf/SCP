@@ -232,12 +232,48 @@ public class GameController : MonoBehaviour
             return;
         }
         
-        Sim.StepDay(State, _rng);
-        // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
-        // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
-        Core.PhaseCompletionRecallSystem.Apply(this);
-        Notify();
-        RefreshMapNodes();
+        // Run end-of-day pipeline (stages contain the original EndDay logic, moved verbatim)
+        var stages = new List<IDaySettlementStage>
+        {
+            new Stage_EndDay_Core(),
+            new Stage_EndDay_RefreshNotify(),
+        };
+
+        var pipeline = new DaySettlementPipeline(stages);
+        var result = pipeline.Run(this);
+
+        // Emit any pipeline logs to Unity console for visibility (no behavior change)
+        if (result != null && result.Logs != null)
+        {
+            foreach (var l in result.Logs)
+                Debug.Log(l);
+        }
+    }
+    
+    // --- EndDay stages (private, minimal; contain original EndDay logic) ---
+    private sealed class Stage_EndDay_Core : IDaySettlementStage
+    {
+        public string Name => "EndDay.Core";
+        public void Execute(GameController gc, GameState state, DayEndResult result)
+        {
+            // Original core settlement logic
+            Sim.StepDay(state, gc._rng);
+            // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
+            // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
+            Core.PhaseCompletionRecallSystem.Apply(gc);
+            result?.Log("Stage_EndDay_Core executed");
+        }
+    }
+
+    private sealed class Stage_EndDay_RefreshNotify : IDaySettlementStage
+    {
+        public string Name => "EndDay.RefreshNotify";
+        public void Execute(GameController gc, GameState state, DayEndResult result)
+        {
+            gc.Notify();
+            gc.RefreshMapNodes();
+            result?.Log("Stage_EndDay_RefreshNotify executed");
+        }
     }
     
     // Check whether user can proceed to end the day. Returns false with reason if blocked.
