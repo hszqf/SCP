@@ -32,8 +32,6 @@ public class Anomaly : MonoBehaviour
     private string _canonicalAnomalyKey;
     private string _anomalyId;
     private string _managedAnomalyId;
-    private bool _isKnown;
-    private bool _isContained;
 
     // registration key actually registered in MapEntityRegistry
     private string _regKeyCanonical;
@@ -131,8 +129,6 @@ public class Anomaly : MonoBehaviour
 
         var managed = ResolveManagedAnomaly(node);
         _managedAnomalyId = managed?.Id ?? _managedAnomalyId;
-        _isContained = managed != null;
-        _isKnown = _isContained || (node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId));
 
         // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
         var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
@@ -185,7 +181,7 @@ public class Anomaly : MonoBehaviour
         else
         {
             // fallback: known anomalies reveal name, unknown hide
-            revealName = _isKnown;
+            revealName = (node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId));
         }
 
         // set display name text if provided
@@ -435,7 +431,9 @@ public class Anomaly : MonoBehaviour
             return;
         }
 
-        if (_isKnown)
+        // determine known directly from node data rather than using legacy UI flag
+        var isKnownDirect = node != null && node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId);
+        if (isKnownDirect)
         {
             root.OpenContainAssignPanelForNode(_nodeId);
             return;
@@ -652,25 +650,6 @@ public class Anomaly : MonoBehaviour
         if (a == null) return 0f;
 
         return Mathf.Clamp01(a.ContainProgress);
-    }
-
-    private static bool IsManagingAnomaly(CityState node, string anomalyId)
-    {
-        if (node == null || string.IsNullOrEmpty(anomalyId)) return false;
-        if (node.Tasks == null) return false;
-
-        foreach (var task in node.Tasks)
-        {
-            if (task == null || task.State != TaskState.Active || task.Type != TaskType.Manage) continue;
-            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) continue;
-
-            var managed = node.ManagedAnomalies?.Find(m => m != null && m.Id == task.TargetManagedAnomalyId);
-            var taskAnomalyId = managed?.AnomalyId ?? task.SourceAnomalyId;
-            if (string.Equals(taskAnomalyId, anomalyId, System.StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
     }
 
     private static float GetContainProgress01(GameState state, CityState node, string anomalyId)
