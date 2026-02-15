@@ -11,6 +11,7 @@ namespace Settlement
     {
         public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
         {
+            Debug.Log("[Settlement] AnomalyWorkSystem.Apply called");
             if (state == null || state.Anomalies == null) return;
 
             foreach (var anom in state.Anomalies.OrderBy(a => a.SpawnSeq))
@@ -25,6 +26,7 @@ namespace Settlement
                 var conArrived = CollectArrived(state, canonicalKey, conIds);
                 var opArrived  = CollectArrived(state, canonicalKey, opIds);
 
+             
                 switch (anom.Phase)
                 {
                     case AnomalyPhase.Investigate:

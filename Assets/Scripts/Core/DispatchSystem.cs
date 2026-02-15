@@ -264,7 +264,7 @@ namespace Core
                         created.NodeId = nodeId;
                         created.AnomalyDefId = m.AnomalyId;
                         created.ManagedState = m;
-                        created.Phase = AnomalyPhase.Contained;
+                        created.Phase = AnomalyPhase.Operate;
 
                         if (s.Anomalies == null) s.Anomalies = new List<AnomalyState>();
                         s.Anomalies.Add(created);

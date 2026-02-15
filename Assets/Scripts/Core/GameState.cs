@@ -173,15 +173,11 @@ namespace Core
 
     public enum AnomalyPhase
     {
-        Unknown,
-        Discovered,
-        Investigating,
-        Containing,
-        Contained,
         Investigate,
         Contain,
         Operate
     }
+
 
     [Serializable]
     public class AnomalyState

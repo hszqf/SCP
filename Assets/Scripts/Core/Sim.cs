@@ -255,8 +255,8 @@ namespace Core
                                         Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyStateForReach.Id} err={err}");
 
                                     // Advance anomaly phase if applicable: Investigating -> Containing
-                                    if (anomalyStateForReach.Phase == AnomalyPhase.Investigating || anomalyStateForReach.Phase == AnomalyPhase.Discovered)
-                                        anomalyStateForReach.Phase = AnomalyPhase.Containing;
+                                    if (anomalyStateForReach.Phase == AnomalyPhase.Investigate)
+                                        anomalyStateForReach.Phase = AnomalyPhase.Contain;
                                 }
                                 else if (t.Type == TaskType.Contain)
                                 {
@@ -265,8 +265,8 @@ namespace Core
                                         Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyStateForReach.Id} err={err}");
 
                                     // Advance anomaly phase: Containing -> Contained
-                                    if (anomalyStateForReach.Phase == AnomalyPhase.Containing || anomalyStateForReach.Phase == AnomalyPhase.Investigating || anomalyStateForReach.Phase == AnomalyPhase.Discovered)
-                                        anomalyStateForReach.Phase = AnomalyPhase.Contained;
+                                    if (anomalyStateForReach.Phase == AnomalyPhase.Contain || anomalyStateForReach.Phase == AnomalyPhase.Investigate)
+                                        anomalyStateForReach.Phase = AnomalyPhase.Operate;
                                 }
                             }
                             catch (Exception ex)
@@ -1149,6 +1149,13 @@ namespace Core
             if (def == null) return 0;
             return Math.Max(0, def.manNegentropyPerDay);
         }
+        private static int CalcDailyNegEntropyYield(AnomalyDef def)
+        {
+            if (def == null) return 0;
+            return Math.Max(0, def.manNegentropyPerDay);
+        }
+
+
 
         private static void ApplyIdleAgentRecovery(GameState s)
         {
@@ -1576,19 +1583,65 @@ namespace Core
         // =====================
         // Roster-based efficiency (DRY, no Task)
         // =====================
+
+
+        private static float CalcEffDelta_FromRosterReq(List<AgentState> team, int[] req)
+        {
+            req = NormalizeIntArray4(req);
+            float sMatch = ComputeMatchS_NoWeight(ComputeTeamAvgProps(team), req);
+            float progressScale = MapSToMult(sMatch);
+            return progressScale;
+        }
+
         public static float CalcInvestigateDelta01_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
         {
-            return 0f;
+            if (arrived == null || arrived.Count == 0) return 0f;
+            if (registry == null) return 0f;
+
+
+            if (anom == null) return 0f; // 或 0
+            if (string.IsNullOrEmpty(anom.AnomalyDefId))
+            {
+                Debug.LogWarning($"[SettleCalc] Missing anom.AnomalyDefId for anomStateId={anom?.Id ?? "null"}");
+                return 0f; // NegEntropy 的函数返回 0
+            }
+
+            if (!registry.AnomaliesById.TryGetValue(anom.AnomalyDefId, out var def) || def == null)
+                return 0f;
+
+            int[] req = NormalizeIntArray4(def.invReq);
+            float effDelta = CalcEffDelta_FromRosterReq(arrived, req);
+
+            int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(def));
+            float delta01 = effDelta / Mathf.Max(1f, (float)requiredDays);
+            return Mathf.Clamp01(delta01);
         }
 
         public static float CalcContainDelta01_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
         {
-            return 0f;
+            if (arrived == null || arrived.Count == 0) return 0f;
+            if (registry == null) return 0f;
+
+            if (!registry.AnomaliesById.TryGetValue(anom.AnomalyDefId, out var def) || def == null)
+                return 0f;
+
+            int[] req = NormalizeIntArray4(def.conReq);
+            float effDelta = CalcEffDelta_FromRosterReq(arrived, req);
+
+            int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(def));
+            float delta01 = effDelta / Mathf.Max(1f, (float)requiredDays);
+            return Mathf.Clamp01(delta01);
         }
 
         public static int CalcNegEntropyDelta_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
         {
-            return 0;
+            if (arrived == null || arrived.Count == 0) return 0;
+            if (registry == null) return 0;
+
+            if (!registry.AnomaliesById.TryGetValue(anom.AnomalyDefId, out var def) || def == null)
+                return 0;
+
+            return CalcDailyNegEntropyYield(def);
         }
     }
 }
