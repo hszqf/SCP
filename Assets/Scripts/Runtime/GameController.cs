@@ -243,10 +243,11 @@ public class GameController : MonoBehaviour
         var result = pipeline.Run(this);
 
         // Emit any pipeline logs to Unity console for visibility (no behavior change)
+        // after pipeline.Run(this)
         if (result != null && result.Logs != null)
         {
-            foreach (var l in result.Logs)
-                Debug.Log(l);
+            for (int i = 0; i < result.Logs.Count; i++)
+                Debug.Log(result.Logs[i]);
         }
     }
     
@@ -265,6 +266,21 @@ public class GameController : MonoBehaviour
             Settlement.CityEconomySystem.Apply(gc, state, result);
             Settlement.BaseRecoverySystem.Apply(gc, state, result);
             Settlement.SettlementCleanupSystem.Apply(gc, state, result);
+
+            // Generate scheduled anomalies after settlement pipeline if the GameState requests it.
+            // This prevents newly spawned anomalies from being processed by the same day's settlement systems.
+            try
+            {
+                if (state != null && state.UseSettlement_Pipeline)
+                {
+                    Core.Sim.GenerateScheduledAnomalies_Public(state, gc._rng);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+            
 
             // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
             // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.

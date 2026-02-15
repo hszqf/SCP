@@ -273,6 +273,14 @@ namespace Core
         // New flag: if true, Settlement.AnomalyBehaviorSystem performs actual city population deduction
         // Default true = enable new settlement-driven population deduction. When false, Sim performs legacy deductions.
         public bool UseSettlement_AnomalyCityPop = true;
+
+        // New flag: when true, anomaly generation is deferred until after the Settlement pipeline runs.
+        // Default true preserves the corrected pipeline behavior where newly spawned anomalies do not participate in the same day's settlement.
+        public bool UseSettlement_Pipeline = true;
+
+        // New flag: when true, Settlement.AnomalyWorkSystem performs anomaly work (Investigate/Contain/Operate)
+        // Default true = enable settlement-driven anomaly work progression. When false, legacy Sim per-task progression runs.
+        public bool UseSettlement_AnomalyWork = true;
     }
 }
 // </EXPORT_BLOCK>

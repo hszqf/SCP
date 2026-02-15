@@ -79,231 +79,234 @@ namespace Core
             var legacyWorkLogged = new HashSet<string>();
 
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
-            foreach (var n in s.Cities)
+            if (!s.UseSettlement_AnomalyWork)
             {
-                if (n == null || n.Type == 0) continue;
-                if (n?.Tasks == null || n.Tasks.Count == 0) continue;
-
-                // 推进所有 Active 任务
-                for (int i = 0; i < n.Tasks.Count; i++)
+                foreach (var n in s.Cities)
                 {
-                    var t = n.Tasks[i];
-                    if (t == null) continue;
-                    if (t.State != TaskState.Active) continue;
-                    if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
+                    if (n == null || n.Type == 0) continue;
+                    if (n?.Tasks == null || n.Tasks.Count == 0) continue;
 
-                    var squad = GetAssignedAgents(s, t.AssignedAgentIds);
-                    if (squad.Count == 0) continue;
-
-                    if (t.Type == TaskType.Investigate && !t.InvestigateTargetLocked)
+                    // 推进所有 Active 任务
+                    for (int i = 0; i < n.Tasks.Count; i++)
                     {
-                        if (!string.IsNullOrEmpty(t.SourceAnomalyId))
+                        var t = n.Tasks[i];
+                        if (t == null) continue;
+                        if (t.State != TaskState.Active) continue;
+                        if (t.AssignedAgentIds == null || t.AssignedAgentIds.Count == 0) continue;
+
+                        var squad = GetAssignedAgents(s, t.AssignedAgentIds);
+                        if (squad.Count == 0) continue;
+
+                        if (t.Type == TaskType.Investigate && !t.InvestigateTargetLocked)
                         {
-                            t.InvestigateNoResultBaseDays = 0;
-                            t.InvestigateTargetLocked = true;
+                            if (!string.IsNullOrEmpty(t.SourceAnomalyId))
+                            {
+                                t.InvestigateNoResultBaseDays = 0;
+                                t.InvestigateTargetLocked = true;
+                            }
+                            else
+                            {
+                                TryLockGenericInvestigateTarget(s, n, t, squad, registry, rng);
+                            }
                         }
-                        else
+
+                        string anomalyId = GetTaskAnomalyId(n, t);
+                        var team = ComputeTeamAvgProps(squad);
+                        AnomalyDef anomalyDef = null;
+                        if (!string.IsNullOrEmpty(anomalyId))
                         {
-                            TryLockGenericInvestigateTarget(s, n, t, squad, registry, rng);
+                            registry.AnomaliesById.TryGetValue(anomalyId, out anomalyDef);
                         }
-                    }
 
-                    string anomalyId = GetTaskAnomalyId(n, t);
-                    var team = ComputeTeamAvgProps(squad);
-                    AnomalyDef anomalyDef = null;
-                    if (!string.IsNullOrEmpty(anomalyId))
-                    {
-                        registry.AnomaliesById.TryGetValue(anomalyId, out anomalyDef);
-                    }
-
-                    int[] req = t.Type switch
-                    {
-                        TaskType.Investigate => NormalizeIntArray4(anomalyDef?.invReq),
-                        TaskType.Contain => NormalizeIntArray4(anomalyDef?.conReq),
-                        TaskType.Manage => NormalizeIntArray4(anomalyDef?.manReq),
-                        _ => new int[4]
-                    };
-
-                    float sMatch = ComputeMatchS_NoWeight(team, req);
-                    float progressScale = MapSToMult(sMatch);
-
-                    float effDelta = progressScale;
-
-                    // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
-                    // They should never auto-complete.
-                    if (t.Type == TaskType.Manage)
-                    {
-                        float beforeManage = t.Progress;
-                        t.Progress = Math.Max(t.Progress, 0f);
-                        t.Progress = Clamp01(t.Progress + effDelta);
-                        if (t.Progress >= 1f) t.Progress = 0.99f;
-                        Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} progress={t.Progress:0.00}/1 (baseDays=1)");
-
-                        var defId = t.SourceAnomalyId;
-                        if (string.IsNullOrEmpty(defId))
+                        int[] req = t.Type switch
                         {
-                            Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=MissingSourceAnomalyId target={t.TargetManagedAnomalyId ?? "none"}");
+                            TaskType.Investigate => NormalizeIntArray4(anomalyDef?.invReq),
+                            TaskType.Contain => NormalizeIntArray4(anomalyDef?.conReq),
+                            TaskType.Manage => NormalizeIntArray4(anomalyDef?.manReq),
+                            _ => new int[4]
+                        };
+
+                        float sMatch = ComputeMatchS_NoWeight(team, req);
+                        float progressScale = MapSToMult(sMatch);
+
+                        float effDelta = progressScale;
+
+                        // Manage tasks are LONG-RUNNING: progress is only used as a "started" flag (0 vs >0).
+                        // They should never auto-complete.
+                        if (t.Type == TaskType.Manage)
+                        {
+                            float beforeManage = t.Progress;
+                            t.Progress = Math.Max(t.Progress, 0f);
+                            t.Progress = Clamp01(t.Progress + effDelta);
+                            if (t.Progress >= 1f) t.Progress = 0.99f;
+                            Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} progress={t.Progress:0.00}/1 (baseDays=1)");
+
+                            var defId = t.SourceAnomalyId;
+                            if (string.IsNullOrEmpty(defId))
+                            {
+                                Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=MissingSourceAnomalyId target={t.TargetManagedAnomalyId ?? "none"}");
+                                continue;
+                            }
+
+                            if (!registry.AnomaliesById.TryGetValue(defId, out var manageDef) || manageDef == null)
+                            {
+                                Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=UnknownAnomalyDef target={t.TargetManagedAnomalyId ?? "none"} anomaly={defId}");
+                                continue;
+                            }
+                            var impact = ComputeImpact(s, TaskType.Manage, manageDef, t.AssignedAgentIds);
+                            var manageReq = NormalizeIntArray4(manageDef?.manReq);
+                            float magSan = (manageDef?.mansanDmg ?? 0) * impact.sanMul;
+                            Debug.Log(
+                                $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.manhpDmg ?? 0},{manageDef?.mansanDmg ?? 0}) " +
+                                $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) " +
+                                $"req={FormatIntArray(manageReq)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
+                            foreach (var agentId in t.AssignedAgentIds)
+                            {
+                                string reason = $"ManageDaily:node={n.Id},anomaly={defId ?? "unknown"},dayTick={s.Day}";
+                                ApplyAgentImpact(s, agentId, 0, impact.sanDelta, reason);
+                            }
                             continue;
                         }
 
-                        if (!registry.AnomaliesById.TryGetValue(defId, out var manageDef) || manageDef == null)
+                        int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
+                        if (t.Type == TaskType.Investigate && t.InvestigateTargetLocked && string.IsNullOrEmpty(t.SourceAnomalyId) && t.InvestigateNoResultBaseDays > 0)
                         {
-                            Debug.LogWarning($"[ManageDailySkip] day={s.Day} taskId={t.Id} node={n.Id} reason=UnknownAnomalyDef target={t.TargetManagedAnomalyId ?? "none"} anomaly={defId}");
-                            continue;
+                            requiredDays = t.InvestigateNoResultBaseDays;
                         }
-                        var impact = ComputeImpact(s, TaskType.Manage, manageDef, t.AssignedAgentIds);
-                        var manageReq = NormalizeIntArray4(manageDef?.manReq);
-                        float magSan = (manageDef?.mansanDmg ?? 0) * impact.sanMul;
-                        Debug.Log(
-                            $"[ImpactCalc] day={s.Day} type=Manage node={n.Id} anomaly={defId ?? "unknown"} base=({manageDef?.manhpDmg ?? 0},{manageDef?.mansanDmg ?? 0}) " +
-                            $"mul=({impact.hpMul:0.###},{impact.sanMul:0.###}) " +
-                            $"req={FormatIntArray(manageReq)} team={FormatIntArray(impact.team)} D={impact.D:0.###} S={impact.S:0.###} magSan={magSan:0.###} final=({impact.hpDelta},{impact.sanDelta})");
-                        foreach (var agentId in t.AssignedAgentIds)
+
+                        // legacy task progress (0..requiredDays) kept for compatibility/logging
+                        float before = t.Progress;
+                        t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, requiredDays);
+
+                        // new truth: persist normalized progress (0..1) onto AnomalyState
+                        if (!string.IsNullOrEmpty(anomalyId))
                         {
-                            string reason = $"ManageDaily:node={n.Id},anomaly={defId ?? "unknown"},dayTick={s.Day}";
-                            ApplyAgentImpact(s, agentId, 0, impact.sanDelta, reason);
-                        }
-                        continue;
-                    }
-
-                    int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
-                    if (t.Type == TaskType.Investigate && t.InvestigateTargetLocked && string.IsNullOrEmpty(t.SourceAnomalyId) && t.InvestigateNoResultBaseDays > 0)
-                    {
-                        requiredDays = t.InvestigateNoResultBaseDays;
-                    }
-
-                    // legacy task progress (0..requiredDays) kept for compatibility/logging
-                    float before = t.Progress;
-                    t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, requiredDays);
-
-                    // new truth: persist normalized progress (0..1) onto AnomalyState
-                    if (!string.IsNullOrEmpty(anomalyId))
-                    {
-                        var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
-                        if (anomalyState != null)
-                        {
-                            float delta01 = effDelta / Mathf.Max(1f, (float)requiredDays);
-
-                            if (t.Type == TaskType.Investigate)
+                            var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
+                            if (anomalyState != null)
                             {
-                                anomalyState.InvestigateProgress = Mathf.Clamp01(anomalyState.InvestigateProgress + delta01);
-                            }
-                            else if (t.Type == TaskType.Contain)
-                            {
-                                anomalyState.ContainProgress = Mathf.Clamp01(anomalyState.ContainProgress + delta01);
-                            }
+                                float delta01 = effDelta / Mathf.Max(1f, (float)requiredDays);
 
-                            // Legacy work logging (limit to 1 per anomaly per day)
-                            try
-                            {
-                                string logKey = $"{t.Type}|{anomalyState.Id}|{s.Day}";
-                                if (!legacyWorkLogged.Contains(logKey))
-                                {
-                                    if (t.Type == TaskType.Investigate)
-                                        Debug.Log($"[Sim][LegacyWork] type=Investigate anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.InvestigateProgress:0.###}");
-                                    else if (t.Type == TaskType.Contain)
-                                        Debug.Log($"[Sim][LegacyWork] type=Contain anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.ContainProgress:0.###}");
-
-                                    legacyWorkLogged.Add(logKey);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.LogException(ex);
-                            }
-                        }
-                    }
-
-
-                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
-                    {
-                        var a = !string.IsNullOrEmpty(anomalyId) ? GetOrCreateAnomalyState(s, n, anomalyId) : null;
-                        float ap = (a == null) ? -1f : (t.Type == TaskType.Investigate ? a.InvestigateProgress : a.ContainProgress);
-                        Debug.Log($"[ReachDbg] day={s.Day} task={t.Id} type={t.Type} anomalyId={anomalyId} taskProg={t.Progress:0.###} requiredDays={requiredDays} anomalyProg01={ap:0.###}");
-                    }
-
-                    ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
-
-                    bool reached = false;
-
-                    Core.AnomalyState anomalyStateForReach = null;
-                    if (!string.IsNullOrEmpty(anomalyId))
-                        anomalyStateForReach = GetOrCreateAnomalyState(s, n, anomalyId);
-
-                    if (anomalyStateForReach != null)
-                    {
-                        if (t.Type == TaskType.Investigate)
-                            reached = anomalyStateForReach.InvestigateProgress >= 1f;
-                        else if (t.Type == TaskType.Contain)
-                            reached = anomalyStateForReach.ContainProgress >= 1f;
-                    }
-
-                    if (reached)
-                    {
-                        // When a task reaches completion, immediately recall assigned agents from the
-                        // corresponding anomaly roster (generate Recall movement tokens) so UI/dispatch
-                        // systems see TravellingToBase/Recall tokens in the same frame.
-                        if (anomalyStateForReach != null)
-                        {
-                            try
-                            {
-                                string err;
                                 if (t.Type == TaskType.Investigate)
                                 {
-                                    DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Investigate, Array.Empty<string>(), out err);
-                                    if (!string.IsNullOrEmpty(err))
-                                        Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyStateForReach.Id} err={err}");
-
-                                    // Advance anomaly phase if applicable: Investigating -> Containing
-                                    if (anomalyStateForReach.Phase == AnomalyPhase.Investigate)
-                                        anomalyStateForReach.Phase = AnomalyPhase.Contain;
+                                    anomalyState.InvestigateProgress = Mathf.Clamp01(anomalyState.InvestigateProgress + delta01);
                                 }
                                 else if (t.Type == TaskType.Contain)
                                 {
-                                    DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Contain, Array.Empty<string>(), out err);
-                                    if (!string.IsNullOrEmpty(err))
-                                        Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyStateForReach.Id} err={err}");
-
-                                    // Advance anomaly phase: Containing -> Contained
-                                    if (anomalyStateForReach.Phase == AnomalyPhase.Contain || anomalyStateForReach.Phase == AnomalyPhase.Investigate)
-                                        anomalyStateForReach.Phase = AnomalyPhase.Operate;
+                                    anomalyState.ContainProgress = Mathf.Clamp01(anomalyState.ContainProgress + delta01);
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.LogException(ex);
-                            }
-                        }
 
-                        // Sync legacy task system: ensure no other active tasks for the same anomaly keep agents busy.
-                        if (n?.Tasks != null)
-                        {
-                            for (int ti2 = 0; ti2 < n.Tasks.Count; ti2++)
-                            {
-                                var other = n.Tasks[ti2];
-                                if (other == null) continue;
-                                if (other == t) continue; // skip the task we're about to complete
-                                if (other.State != TaskState.Active) continue;
-
-                                // If the other task targets the same anomaly (by SourceAnomalyId), cancel it to avoid busy residue.
-                                if (!string.IsNullOrEmpty(anomalyId) && string.Equals(other.SourceAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)
-                                    && (other.Type == TaskType.Investigate || other.Type == TaskType.Contain))
+                                // Legacy work logging (limit to 1 per anomaly per day)
+                                try
                                 {
-                                    if (other.AssignedAgentIds != null) other.AssignedAgentIds.Clear();
-                                    other.Progress = 0f;
-                                    other.State = TaskState.Cancelled;
-                                    Debug.Log($"[LegacySync] day={s.Day} node={n.Id} cancelled task={other.Id} type={other.Type} reason=DuplicateAnomalyCompletion");
+                                    string logKey = $"{t.Type}|{anomalyState.Id}|{s.Day}";
+                                    if (!legacyWorkLogged.Contains(logKey))
+                                    {
+                                        if (t.Type == TaskType.Investigate)
+                                            Debug.Log($"[Sim][LegacyWork] type=Investigate anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.InvestigateProgress:0.###}");
+                                        else if (t.Type == TaskType.Contain)
+                                            Debug.Log($"[Sim][LegacyWork] type=Contain anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.ContainProgress:0.###}");
+
+                                        legacyWorkLogged.Add(logKey);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.LogException(ex);
                                 }
                             }
                         }
 
-                        CompleteTask(s, n, t, rng, registry);
+
+                        if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
+                        {
+                            var a = !string.IsNullOrEmpty(anomalyId) ? GetOrCreateAnomalyState(s, n, anomalyId) : null;
+                            float ap = (a == null) ? -1f : (t.Type == TaskType.Investigate ? a.InvestigateProgress : a.ContainProgress);
+                            Debug.Log($"[ReachDbg] day={s.Day} task={t.Id} type={t.Type} anomalyId={anomalyId} taskProg={t.Progress:0.###} requiredDays={requiredDays} anomalyProg01={ap:0.###}");
+                        }
+
+                        ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
+
+                        bool reached = false;
+
+                        Core.AnomalyState anomalyStateForReach = null;
+                        if (!string.IsNullOrEmpty(anomalyId))
+                            anomalyStateForReach = GetOrCreateAnomalyState(s, n, anomalyId);
+
+                        if (anomalyStateForReach != null)
+                        {
+                            if (t.Type == TaskType.Investigate)
+                                reached = anomalyStateForReach.InvestigateProgress >= 1f;
+                            else if (t.Type == TaskType.Contain)
+                                reached = anomalyStateForReach.ContainProgress >= 1f;
+                        }
+
+                        if (reached)
+                        {
+                            // When a task reaches completion, immediately recall assigned agents from the
+                            // corresponding anomaly roster (generate Recall movement tokens) so UI/dispatch
+                            // systems see TravellingToBase/Recall tokens in the same frame.
+                            if (anomalyStateForReach != null)
+                            {
+                                try
+                                {
+                                    string err;
+                                    if (t.Type == TaskType.Investigate)
+                                    {
+                                        DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Investigate, Array.Empty<string>(), out err);
+                                        if (!string.IsNullOrEmpty(err))
+                                            Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyStateForReach.Id} err={err}");
+
+                                        // Advance anomaly phase if applicable: Investigating -> Containing
+                                        if (anomalyStateForReach.Phase == AnomalyPhase.Investigate)
+                                            anomalyStateForReach.Phase = AnomalyPhase.Contain;
+                                    }
+                                    else if (t.Type == TaskType.Contain)
+                                    {
+                                        DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Contain, Array.Empty<string>(), out err);
+                                        if (!string.IsNullOrEmpty(err))
+                                            Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyStateForReach.Id} err={err}");
+
+                                        // Advance anomaly phase: Containing -> Contained
+                                        if (anomalyStateForReach.Phase == AnomalyPhase.Contain || anomalyStateForReach.Phase == AnomalyPhase.Investigate)
+                                            anomalyStateForReach.Phase = AnomalyPhase.Operate;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.LogException(ex);
+                                }
+                            }
+
+                            // Sync legacy task system: ensure no other active tasks for the same anomaly keep agents busy.
+                            if (n?.Tasks != null)
+                            {
+                                for (int ti2 = 0; ti2 < n.Tasks.Count; ti2++)
+                                {
+                                    var other = n.Tasks[ti2];
+                                    if (other == null) continue;
+                                    if (other == t) continue; // skip the task we're about to complete
+                                    if (other.State != TaskState.Active) continue;
+
+                                    // If the other task targets the same anomaly (by SourceAnomalyId), cancel it to avoid busy residue.
+                                    if (!string.IsNullOrEmpty(anomalyId) && string.Equals(other.SourceAnomalyId, anomalyId, StringComparison.OrdinalIgnoreCase)
+                                        && (other.Type == TaskType.Investigate || other.Type == TaskType.Contain))
+                                    {
+                                        if (other.AssignedAgentIds != null) other.AssignedAgentIds.Clear();
+                                        other.Progress = 0f;
+                                        other.State = TaskState.Cancelled;
+                                        Debug.Log($"[LegacySync] day={s.Day} node={n.Id} cancelled task={other.Id} type={other.Type} reason=DuplicateAnomalyCompletion");
+                                    }
+                                }
+                            }
+
+                            CompleteTask(s, n, t, rng, registry);
+                        }
                     }
                 }
-            }
 
-            // 1.5) 收容后管理（负熵产出）
-            StepManageTasks(s, rng, registry, legacyWorkLogged);
+                // 1.5) 收容后管理（负熵产出）
+                StepManageTasks(s, rng, registry, legacyWorkLogged);
+            }
 
             // 1.75) Idle agents recover HP/SAN (10% max per day)
             ApplyIdleAgentRecovery(s);
@@ -446,6 +449,21 @@ namespace Core
             }
 
             // 5) 异常生成（按 AnomaliesGen 表调度）
+            if (!s.UseSettlement_Pipeline)
+            {
+                GenerateScheduledAnomalies(s, rng, registry, s.Day);
+            }
+        }
+
+        /// <summary>
+        /// Public wrapper to generate scheduled anomalies for the current day using the provided RNG.
+        /// This exists so callers outside Sim.StepDay can control when anomaly generation happens
+        /// (e.g. after settlement pipeline completes).
+        /// </summary>
+        public static void GenerateScheduledAnomalies_Public(GameState s, System.Random rng)
+        {
+            var registry = Data.DataRegistry.Instance;
+            if (s == null || registry == null || rng == null) return;
             GenerateScheduledAnomalies(s, rng, registry, s.Day);
         }
 
