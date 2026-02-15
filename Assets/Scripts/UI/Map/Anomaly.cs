@@ -45,7 +45,33 @@ public class Anomaly : MonoBehaviour
         // compute canonical anomaly key if possible
         var gcBind = GameController.I;
         var preferKeyBind = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
-        var anomBind = gcBind != null ? Core.DispatchSystem.FindAnomaly(gcBind.State, preferKeyBind) : null;
+        AnomalyState anomBind = null;
+        if (gcBind != null && gcBind.State != null)
+        {
+            if (!string.IsNullOrEmpty(_managedAnomalyId))
+            {
+                anomBind = Core.DispatchSystem.FindAnomaly(gcBind.State, _managedAnomalyId);
+            }
+            else
+            {
+                // node+def disambiguation: avoid cross-node same def
+                var list = gcBind.State.Anomalies;
+                if (list != null)
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        var a = list[i];
+                        if (a == null) continue;
+                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
+                        {
+                            anomBind = a;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         _canonicalAnomalyKey = anomBind != null ? anomBind.Id : preferKeyBind;
 
         EnsureRefs();
@@ -97,7 +123,30 @@ public class Anomaly : MonoBehaviour
 
         // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
         var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
-        var anom = Core.DispatchSystem.FindAnomaly(gc.State, preferKey);
+        AnomalyState anom = null;
+        if (!string.IsNullOrEmpty(_managedAnomalyId))
+        {
+            anom = Core.DispatchSystem.FindAnomaly(gc.State, _managedAnomalyId);
+        }
+        else
+        {
+            // node+def disambiguation: avoid cross-node same def
+            var list = gc.State.Anomalies;
+            if (list != null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var a = list[i];
+                    if (a == null) continue;
+                    if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                        !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
+                    {
+                        anom = a;
+                        break;
+                    }
+                }
+            }
+        }
         _canonicalAnomalyKey = anom != null ? anom.Id : preferKey;
 
         bool displayKnown = _isKnown;
@@ -387,7 +436,7 @@ public class Anomaly : MonoBehaviour
 
             // only show agents whose location is at this anomaly
             if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
-            if (!string.Equals(ag.LocationAnomalyKey, _canonicalAnomalyKey, System.StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.Equals(ag.LocationAnomalyKey, _canonicalAnomalyKey, System.StringComparison.Ordinal)) continue;
 
             result.Add(ag.Id);
         }

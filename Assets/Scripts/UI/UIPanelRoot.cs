@@ -247,9 +247,34 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 // New: write roster into AnomalyState before creating legacy task
-                var anomalyKey = targetId; // migration: ManagedAnomalyState.Id
+                var state = gc.State;
+                var anomalyKey = targetId; // migration: ManagedAnomalyState.Id (may be defId)
+
+                // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
+                Core.AnomalyState anom = null;
+                anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
+                if (anom == null && !string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(anomalyKey))
+                {
+                    var list = state.Anomalies;
+                    if (list != null)
+                    {
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var a = list[i];
+                            if (a == null) continue;
+                            if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == nodeId &&
+                                !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
+                            {
+                                anom = a;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (anom != null) anomalyKey = anom.Id;
+
                 string err;
-                if (!Core.DispatchSystem.TrySetRoster(gc.State, anomalyKey, AssignmentSlot.Investigate, agentIds, out err))
+                if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, AssignmentSlot.Investigate, agentIds, out err))
                 {
                     ShowInfo("派遣失败", err);
                     return;
@@ -346,9 +371,34 @@ public class UIPanelRoot : MonoBehaviour
                 }
 
                 // New: write roster into AnomalyState before creating legacy task
-                var anomalyKey = targetAnomalyId; // migration: ManagedAnomalyState.Id
+                var state = gc.State;
+                var anomalyKey = targetAnomalyId; // migration: ManagedAnomalyState.Id (may be defId)
+
+                // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
+                Core.AnomalyState anom = null;
+                anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
+                if (anom == null && !string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(anomalyKey))
+                {
+                    var list = state.Anomalies;
+                    if (list != null)
+                    {
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var a = list[i];
+                            if (a == null) continue;
+                            if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == nodeId &&
+                                !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
+                            {
+                                anom = a;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (anom != null) anomalyKey = anom.Id;
+
                 string err;
-                if (!Core.DispatchSystem.TrySetRoster(gc.State, anomalyKey, AssignmentSlot.Contain, agentIds, out err))
+                if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, AssignmentSlot.Contain, agentIds, out err))
                 {
                     ShowInfo("派遣失败", err);
                     return;

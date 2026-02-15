@@ -328,11 +328,35 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         // Determine slot-driven roster source and sync selected ids from AnomalyState.GetRoster(slot) if available.
         var slot = GetCurrentSlot();
 
-        Core.AnomalyState anomState = (!string.IsNullOrEmpty(_selectedTargetId) && gc?.State != null)
-            ? Core.DispatchSystem.FindAnomaly(gc.State, _selectedTargetId)
-            : null;
+        Core.AnomalyState anomState = null;
+        if (!string.IsNullOrEmpty(_selectedTargetId) && gc?.State != null)
+        {
+            // 1) managedId/instanceId/legacy id 先尝试直接找
+            anomState = Core.DispatchSystem.FindAnomaly(gc.State, _selectedTargetId);
 
-        canonicalKeyForFilter = anomState != null ? anomState.Id : null;
+            // 2) 如果找不到，视为 defId：按 node+def 消歧（避免跨节点同 def 串台）
+            if (anomState == null && !string.IsNullOrEmpty(_nodeId))
+            {
+                var list = gc.State.Anomalies;
+                if (list != null)
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        var a = list[i];
+                        if (a == null) continue;
+                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _selectedTargetId)
+                        {
+                            anomState = a;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // canonical key: 一律用实例 id（能找到就用 anomState.Id），找不到才退回 targetId（迁移期兜底）
+        canonicalKeyForFilter = anomState != null ? anomState.Id : _selectedTargetId;
 
         // Sync selected ids: if anomState exists and has a roster for this slot, use it even if empty.
         _selectedAgentIds.Clear();
@@ -369,7 +393,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                 }
 
                 // Use selectedTargetId as filter if nothing else
-                canonicalKeyForFilter = anomState?.Id ?? _selectedTargetId;
+                canonicalKeyForFilter = anomState != null ? anomState.Id : _selectedTargetId;
             }
         }
 
@@ -509,7 +533,40 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Debug.Log($"[AssignPanel] ApplyRosterImmediate enter mode={_mode} slot={slot} targetId={_selectedTargetId} idsCount={ids.Count}");
 
         string err;
-        if (!Core.DispatchSystem.TrySetRoster(gc.State, _selectedTargetId, slot, ids, out err))
+        var state = gc.State;
+        var anomalyKey = _selectedTargetId;
+
+        // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
+        Core.AnomalyState anom = null;
+
+        // First try using DispatchSystem.FindAnomaly with the provided key (managedId / instanceId / legacy id).
+        anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
+
+        // If not found, treat anomalyKey as defId and disambiguate by node+def.
+        if (anom == null && !string.IsNullOrEmpty(_nodeId) && !string.IsNullOrEmpty(anomalyKey))
+        {
+            var list = state.Anomalies;
+            if (list != null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var a = list[i];
+                    if (a == null) continue;
+                    if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                        !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
+                    {
+                        anom = a;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If resolved, use canonical instance key.
+        if (anom != null)
+            anomalyKey = anom.Id;
+
+        if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, slot, ids, out err))
         {
             Debug.LogError($"[AssignPanel] TrySetRoster failed: {err}");
             return;
