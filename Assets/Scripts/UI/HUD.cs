@@ -107,6 +107,12 @@ public class HUD : MonoBehaviour
     void OnEndDayClicked()
     {
         if (GameController.I == null) return;
+        if (!GameController.I.CanEndDay(out var reason))
+        {
+            Debug.LogWarning($"[Day] Blocked: {reason}");
+            return;
+        }
+
         GameController.I.EndDay();
         StartCoroutine(PlayDispatchNextFrame());
     }

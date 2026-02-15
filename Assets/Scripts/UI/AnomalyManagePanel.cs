@@ -32,6 +32,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private enum AssignPanelMode
     {
         Manage,
+        Investigate,
+        Contain,
         Generic
     }
 
@@ -164,6 +166,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (gc == null) return;
         var registry = DataRegistry.Instance;
         (_slotsMin, _slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Manage, 1, int.MaxValue);
+        // Allow Operate (new-arch) mode to have zero agents (withdraw). For stopgap, relax min to 0 here.
+        _slotsMin = 0;
 
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
         var list = GetFavoritedAnomalies(node);
@@ -234,7 +238,11 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         string modeLabel)
     {
         ClearSelectionState();
-        _mode = modeLabel == "Manage" ? AssignPanelMode.Manage : AssignPanelMode.Generic;
+        // Map incoming mode label to internal AssignPanelMode so slot can be derived.
+        if (string.Equals(modeLabel, "Manage", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Manage;
+        else if (string.Equals(modeLabel, "Investigate", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Investigate;
+        else if (string.Equals(modeLabel, "Contain", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Contain;
+        else _mode = AssignPanelMode.Generic;
         _onConfirm = onConfirm;
         _slotsMin = agentSlotsMin;
         _slotsMax = agentSlotsMax;
@@ -267,6 +275,17 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         return $"{a.Name}  (管理:{mgr})";
     }
 
+    private AssignmentSlot GetCurrentSlot()
+    {
+        switch (_mode)
+        {
+            case AssignPanelMode.Investigate: return AssignmentSlot.Investigate;
+            case AssignPanelMode.Contain:     return AssignmentSlot.Contain;
+            case AssignPanelMode.Manage:      return AssignmentSlot.Operate;
+            default:                          return AssignmentSlot.Operate;
+        }
+    }
+
     private void RebuildAgentList()
     {
         // Clear
@@ -297,27 +316,104 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (gc == null) return;
 
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
+        string anomalyKeyForFilter = null;
+
+        // Determine slot-driven roster source and sync selected ids from AnomalyState.GetRoster(slot) if available.
+        var slot = GetCurrentSlot();
+
+        Core.AnomalyState anomState = null;
         if (_mode == AssignPanelMode.Manage)
         {
             var anomaly = FindManagedAnomaly(node, _selectedTargetId);
             if (anomaly == null)
                 return;
 
-            // Sync selection from Manage Task (source of truth), fallback legacy.
-            var mt = FindManageTask(node, anomaly.Id);
+            var gcState = gc.State;
+            // Try to find a matching AnomalyState for this managed anomaly by AnomalyId/AnomalyDefId/Id
+            anomState = gcState?.Anomalies?.FirstOrDefault(a => a != null && (
+                (!string.IsNullOrEmpty(a.AnomalyDefId) && !string.IsNullOrEmpty(anomaly.AnomalyId) && a.AnomalyDefId == anomaly.AnomalyId) ||
+                (!string.IsNullOrEmpty(a.AnomalyId) && !string.IsNullOrEmpty(anomaly.AnomalyId) && a.AnomalyId == anomaly.AnomalyId) ||
+                (!string.IsNullOrEmpty(a.Id) && !string.IsNullOrEmpty(anomaly.AnomalyId) && a.Id == anomaly.AnomalyId)
+            ));
+
+            // canonical key for Managed anomaly is ManagedAnomalyState.Id
+            anomalyKeyForFilter = anomaly.Id;
+
+            // Sync from roster if available
             _selectedAgentIds.Clear();
-            if (mt?.AssignedAgentIds != null)
-                foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
+            var roster = anomState?.GetRoster(slot);
+            if (roster != null && roster.Count > 0)
+            {
+                foreach (var id in roster) _selectedAgentIds.Add(id);
+            }
+            else
+            {
+                var mt = FindManageTask(node, anomaly.Id);
+                if (mt?.AssignedAgentIds != null)
+                    foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
+            }
+        }
+        else
+        {
+            // Investigate / Contain / Generic
+            // SelectedTargetId for these modes represents an anomalyDefId or anomaly instance id.
+            if (!string.IsNullOrEmpty(_selectedTargetId))
+            {
+                var gcState = gc.State;
+                anomState = gcState?.Anomalies?.FirstOrDefault(a => a != null && (
+                    (!string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _selectedTargetId) ||
+                    (!string.IsNullOrEmpty(a.AnomalyId) && a.AnomalyId == _selectedTargetId) ||
+                    (!string.IsNullOrEmpty(a.Id) && a.Id == _selectedTargetId)
+                ));
+            }
+
+            // Sync selected ids from AnomalyState roster if present
+            _selectedAgentIds.Clear();
+            var roster = anomState?.GetRoster(slot);
+            if (roster != null && roster.Count > 0)
+            {
+                foreach (var id in roster) _selectedAgentIds.Add(id);
+                // canonical key for filtering is anomaly state id
+                anomalyKeyForFilter = anomState?.Id;
+            }
+            else
+            {
+                // Fallback: legacy current task AssignedAgentIds for Investigate/Contain
+                if (slot == AssignmentSlot.Investigate || slot == AssignmentSlot.Contain)
+                {
+                    var legacyTask = node?.Tasks?.LastOrDefault(t => t != null && t.State == TaskState.Active &&
+                        ((slot == AssignmentSlot.Investigate && t.Type == TaskType.Investigate) || (slot == AssignmentSlot.Contain && t.Type == TaskType.Contain)));
+                    if (legacyTask?.AssignedAgentIds != null)
+                        foreach (var id in legacyTask.AssignedAgentIds) _selectedAgentIds.Add(id);
+                }
+                // Use selectedTargetId as filter if nothing else
+                anomalyKeyForFilter = anomState?.Id ?? _selectedTargetId;
+            }
         }
 
         foreach (var ag in gc.State.Agents)
         {
             if (ag == null) continue;
 
-            bool selected = _selectedAgentIds.Contains(ag.Id);
+            if (ag.IsDead || ag.IsInsane) continue;
 
-            // Busy check (global): any active task (including Manage) OR legacy management occupancy.
+            // Determine global busy state early (for Base filtering)
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
+
+            // If agent is at Base, only include if truly idle (not busy elsewhere)
+            if (ag.LocationKind == AgentLocationKind.Base)
+            {
+                if (busyTask) continue; // excluded from candidate list when busy
+                // else allow
+            }
+            else
+            {
+                // Only include agents already at this managed anomaly
+                if (!(ag.LocationKind == AgentLocationKind.AtAnomaly && !string.IsNullOrEmpty(anomalyKeyForFilter) && ag.LocationAnomalyKey == anomalyKeyForFilter))
+                    continue; // not at this anomaly -> do not display
+            }
+
+            bool selected = _selectedAgentIds.Contains(ag.Id);
 
             bool unusable = ag.IsDead || ag.IsInsane;
 
@@ -471,6 +567,21 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var m = FindManagedAnomaly(node, targetId);
         if (m == null) return;
 
+        // Determine anomalyKey (use ManagedAnomalyState.Id as canonical key)
+        string anomalyKey = m.Id;
+
+        // Update Operate roster via DispatchSystem as the source-of-truth for new-arch rosters.
+        string err;
+        if (!Core.DispatchSystem.TrySetRoster(gc.State, anomalyKey, AssignmentSlot.Operate, agentIds, out err))
+        {
+            Debug.LogError($"[AnomalyManagePanel] TrySetRoster failed: {err}");
+            return;
+        }
+
+        // Capture old assigned ids from existing manage task (if any) for removal handling
+        var oldTask = FindManageTask(node, m.Id);
+        var oldIds = (oldTask != null && oldTask.AssignedAgentIds != null) ? new List<string>(oldTask.AssignedAgentIds) : new List<string>();
+
         // Write back as a formal Manage task.
         var mt = gc.CreateManageTask(_nodeId, m.Id);
         if (mt == null) return;
@@ -487,6 +598,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             // Optional: set StartDay for UX (Sim will also set on first yield)
             if (m.StartDay <= 0) m.StartDay = gc.State.Day;
         }
+
+        // Location is now maintained by DispatchSystem.TrySetRoster (single source of truth).
+        // AgentState location sync moved to DispatchSystem.TrySetRoster so UI no longer directly mutates agent Location fields here.
 
         // Update UI
         RefreshUI();

@@ -225,9 +225,47 @@ public class GameController : MonoBehaviour
             return;
         }
 
+        // Guard: prevent ending day while movement/dispatch in progress
+        if (!CanEndDay(out var canReason))
+        {
+            Debug.LogWarning($"[Day] Blocked: {canReason}");
+            return;
+        }
+        
         Sim.StepDay(State, _rng);
         Notify();
         RefreshMapNodes();
+    }
+    
+    // Check whether user can proceed to end the day. Returns false with reason if blocked.
+    public bool CanEndDay(out string reason)
+    {
+        reason = null;
+        if (State == null)
+        {
+            reason = "State null";
+            return false;
+        }
+
+        if (State.MovementLockCount > 0)
+        {
+            reason = "MovementLockCount>0";
+            return false;
+        }
+
+        if (State.PendingMovementCount > 0)
+        {
+            reason = "PendingMovementCount>0";
+            return false;
+        }
+
+        if (DispatchAnimationSystem.I != null && DispatchAnimationSystem.I.IsInteractionLocked)
+        {
+            reason = "DispatchAnimationSystem locked";
+            return false;
+        }
+
+        return true;
     }
 
     public void MarkGameOver(string reason)
@@ -838,9 +876,9 @@ public static class GameControllerTaskExt
 
     // ---------- Busy derivation & debug ----------
 
-    public static HashSet<string> DeriveBusyAgentIdsFromTasks(GameController gc)
+    public static HashSet<String> DeriveBusyAgentIdsFromTasks(GameController gc)
     {
-        var result = new HashSet<string>();
+        var result = new HashSet<String>();
         if (gc?.State?.Cities == null) return result;
 
         foreach (var node in gc.State.Cities)

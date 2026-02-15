@@ -239,6 +239,22 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
+                // New: ensure a target is selected
+                if (string.IsNullOrEmpty(targetId))
+                {
+                    ShowInfo("派遣失败", "未选择调查目标");
+                    return;
+                }
+
+                // New: write roster into AnomalyState before creating legacy task
+                var anomalyKey = targetId; // migration: ManagedAnomalyState.Id
+                string err;
+                if (!Core.DispatchSystem.TrySetRoster(gc.State, anomalyKey, AssignmentSlot.Investigate, agentIds, out err))
+                {
+                    ShowInfo("派遣失败", err);
+                    return;
+                }
+
                 if (!GameControllerTaskExt.AreAgentsUsable(gc, agentIds, out var usableReason))
                 {
                     ShowInfo("派遣失败", usableReason);
@@ -326,6 +342,15 @@ public class UIPanelRoot : MonoBehaviour
                 if (agentIds == null || agentIds.Count == 0)
                 {
                     ShowInfo("派遣失败", "未选择干员");
+                    return;
+                }
+
+                // New: write roster into AnomalyState before creating legacy task
+                var anomalyKey = targetAnomalyId; // migration: ManagedAnomalyState.Id
+                string err;
+                if (!Core.DispatchSystem.TrySetRoster(gc.State, anomalyKey, AssignmentSlot.Contain, agentIds, out err))
+                {
+                    ShowInfo("派遣失败", err);
                     return;
                 }
 

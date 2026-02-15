@@ -18,6 +18,7 @@ public class DispatchAnimationSystem : MonoBehaviour
     [SerializeField] private float launchInterval = 0.5f;
     [SerializeField] private float arrivalProgressStepPercent = 0.01f;
     [SerializeField] private float arrivalProgressInterval = 0.12f;
+    [SerializeField] private float _fallbackTravelSeconds = 0.45f; // placeholder travel duration
 
     private readonly Dictionary<string, RectTransform> _nodes = new();
     private readonly Dictionary<string, RectTransform> _anomalies = new();
@@ -42,7 +43,11 @@ public class DispatchAnimationSystem : MonoBehaviour
     private bool _nodesScanned;
     private readonly Dictionary<string, List<string>> _taskAgentHistory = new();
 
-    public bool IsInteractionLocked => _activeAgents > 0 || _activeProgressRolls > 0;
+    // Token-based interaction lock: non-null when a MovementToken coroutine is playing
+    private Coroutine _tokenCo;
+    private Core.MovementToken _playingToken;
+
+    public bool IsInteractionLocked => _tokenCo != null;
 
     public bool IsTaskInTransit(string taskId)
         => !string.IsNullOrEmpty(taskId) && _inTransitTasks.Contains(taskId);
@@ -117,6 +122,16 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         if (!_isSubscribed)
             TryBindGameController();
+
+        if (_tokenCo != null) return; // already playing a token
+
+        var gc = GameController.I;
+        if (gc == null || gc.State == null) return;
+
+        var token = FindFirstPendingToken(gc.State);
+        if (token == null) return;
+
+        _tokenCo = StartCoroutine(ConsumeTokenCoroutine(gc, token));
     }
 
     public void RegisterNode(string nodeId, RectTransform nodeRT)
@@ -789,5 +804,81 @@ public class DispatchAnimationSystem : MonoBehaviour
             if (_offBaseAgents.Contains(agentId)) return true;
         }
         return false;
+    }
+
+    private Core.MovementToken FindFirstPendingToken(Core.GameState s)
+    {
+        if (s?.MovementTokens == null) return null;
+        for (int i = 0; i < s.MovementTokens.Count; i++)
+        {
+            var t = s.MovementTokens[i];
+            if (t != null && t.State == Core.MovementTokenState.Pending)
+                return t;
+        }
+        return null;
+    }
+
+    private System.Collections.IEnumerator ConsumeTokenCoroutine(GameController gc, Core.MovementToken token)
+    {
+        _playingToken = token;
+        token.State = Core.MovementTokenState.Playing;
+
+        // 1) Play animation or fallback wait
+        yield return PlayTokenAnimationOrFallback(gc, token);
+
+        // 2) On animation end: apply landing and complete token
+        ApplyTokenLanding(gc, token);
+
+        token.State = Core.MovementTokenState.Completed;
+
+        if (gc.State != null && gc.State.MovementLockCount > 0)
+            gc.State.MovementLockCount -= 1;
+
+        _playingToken = null;
+        _tokenCo = null;
+    }
+
+    private System.Collections.IEnumerator PlayTokenAnimationOrFallback(GameController gc, Core.MovementToken token)
+    {
+        // TODO: Hook into existing visual dispatch/recall animations here and yield until complete.
+        yield return new UnityEngine.WaitForSeconds(_fallbackTravelSeconds);
+    }
+
+    private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
+    {
+        var s = gc?.State;
+        if (s == null || s.Agents == null) return;
+
+        Core.AgentState ag = null;
+        for (int i = 0; i < s.Agents.Count; i++)
+        {
+            var a = s.Agents[i];
+            if (a != null && a.Id == token.AgentId) { ag = a; break; }
+        }
+        if (ag == null) return;
+
+        if (token.Type == Core.MovementTokenType.Dispatch)
+        {
+            // TravellingToAnomaly -> AtAnomaly
+            if (ag.LocationKind == Core.AgentLocationKind.TravellingToAnomaly &&
+                ag.LocationAnomalyKey == token.AnomalyKey)
+            {
+                ag.LocationKind = Core.AgentLocationKind.AtAnomaly;
+            }
+            else
+            {
+                // Tolerant: if state drifted, still land at anomaly
+                ag.LocationKind = Core.AgentLocationKind.AtAnomaly;
+                ag.LocationAnomalyKey = token.AnomalyKey;
+            }
+            ag.LocationSlot = token.Slot;
+        }
+        else
+        {
+            // Recall -> Base
+            ag.LocationKind = Core.AgentLocationKind.Base;
+            ag.LocationAnomalyKey = null;
+            ag.LocationSlot = token.Slot;
+        }
     }
 }

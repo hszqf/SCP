@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Core
 {
@@ -16,6 +17,14 @@ namespace Core
 
     public enum TaskType { Investigate, Contain, Manage }
     public enum TaskState { Active, Completed, Cancelled }
+
+    public enum AgentLocationKind
+    {
+        Base,
+        TravellingToAnomaly,
+        AtAnomaly,
+        TravellingToBase
+    }
 
     [Serializable]
     public class AgentState
@@ -38,6 +47,21 @@ namespace Core
 
         public bool IsDead = false;
         public bool IsInsane = false;
+
+        // new-arch: agent location (single source of truth for “arrived / travelling / base”)
+        public AgentLocationKind LocationKind = AgentLocationKind.Base;
+
+        // When LocationKind is AtAnomaly / TravellingToAnomaly / TravellingToBase, this stores the anomaly key.
+        // IMPORTANT: for now use AnomalyState.Id as the key (legacy stable id).
+        public string LocationAnomalyKey = null;
+
+        // Which roster slot this agent is assigned to while at an anomaly (for UI tag/debug).
+        // Default Operate; meaningful only when LocationKind != Base.
+        public AssignmentSlot LocationSlot = AssignmentSlot.Operate;
+
+        // Convenience (not serialized)
+        public bool IsTravelling =>
+            LocationKind == AgentLocationKind.TravellingToAnomaly || LocationKind == AgentLocationKind.TravellingToBase;
     }
 
     [Serializable]
@@ -147,6 +171,15 @@ namespace Core
     }
 
 
+    public enum AnomalyPhase
+    {
+        Unknown,
+        Discovered,
+        Investigating,
+        Containing,
+        Contained
+    }
+
     [Serializable]
     public class AnomalyState
     {
@@ -161,8 +194,33 @@ namespace Core
         public float Y;
         public int SpawnDay;
 
+        // existing fields (kept)
         public float InvestigateProgress;
         public float ContainProgress;
+
+        // new-arch: identity & spatial
+        public string AnomalyId;        // 实例唯一ID（将来替代/区分与配置ID）
+        public Vector2 Position;        // 世界坐标/生成位置（用于影响范围计算）
+
+        // new-arch: lifecycle & reveal
+        public AnomalyPhase Phase;      // 生命周期阶段
+        public int RevealLevel;         // 0=小方块名；1=已发现名字（desc0）；>=2逐步解锁desc1..n
+
+        // new-arch: rosters (single source of truth in future)
+        public List<string> InvestigatorIds = new List<string>();
+        public List<string> ContainmentIds = new List<string>();
+        public List<string> OperateIds = new List<string>();
+
+        public List<string> GetRoster(AssignmentSlot slot)
+        {
+            switch (slot)
+            {
+                case AssignmentSlot.Investigate: return InvestigatorIds;
+                case AssignmentSlot.Contain:     return ContainmentIds;
+                case AssignmentSlot.Operate:     return OperateIds;
+                default:                         return OperateIds;
+            }
+        }
     }
 
     [Serializable]
@@ -184,6 +242,28 @@ namespace Core
         public List<AgentState> Agents = new();
 
         public RecruitPoolState RecruitPool = new RecruitPoolState();
+
+        // Movement tokens for dispatch/recall animation & sequencing
+        public List<Core.MovementToken> MovementTokens = new List<Core.MovementToken>();
+
+        // UI/过天锁：当 >0 时，不允许 EndDay/NextDay
+        public int MovementLockCount = 0;
+
+        // Convenience: number of pending movement tokens (not serialized)
+        public int PendingMovementCount
+        {
+            get
+            {
+                if (MovementTokens == null) return 0;
+                int c = 0;
+                for (int i = 0; i < MovementTokens.Count; i++)
+                {
+                    var t = MovementTokens[i];
+                    if (t != null && t.State != Core.MovementTokenState.Completed) c++;
+                }
+                return c;
+            }
+        }
     }
 }
 // </EXPORT_BLOCK>
