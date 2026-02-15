@@ -399,37 +399,45 @@ public class Anomaly : MonoBehaviour
         var root = UIPanelRoot.I;
         if (root == null || string.IsNullOrEmpty(_nodeId)) return;
 
-        var node = GameController.I?.GetNode(_nodeId);
-        var anomalyState = FindAnomalyState(GameController.I?.State, node, _anomalyId);
-        LogAnomalyDescriptions(node, anomalyState, _anomalyId);
+        var gc = GameController.I;
+        var node = gc?.GetNode(_nodeId);
+
+        // 关键：优先拿到 anomalyState（真源：phase）
+        var anomalyState = FindAnomalyState(gc?.State, node, _anomalyId);
+
+        // 若能拿到 anomalyState，则完全按 phase 分流（不再看 _isKnown / managed）
+        if (anomalyState != null)
+        {
+            switch (anomalyState.Phase)
+            {
+
+                case AnomalyPhase.Contain:
+                    root.OpenContainAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+                    return;
+
+                case AnomalyPhase.Operate:
+                    root.OpenOperateAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+                    return;
+
+                // Investigate/Investigating/Discovered/Unknown 统一走调查
+                default:
+                    root.OpenInvestigateAssignPanelForNode(_nodeId, _anomalyId);
+                    return;
+            }
+        }
+
+        // anomalyState 拿不到的兜底：旧逻辑（可保留）
+        // 这里只做 “managed -> manage；known -> contain；else investigate”
         var managed = ResolveManagedAnomaly(node);
         if (managed != null)
         {
-            // For managed anomalies prefer opening the Operate/Manage assign panel bound to the anomaly instance id
-            if (anomalyState != null)
-            {
-                root.OpenOperateAssignPanelForAnomaly(_nodeId, anomalyState.Id);
-            }
-            else
-            {
-                // Fallback to existing OpenManage by managed id
-                root.OpenManage(_nodeId, managed.Id);
-            }
+            root.OpenManage(_nodeId, managed.Id);
             return;
         }
 
         if (_isKnown)
         {
-            // For known (but not yet managed) anomalies prefer opening Contain assign panel bound to the anomaly instance id
-            if (anomalyState != null)
-            {
-                root.OpenContainAssignPanelForAnomaly(_nodeId, anomalyState.Id);
-            }
-            else
-            {
-                // Fallback to node-level contain panel
-                root.OpenContainAssignPanelForNode(_nodeId);
-            }
+            root.OpenContainAssignPanelForNode(_nodeId);
             return;
         }
 
