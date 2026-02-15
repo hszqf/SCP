@@ -530,7 +530,7 @@ public class Anomaly : MonoBehaviour
         var anomalyState = FindAnomalyState(state, node, anomalyId);
         if (anomalyState == null) return 0f;
         int baseDays = GetAnomalyBaseDays(anomalyId);
-        return baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress / baseDays) : 0f;
+        return baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress) : 0f;
     }
 
     // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays when missing
@@ -542,6 +542,7 @@ public class Anomaly : MonoBehaviour
         var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
         var a = Core.DispatchSystem.FindAnomaly(s, preferKey);
         if (a == null) return 0f;
+        Debug.Log($"[UIProgSrc] key={preferKey} found={a != null} anomId={a?.Id ?? "null"} inv01={(a?.InvestigateProgress ?? -1f):0.###}");
 
         return Mathf.Clamp01(a.InvestigateProgress);
     }
@@ -583,7 +584,7 @@ public class Anomaly : MonoBehaviour
         var anomalyState = FindAnomalyState(state, node, anomalyId);
         if (anomalyState == null) return 0f;
         int baseDays = GetAnomalyBaseDays(anomalyId);
-        return baseDays > 0 ? Mathf.Clamp01(anomalyState.ContainProgress / baseDays) : 0f;
+        return baseDays > 0 ? Mathf.Clamp01(anomalyState.ContainProgress) : 0f;
     }
 
     private static int GetAnomalyBaseDays(string anomalyId)
@@ -625,7 +626,7 @@ public class Anomaly : MonoBehaviour
         if (anomalyState != null)
         {
             int baseDays = GetAnomalyBaseDays(anomalyId);
-            progress01 = baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress / baseDays) : 0f;
+            progress01 = baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress) : 0f;
         }
 
         int total = filtered.Count;
