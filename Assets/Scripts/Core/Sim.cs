@@ -163,42 +163,51 @@ namespace Core
                         continue;
                     }
 
-                    int baseDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
+                    int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
                     if (t.Type == TaskType.Investigate && t.InvestigateTargetLocked && string.IsNullOrEmpty(t.SourceAnomalyId) && t.InvestigateNoResultBaseDays > 0)
                     {
-                        baseDays = t.InvestigateNoResultBaseDays;
+                        requiredDays = t.InvestigateNoResultBaseDays;
                     }
-                    float before = t.Progress;
-                    t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, baseDays);
 
-                    // Persist progress onto the anomaly so it survives task cancellation.
+                    // legacy task progress (0..requiredDays) kept for compatibility/logging
+                    float before = t.Progress;
+                    t.Progress = Mathf.Clamp(t.Progress + effDelta, 0f, requiredDays);
+
+                    // new truth: persist normalized progress (0..1) onto AnomalyState
                     if (!string.IsNullOrEmpty(anomalyId))
                     {
                         var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
                         if (anomalyState != null)
                         {
+                            float delta01 = effDelta / Mathf.Max(1f, (float)requiredDays);
+
                             if (t.Type == TaskType.Investigate)
                             {
-                                anomalyState.InvestigateProgress = Mathf.Clamp(anomalyState.InvestigateProgress + effDelta, 0f, baseDays);
+                                anomalyState.InvestigateProgress = Mathf.Clamp01(anomalyState.InvestigateProgress + delta01);
                             }
                             else if (t.Type == TaskType.Contain)
                             {
-                                anomalyState.ContainProgress = Mathf.Clamp(anomalyState.ContainProgress + effDelta, 0f, baseDays);
+                                anomalyState.ContainProgress = Mathf.Clamp01(anomalyState.ContainProgress + delta01);
                             }
                         }
                     }
 
-                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} taskProgress={t.Progress:0.00}/{baseDays} (baseDays={baseDays})");
+                    Debug.Log($"[TaskProgress] day={s.Day} taskId={t.Id} type={t.Type} anomalyId={anomalyId ?? "none"} team={FormatFloatArray(team)} req={FormatIntArray(req)} s={sMatch:0.###} scale={progressScale:0.###} effDelta={effDelta:0.00} taskProgress={t.Progress:0.00}/{requiredDays} (requiredDays={requiredDays})");
 
                     ApplyDailyTaskImpact(s, n, t, anomalyDef, anomalyId);
 
                     bool reached = false;
-                    // Previously completion checked AnomalyState.InvestigateProgress/ContainProgress;
-                    // migrate to derive completion from the task's own Progress to avoid relying on AnomalyState fields.
-                    if (t.Type == TaskType.Investigate || t.Type == TaskType.Contain)
+
+                    Core.AnomalyState anomalyStateForReach = null;
+                    if (!string.IsNullOrEmpty(anomalyId))
+                        anomalyStateForReach = GetOrCreateAnomalyState(s, n, anomalyId);
+
+                    if (anomalyStateForReach != null)
                     {
-                        if (t.Progress >= baseDays)
-                            reached = true;
+                        if (t.Type == TaskType.Investigate)
+                            reached = anomalyStateForReach.InvestigateProgress >= 1f;
+                        else if (t.Type == TaskType.Contain)
+                            reached = anomalyStateForReach.ContainProgress >= 1f;
                     }
 
                     if (reached)
@@ -206,39 +215,35 @@ namespace Core
                         // When a task reaches completion, immediately recall assigned agents from the
                         // corresponding anomaly roster (generate Recall movement tokens) so UI/dispatch
                         // systems see TravellingToBase/Recall tokens in the same frame.
-                        if (!string.IsNullOrEmpty(anomalyId))
+                        if (anomalyStateForReach != null)
                         {
-                            var anomalyState = GetOrCreateAnomalyState(s, n, anomalyId);
-                            if (anomalyState != null)
+                            try
                             {
-                                try
+                                string err;
+                                if (t.Type == TaskType.Investigate)
                                 {
-                                    string err;
-                                    if (t.Type == TaskType.Investigate)
-                                    {
-                                        DispatchSystem.TrySetRoster(s, anomalyState.Id, AssignmentSlot.Investigate, Array.Empty<string>(), out err);
-                                        if (!string.IsNullOrEmpty(err))
-                                            Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyState.Id} err={err}");
+                                    DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Investigate, Array.Empty<string>(), out err);
+                                    if (!string.IsNullOrEmpty(err))
+                                        Debug.LogWarning($"[RecallRoster] Investigate recall failed anomaly={anomalyStateForReach.Id} err={err}");
 
-                                        // Advance anomaly phase if applicable: Investigating -> Containing
-                                        if (anomalyState.Phase == AnomalyPhase.Investigating || anomalyState.Phase == AnomalyPhase.Discovered)
-                                            anomalyState.Phase = AnomalyPhase.Containing;
-                                    }
-                                    else if (t.Type == TaskType.Contain)
-                                    {
-                                        DispatchSystem.TrySetRoster(s, anomalyState.Id, AssignmentSlot.Contain, Array.Empty<string>(), out err);
-                                        if (!string.IsNullOrEmpty(err))
-                                            Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyState.Id} err={err}");
-
-                                        // Advance anomaly phase: Containing -> Contained
-                                        if (anomalyState.Phase == AnomalyPhase.Containing || anomalyState.Phase == AnomalyPhase.Investigating || anomalyState.Phase == AnomalyPhase.Discovered)
-                                            anomalyState.Phase = AnomalyPhase.Contained;
-                                    }
+                                    // Advance anomaly phase if applicable: Investigating -> Containing
+                                    if (anomalyStateForReach.Phase == AnomalyPhase.Investigating || anomalyStateForReach.Phase == AnomalyPhase.Discovered)
+                                        anomalyStateForReach.Phase = AnomalyPhase.Containing;
                                 }
-                                catch (Exception ex)
+                                else if (t.Type == TaskType.Contain)
                                 {
-                                    Debug.LogException(ex);
+                                    DispatchSystem.TrySetRoster(s, anomalyStateForReach.Id, AssignmentSlot.Contain, Array.Empty<string>(), out err);
+                                    if (!string.IsNullOrEmpty(err))
+                                        Debug.LogWarning($"[RecallRoster] Contain recall failed anomaly={anomalyStateForReach.Id} err={err}");
+
+                                    // Advance anomaly phase: Containing -> Contained
+                                    if (anomalyStateForReach.Phase == AnomalyPhase.Containing || anomalyStateForReach.Phase == AnomalyPhase.Investigating || anomalyStateForReach.Phase == AnomalyPhase.Discovered)
+                                        anomalyStateForReach.Phase = AnomalyPhase.Contained;
                                 }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogException(ex);
                             }
                         }
 

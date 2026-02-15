@@ -168,13 +168,19 @@ public class Anomaly : MonoBehaviour
 
         if (!_isKnown)
         {
-            progress01 = GetInvestigateProgress01(gc.State, node, _anomalyId);
+            // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays if missing
+            progress01 = GetInvestigateProgress01_FromAnomalyState(gc.State);
+            if (progress01 <= 0f)
+                progress01 = GetInvestigateProgress01(gc.State, node, _anomalyId); // legacy fallback only
             if (progress01 > 0f)
                 progressPrefix = "调查中：";
         }
         else if (!_isContained)
         {
-            progress01 = GetContainProgress01(gc.State, node, _anomalyId);
+            // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays if missing
+            progress01 = GetContainProgress01_FromAnomalyState(gc.State);
+            if (progress01 <= 0f)
+                progress01 = GetContainProgress01(gc.State, node, _anomalyId); // legacy fallback only
             if (progress01 > 0f)
             {
                 progressPrefix = "收容中：";
@@ -525,6 +531,31 @@ public class Anomaly : MonoBehaviour
         if (anomalyState == null) return 0f;
         int baseDays = GetAnomalyBaseDays(anomalyId);
         return baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress / baseDays) : 0f;
+    }
+
+    // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays when missing
+    private float GetInvestigateProgress01_FromAnomalyState(GameState s)
+    {
+        if (s == null) return 0f;
+
+        // prefer managed id -> def id (same as canonicalKey logic)
+        var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
+        var a = Core.DispatchSystem.FindAnomaly(s, preferKey);
+        if (a == null) return 0f;
+
+        return Mathf.Clamp01(a.InvestigateProgress);
+    }
+
+    // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays when missing
+    private float GetContainProgress01_FromAnomalyState(GameState s)
+    {
+        if (s == null) return 0f;
+
+        var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
+        var a = Core.DispatchSystem.FindAnomaly(s, preferKey);
+        if (a == null) return 0f;
+
+        return Mathf.Clamp01(a.ContainProgress);
     }
 
     private static bool IsManagingAnomaly(CityState node, string anomalyId)
