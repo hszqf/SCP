@@ -67,8 +67,9 @@ MonoBehaviour:
   progressBar: {fileID: 1244321173508216312}
   progressBackground: {fileID: 7036226825946044298}
   progressText: {fileID: 2915922585973780594}
-  nameRoot: {fileID: 1575824600966068182}
-  nameText: {fileID: 2637110963448471807}
+  nameRoot: {fileID: 0}
+  nameText: {fileID: 0}
+  displayNameText: {fileID: 2637110963448471807}
   agentGridRoot: {fileID: 4860373889687638084}
   rangeIndicator: {fileID: 0}
   rangeIndicatorAlpha: 0.25
@@ -400,8 +401,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0, y: 3.600006}
-  m_SizeDelta: {x: 0, y: 30}
+  m_AnchoredPosition: {x: 0, y: -20.7}
+  m_SizeDelta: {x: 0, y: 25}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!1 &4195364251745618620
 GameObject:
@@ -555,10 +556,10 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26.85
-  m_fontSizeBase: 36
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 12
   m_fontSizeMax: 72
   m_fontStyle: 1
@@ -634,8 +635,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 30}
+  m_AnchoredPosition: {x: 10, y: 0}
+  m_SizeDelta: {x: -20, y: 25}
   m_Pivot: {x: 0, y: 0}
 --- !u!222 &7599623138652887658
 CanvasRenderer:

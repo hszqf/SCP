@@ -440,6 +440,150 @@ public class UIPanelRoot : MonoBehaviour
         );
     }
 
+    // 新增：针对指定 anomalyKey 打开的 Contain 指派面板（targets 只有 1 个并自动选中）
+    public void OpenContainAssignPanelForAnomaly(string nodeId, string anomalyKey)
+    {
+        if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(nodeId)) return;
+        if (string.IsNullOrEmpty(anomalyKey)) return;
+
+        EnsureManagePanel();
+        if (!_managePanelView) return;
+
+        var gc = GameController.I;
+        var node = gc.GetNode(nodeId);
+        if (node == null)
+        {
+            ShowInfo("派遣失败", "节点不存在");
+            return;
+        }
+
+        var registry = DataRegistry.Instance;
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Contain, 1, int.MaxValue);
+
+        _currentNodeId = nodeId;
+        _manageNodeId = nodeId;
+
+        if (_managePanel) _managePanel.SetActive(true);
+        _managePanel.transform.SetAsLastSibling();
+        PushModal(_managePanel, "open manage");
+        RefreshModalStack("open manage", _managePanel);
+
+        var targets = new List<AnomalyManagePanel.TargetEntry>
+        {
+            new AnomalyManagePanel.TargetEntry
+            {
+                id = anomalyKey,
+                title = "收容",
+                subtitle = null,
+                disabled = false
+            }
+        };
+
+        _managePanelView.ShowGeneric(
+            header: $"Contain | {nodeId}",
+            hint: "派遣干员进行收容",
+            targets: targets,
+            agentSlotsMin: slotsMin,
+            agentSlotsMax: slotsMax,
+            onConfirm: (targetId, agentIds) =>
+            {
+                // 兜底：若用户仍点了 confirm，则写 roster 并关闭面板
+                if (agentIds == null || agentIds.Count == 0)
+                {
+                    ShowInfo("派遣失败", "未选择干员");
+                    return;
+                }
+
+                var state = gc.State;
+                var key = string.IsNullOrEmpty(targetId) ? anomalyKey : targetId;
+
+                string err;
+                if (!Core.DispatchSystem.TrySetRoster(state, key, AssignmentSlot.Contain, agentIds, out err))
+                {
+                    ShowInfo("派遣失败", err);
+                    return;
+                }
+
+                // 不创建 legacy Contain task（迁移期避免产生 legacy 任务）
+                CloseModal(_managePanel, "assign_confirm");
+                RefreshNodePanel();
+            },
+            modeLabel: "Contain"
+        );
+
+        // AnomalyManagePanel.ShowGeneric already auto-selects single target when targets.Count == 1.
+    }
+
+    // 新增：针对指定 anomalyKey 打开的 Operate/Manage 指派面板（targets 只有 1 个并自动选中）
+    public void OpenOperateAssignPanelForAnomaly(string nodeId, string anomalyKey)
+    {
+        if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(nodeId)) return;
+        if (string.IsNullOrEmpty(anomalyKey)) return;
+
+        EnsureManagePanel();
+        if (!_managePanelView) return;
+
+        var gc = GameController.I;
+        var node = gc.GetNode(nodeId);
+        if (node == null)
+        {
+            ShowInfo("派遣失败", "节点不存在");
+            return;
+        }
+
+        var registry = DataRegistry.Instance;
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Manage, 0, int.MaxValue);
+
+        _currentNodeId = nodeId;
+        _manageNodeId = nodeId;
+
+        if (_managePanel) _managePanel.SetActive(true);
+        _managePanel.transform.SetAsLastSibling();
+        PushModal(_managePanel, "open manage");
+        RefreshModalStack("open manage", _managePanel);
+
+        var targets = new List<AnomalyManagePanel.TargetEntry>
+        {
+            new AnomalyManagePanel.TargetEntry
+            {
+                id = anomalyKey,
+                title = "管理",
+                subtitle = null,
+                disabled = false
+            }
+        };
+
+        _managePanelView.ShowGeneric(
+            header: $"Manage | {nodeId}",
+            hint: "派遣干员进行管理（产出负熵）",
+            targets: targets,
+            agentSlotsMin: slotsMin,
+            agentSlotsMax: slotsMax,
+            onConfirm: (targetId, agentIds) =>
+            {
+                // 兜底：写一次 roster（Operate slot）并关闭
+                if (agentIds == null) agentIds = new List<string>();
+                var state = gc.State;
+                var key = string.IsNullOrEmpty(targetId) ? anomalyKey : targetId;
+
+                string err;
+                if (!Core.DispatchSystem.TrySetRoster(state, key, AssignmentSlot.Operate, agentIds, out err))
+                {
+                    ShowInfo("派遣失败", err);
+                    return;
+                }
+
+                CloseModal(_managePanel, "assign_confirm");
+                RefreshNodePanel();
+            },
+            modeLabel: "Manage"
+        );
+
+        // AnomalyManagePanel.ShowGeneric will auto-select the single provided target.
+    }
+
     private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(CityState node, DataRegistry registry, string targetAnomalyId)
     {
         var targets = new List<AnomalyManagePanel.TargetEntry>();

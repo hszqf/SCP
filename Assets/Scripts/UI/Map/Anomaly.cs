@@ -14,8 +14,7 @@ public class Anomaly : MonoBehaviour
     [SerializeField] private Image progressBar;
     [SerializeField] private Image progressBackground;
     [SerializeField] private TMP_Text progressText;
-    [SerializeField] private Transform nameRoot;
-    [SerializeField] private TMP_Text nameText;
+    [SerializeField] private TMP_Text displayNameText;
     [SerializeField] private Transform agentGridRoot;
     [SerializeField] private Image rangeIndicator;
     [SerializeField] private float rangeIndicatorAlpha = 0.25f;
@@ -137,54 +136,123 @@ public class Anomaly : MonoBehaviour
 
         // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
         var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
+
+        // Unified anomaly resolution: prefer canonical key (instance id) then fall back to node+def disambiguation
         AnomalyState anom = null;
-        if (!string.IsNullOrEmpty(_managedAnomalyId))
+        if (!string.IsNullOrEmpty(_canonicalAnomalyKey))
         {
-            anom = Core.DispatchSystem.FindAnomaly(gc.State, _managedAnomalyId);
+            anom = Core.DispatchSystem.FindAnomaly(gc.State, _canonicalAnomalyKey);
         }
-        else
+
+        if (anom == null)
         {
-            // node+def disambiguation: avoid cross-node same def
-            var list = gc.State.Anomalies;
-            if (list != null)
+            if (!string.IsNullOrEmpty(_managedAnomalyId))
             {
-                for (int i = 0; i < list.Count; i++)
+                anom = Core.DispatchSystem.FindAnomaly(gc.State, _managedAnomalyId);
+            }
+            else
+            {
+                // node+def disambiguation: avoid cross-node same def
+                var list = gc.State.Anomalies;
+                if (list != null)
                 {
-                    var a = list[i];
-                    if (a == null) continue;
-                    if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
-                        !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
+                    for (int i = 0; i < list.Count; i++)
                     {
-                        anom = a;
-                        break;
+                        var a = list[i];
+                        if (a == null) continue;
+                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
+                        {
+                            anom = a;
+                            break;
+                        }
                     }
                 }
             }
         }
+
         _canonicalAnomalyKey = anom != null ? anom.Id : preferKey;
 
         // register with MapEntityRegistry so other systems can resolve world positions
         RegisterToRegistry();
 
-        bool displayKnown = _isKnown;
+        // Determine display name reveal based on phase/progress
+        bool revealName = false;
+        if (anom != null)
+        {
+            revealName = (anom.Phase != AnomalyPhase.Investigate) || (anom.InvestigateProgress >= 0.2f);
+        }
+        else
+        {
+            // fallback: known anomalies reveal name, unknown hide
+            revealName = _isKnown;
+        }
+
+        // set display name text if provided
+        if (displayNameText)
+        {
+            displayNameText.text = revealName ? ResolveAnomalyName(_anomalyId) : "□□□□";
+        }
+
+        // sprite: use revealName as 'known' flag for sprite resolution
+        var spriteLibrary = AnomalySpriteLibrary.I;
+        var sprite = spriteLibrary != null ? spriteLibrary.ResolveAnomalySprite(_anomalyId, revealName) : null;
+        if (icon)
+            icon.sprite = sprite;
+
+        // Progress handling driven by phase
         float progress01 = 0f;
         string progressPrefix = string.Empty;
-        string nameSuffix = string.Empty;
-        bool hideNameWhileProgress = false;
+        string overrideText = null;
+        bool alwaysVisible = false;
+        bool showPercent = true;
 
-        bool isManaging = IsManagingAnomaly(node, _anomalyId);
-
-        if (_isContained)
+        if (anom != null)
         {
-            nameSuffix = isManaging ? "(管理中)" : "(已收容)";
+            switch (anom.Phase)
+            {
+                case AnomalyPhase.Investigate:
+                    alwaysVisible = true;
+                    progress01 = Mathf.Clamp01(anom.InvestigateProgress);
+                    if (progress01 <= 0f)
+                    {
+                        overrideText = "待调查";
+                    }
+                    else
+                    {
+                        // show percent; prefix optional
+                        progressPrefix = string.Empty;
+                    }
+                    break;
+
+                case AnomalyPhase.Contain:
+                    alwaysVisible = true;
+                    progress01 = Mathf.Clamp01(anom.ContainProgress);
+                    if (progress01 <= 0f)
+                    {
+                        overrideText = "未收容";
+                    }
+                    break;
+
+                case AnomalyPhase.Operate:
+                    // arrived count -> binary progress
+                    var arrived = CollectArrivedAgentIds(node).Count;
+                    progress01 = arrived > 0 ? 1f : 0f;
+                    // no percent, use fixed labels
+                    overrideText = arrived > 0 ? "管理中" : "待管理";
+                    showPercent = false;
+                    alwaysVisible = true;
+                    break;
+
+                default:
+                    // fallback to previous behavior: if not found, attempt legacy lookups
+                    progress01 = 0f;
+                    break;
+            }
         }
-        else if (_isKnown)
+        else
         {
-            nameSuffix = "(未收容)";
-        }
-
-        if (!_isKnown)
-        {
+            // fallback legacy behavior when no AnomalyState is found in the simulation
             // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays if missing
             progress01 = GetInvestigateProgress01_FromAnomalyState(gc.State);
             if (progress01 <= 0f)
@@ -192,31 +260,16 @@ public class Anomaly : MonoBehaviour
             if (progress01 > 0f)
                 progressPrefix = "调查中：";
         }
-        else if (!_isContained)
-        {
-            // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays if missing
-            progress01 = GetContainProgress01_FromAnomalyState(gc.State);
-            if (progress01 <= 0f)
-                progress01 = GetContainProgress01(gc.State, node, _anomalyId); // legacy fallback only
-            if (progress01 > 0f)
-            {
-                progressPrefix = "收容中：";
-                hideNameWhileProgress = true;
-            }
-        }
 
-        var spriteLibrary = AnomalySpriteLibrary.I;
-        var sprite = spriteLibrary != null ? spriteLibrary.ResolveAnomalySprite(_anomalyId, displayKnown) : null;
-        if (icon)
-            icon.sprite = sprite;
+        UpdateProgressBar(progress01, progressPrefix, alwaysVisible, overrideText, showPercent);
 
-        UpdateProgressBar(progress01, progressPrefix);
-        UpdateName(displayKnown, nameSuffix, hideNameWhileProgress, progress01);
+
+
         UpdateRangeIndicator(_anomalyId);
         RefreshAgentAvatars();
     }
 
-    private void UpdateProgressBar(float progress01, string progressPrefix)
+    private void UpdateProgressBar(float progress01, string progressPrefix, bool alwaysVisible = false, string overrideText = null, bool showPercent = true)
     {
         if (progressBar)
         {
@@ -234,31 +287,30 @@ public class Anomaly : MonoBehaviour
                 progressBar.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, _progressWidth * clamped);
             }
 
-            progressBar.gameObject.SetActive(clamped > 0f);
+            progressBar.gameObject.SetActive(alwaysVisible || clamped > 0f);
         }
 
         if (progressBackground)
-            progressBackground.gameObject.SetActive(progress01 > 0f);
+            progressBackground.gameObject.SetActive(alwaysVisible || progress01 > 0f);
 
         if (progressText)
         {
-            var percentText = $"{Mathf.RoundToInt(Mathf.Clamp01(progress01) * 100f)}%";
-            var prefix = progressPrefix ?? string.Empty;
-            progressText.text = string.IsNullOrEmpty(prefix) ? percentText : $"{prefix}{percentText}";
-            progressText.gameObject.SetActive(progress01 > 0f);
+            if (!string.IsNullOrEmpty(overrideText))
+            {
+                progressText.text = overrideText;
+                progressText.gameObject.SetActive(true);
+            }
+            else
+            {
+                var percentText = $"{Mathf.RoundToInt(Mathf.Clamp01(progress01) * 100f)}%";
+                var prefix = progressPrefix ?? string.Empty;
+                var text = string.IsNullOrEmpty(prefix) ? (showPercent ? percentText : string.Empty) : $"{prefix}{(showPercent ? percentText : string.Empty)}";
+                progressText.text = text;
+                progressText.gameObject.SetActive((showPercent && progress01 > 0f) || (!showPercent && !string.IsNullOrEmpty(text)));
+            }
         }
     }
 
-    private void UpdateName(bool displayKnown, string nameSuffix, bool hideNameWhileProgress, float progress01)
-    {
-        if (nameText)
-        {
-            nameText.text = displayKnown ? ResolveAnomalyName(_anomalyId) + (nameSuffix ?? string.Empty) : string.Empty;
-        }
-
-        if (nameRoot)
-            nameRoot.gameObject.SetActive(displayKnown && !(hideNameWhileProgress && progress01 > 0f));
-    }
 
     private void UpdateRangeIndicator(string anomalyId)
     {
@@ -353,13 +405,31 @@ public class Anomaly : MonoBehaviour
         var managed = ResolveManagedAnomaly(node);
         if (managed != null)
         {
-            root.OpenManage(_nodeId, managed.Id);
+            // For managed anomalies prefer opening the Operate/Manage assign panel bound to the anomaly instance id
+            if (anomalyState != null)
+            {
+                root.OpenOperateAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+            }
+            else
+            {
+                // Fallback to existing OpenManage by managed id
+                root.OpenManage(_nodeId, managed.Id);
+            }
             return;
         }
 
         if (_isKnown)
         {
-            root.OpenContainAssignPanelForNode(_nodeId);
+            // For known (but not yet managed) anomalies prefer opening Contain assign panel bound to the anomaly instance id
+            if (anomalyState != null)
+            {
+                root.OpenContainAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+            }
+            else
+            {
+                // Fallback to node-level contain panel
+                root.OpenContainAssignPanelForNode(_nodeId);
+            }
             return;
         }
 
