@@ -177,7 +177,10 @@ namespace Core
         Discovered,
         Investigating,
         Containing,
-        Contained
+        Contained,
+        Investigate,
+        Contain,
+        Operate
     }
 
     [Serializable]

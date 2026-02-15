@@ -75,6 +75,9 @@ namespace Core
                 s.RecruitPool.candidates?.Clear();
             }
 
+            // Legacy logging limiter: per-anomaly per-day
+            var legacyWorkLogged = new HashSet<string>();
+
             // 1) 推进任务（任务维度：同节点可并行 N 个任务）
             foreach (var n in s.Cities)
             {
@@ -189,6 +192,25 @@ namespace Core
                             {
                                 anomalyState.ContainProgress = Mathf.Clamp01(anomalyState.ContainProgress + delta01);
                             }
+
+                            // Legacy work logging (limit to 1 per anomaly per day)
+                            try
+                            {
+                                string logKey = $"{t.Type}|{anomalyState.Id}|{s.Day}";
+                                if (!legacyWorkLogged.Contains(logKey))
+                                {
+                                    if (t.Type == TaskType.Investigate)
+                                        Debug.Log($"[Sim][LegacyWork] type=Investigate anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.InvestigateProgress:0.###}");
+                                    else if (t.Type == TaskType.Contain)
+                                        Debug.Log($"[Sim][LegacyWork] type=Contain anom={anomalyState.Id} node={n.Id} delta01={delta01:0.###} after={anomalyState.ContainProgress:0.###}");
+
+                                    legacyWorkLogged.Add(logKey);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogException(ex);
+                            }
                         }
                     }
 
@@ -281,7 +303,7 @@ namespace Core
             }
 
             // 1.5) 收容后管理（负熵产出）
-            StepManageTasks(s, rng, registry);
+            StepManageTasks(s, rng, registry, legacyWorkLogged);
 
             // 1.75) Idle agents recover HP/SAN (10% max per day)
             ApplyIdleAgentRecovery(s);
@@ -998,7 +1020,7 @@ namespace Core
         // Management (NegEntropy) - formalized as NodeTask.Manage
         // =====================
 
-        static void StepManageTasks(GameState s, Random rng, DataRegistry registry)
+        static void StepManageTasks(GameState s, Random rng, DataRegistry registry, HashSet<string> legacyWorkLogged)
         {
             if (s == null || s.Cities == null || s.Cities.Count == 0) return;
 
@@ -1042,6 +1064,26 @@ namespace Core
 
                     nodeTotal += yield;
                     m.TotalNegEntropy += yield;
+
+                    // Legacy pure-calc logging: per-managed-anomaly per-day (limit)
+                    try
+                    {
+                        string logKey = $"Manage|{m.Id}|{s.Day}";
+                        if (legacyWorkLogged == null || !legacyWorkLogged.Contains(logKey))
+                        {
+                            int baseDays = 0;
+                            if (!string.IsNullOrEmpty(defId) && registry.AnomaliesById.TryGetValue(defId, out var defModel))
+                            {
+                                baseDays = GetTaskBaseDaysFromAnomaly(defModel);
+                            }
+                            Debug.Log($"[Sim][LegacyWork] type=Manage anom={m.Id} node={node.Id} deltaNegEntropy={yield} afterNegEntropy={m.TotalNegEntropy}");
+                            legacyWorkLogged?.Add(logKey);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogException(ex);
+                    }
 
                     if (squad.Count > 0)
                     {
@@ -1455,6 +1497,98 @@ namespace Core
         static float Clamp01(float v)
         {
             return Mathf.Clamp01(v);
+        }
+
+        // Pure legacy calculation: Investigate delta normalized to 0..1 per day (does NOT modify state)
+        public static float CalcInvestigateDelta01_Legacy(GameState s, CityState node, NodeTask task, DataRegistry registry)
+        {
+            if (s == null || task == null) return 0f;
+            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) return 0f;
+            var squad = GetAssignedAgents(s, task.AssignedAgentIds);
+            if (squad.Count == 0) return 0f;
+
+            string anomalyId = GetTaskAnomalyId(node, task);
+            AnomalyDef anomalyDef = null;
+            if (!string.IsNullOrEmpty(anomalyId) && registry != null)
+                registry.AnomaliesById.TryGetValue(anomalyId, out anomalyDef);
+
+            var team = ComputeTeamAvgProps(squad);
+            int[] req = NormalizeIntArray4(anomalyDef?.invReq);
+            float sMatch = ComputeMatchS_NoWeight(team, req);
+            float progressScale = MapSToMult(sMatch);
+            float effDelta = progressScale;
+
+            int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
+            if (task.Type == TaskType.Investigate && task.InvestigateTargetLocked && string.IsNullOrEmpty(task.SourceAnomalyId) && task.InvestigateNoResultBaseDays > 0)
+            {
+                requiredDays = task.InvestigateNoResultBaseDays;
+            }
+
+            float delta01 = effDelta / Math.Max(1f, (float)requiredDays);
+            return delta01;
+        }
+
+        // Pure legacy calculation: Contain delta normalized to 0..1 per day (does NOT modify state)
+        public static float CalcContainDelta01_Legacy(GameState s, CityState node, NodeTask task, DataRegistry registry)
+        {
+            if (s == null || task == null) return 0f;
+            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) return 0f;
+            var squad = GetAssignedAgents(s, task.AssignedAgentIds);
+            if (squad.Count == 0) return 0f;
+
+            string anomalyId = GetTaskAnomalyId(node, task);
+            AnomalyDef anomalyDef = null;
+            if (!string.IsNullOrEmpty(anomalyId) && registry != null)
+                registry.AnomaliesById.TryGetValue(anomalyId, out anomalyDef);
+
+            var team = ComputeTeamAvgProps(squad);
+            int[] req = NormalizeIntArray4(anomalyDef?.conReq);
+            float sMatch = ComputeMatchS_NoWeight(team, req);
+            float progressScale = MapSToMult(sMatch);
+            float effDelta = progressScale;
+
+            int requiredDays = Math.Max(1, GetTaskBaseDaysFromAnomaly(anomalyDef));
+
+            float delta01 = effDelta / Math.Max(1f, (float)requiredDays);
+            return delta01;
+        }
+
+        // Pure legacy calculation: Manage daily NegEntropy yield (does NOT modify state)
+        public static int CalcManageNegEntropyDelta_Legacy(GameState s, CityState node, NodeTask task, DataRegistry registry)
+        {
+            if (s == null || node == null || task == null) return 0;
+            if (task.AssignedAgentIds == null || task.AssignedAgentIds.Count == 0) return 0;
+            if (string.IsNullOrEmpty(task.TargetManagedAnomalyId)) return 0;
+
+            var m = node.ManagedAnomalies?.FirstOrDefault(x => x != null && x.Id == task.TargetManagedAnomalyId);
+            if (m == null) return 0;
+
+            string defId = task.SourceAnomalyId;
+            AnomalyDef manageDef = null;
+            if (!string.IsNullOrEmpty(defId) && registry != null)
+                registry.AnomaliesById.TryGetValue(defId, out manageDef);
+            if (manageDef == null) return 0;
+
+            int yield = CalcDailyNegEntropyYield(m, manageDef);
+            return yield;
+        }
+
+        // =====================
+        // Roster-based efficiency (DRY, no Task)
+        // =====================
+        public static float CalcInvestigateDelta01_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
+        {
+            return 0f;
+        }
+
+        public static float CalcContainDelta01_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
+        {
+            return 0f;
+        }
+
+        public static int CalcNegEntropyDelta_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
+        {
+            return 0;
         }
     }
 }

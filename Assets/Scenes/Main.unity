@@ -510,6 +510,7 @@ GameObject:
   - component: {fileID: 689649545}
   - component: {fileID: 689649544}
   - component: {fileID: 689649546}
+  - component: {fileID: 689649547}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -561,6 +562,18 @@ MonoBehaviour:
   anomalySprites: []
   anomalySpritesResourcePath: Anomalies
   loadAnomalySpritesFromResources: 1
+--- !u!114 &689649547
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 689649543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83eda72c78f3a2e4989fb61e58f65fb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MapEntityRegistry
 --- !u!1 &804055677
 GameObject:
   m_ObjectHideFlags: 0
@@ -1020,12 +1033,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DispatchAnimationSystem
   tokenLayer: {fileID: 582351644}
   agentPrefab: {fileID: 5703374399035949852, guid: 992cd55eb171b8f45b7c858893700a63, type: 3}
-  travelSeconds: 5
+  travelSeconds: 2
   baseSpawnRadius: 20
   launchInterval: 0.3
   arrivalProgressStepPercent: 0.01
   arrivalProgressInterval: 0.05
-  _fallbackTravelSeconds: 5
+  _fallbackTravelSeconds: 0.5
 --- !u!1001 &1654898055851204869
 PrefabInstance:
   m_ObjectHideFlags: 0
