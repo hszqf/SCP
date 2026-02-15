@@ -209,24 +209,19 @@ public class DispatchAnimationSystem : MonoBehaviour
     private void SyncOffBaseAgents()
     {
         _offBaseAgents.Clear();
+
         var gc = GameController.I;
-        if (gc?.State?.Cities == null) return;
+        var agents = gc?.State?.Agents;
+        if (agents == null) return;
 
-        foreach (var node in gc.State.Cities)
+        for (int i = 0; i < agents.Count; i++)
         {
-            if (node?.Tasks == null) continue;
-            foreach (var task in node.Tasks)
-            {
-                if (task == null || task.State != TaskState.Active) continue;
-                if (task.Progress <= 0f) continue;
-                if (task.AssignedAgentIds == null) continue;
+            var ag = agents[i];
+            if (ag == null || string.IsNullOrEmpty(ag.Id)) continue;
 
-                foreach (var agentId in task.AssignedAgentIds)
-                {
-                    if (!string.IsNullOrEmpty(agentId))
-                        _offBaseAgents.Add(agentId);
-                }
-            }
+            // off-base = any location not Base (including AtAnomaly/TravellingToAnomaly/TravellingToBase)
+            if (ag.LocationKind != Core.AgentLocationKind.Base)
+                _offBaseAgents.Add(ag.Id);
         }
     }
 
@@ -280,29 +275,35 @@ public class DispatchAnimationSystem : MonoBehaviour
         if (string.IsNullOrEmpty(baseId))
             return;
 
+        var gc = GameController.I;
+        bool useMovementTokens = (gc != null && gc.State != null && gc.State.MovementTokens != null);
+
         var current = BuildTaskSnapshotMap();
 
-        foreach (var kvp in current)
+        if (!useMovementTokens)
         {
-            var taskId = kvp.Key;
-            var snapshot = kvp.Value;
-            if (snapshot.State != TaskState.Active || snapshot.AgentIds.Count == 0 || snapshot.Progress <= 0f)
-                continue;
-
-            if (!_taskCache.TryGetValue(taskId, out var previous) || previous.Progress <= 0f)
-                EnqueueDispatch(DispatchMode.Go, taskId, baseId, snapshot.NodeId, snapshot.AgentIds, previous?.Progress ?? 0f);
-        }
-
-        foreach (var kvp in _taskCache)
-        {
-            var taskId = kvp.Key;
-            var snapshot = kvp.Value;
-            if (snapshot.State != TaskState.Active) continue;
-
-            if (!current.TryGetValue(taskId, out var currentSnapshot) || currentSnapshot.State != TaskState.Active)
+            foreach (var kvp in current)
             {
-                if (snapshot.Progress > 0f || HasOffBaseAgents(snapshot.AgentIds) || _inTransitTasks.Contains(taskId))
-                    EnqueueDispatch(DispatchMode.Return, taskId, snapshot.NodeId, baseId, snapshot.AgentIds);
+                var taskId = kvp.Key;
+                var snapshot = kvp.Value;
+                if (snapshot.State != TaskState.Active || snapshot.AgentIds.Count == 0 || snapshot.Progress <= 0f)
+                    continue;
+
+                if (!_taskCache.TryGetValue(taskId, out var previous) || previous.Progress <= 0f)
+                    EnqueueDispatch(DispatchMode.Go, taskId, baseId, snapshot.NodeId, snapshot.AgentIds, previous?.Progress ?? 0f);
+            }
+
+            foreach (var kvp in _taskCache)
+            {
+                var taskId = kvp.Key;
+                var snapshot = kvp.Value;
+                if (snapshot.State != TaskState.Active) continue;
+
+                if (!current.TryGetValue(taskId, out var currentSnapshot) || currentSnapshot.State != TaskState.Active)
+                {
+                    if (snapshot.Progress > 0f || HasOffBaseAgents(snapshot.AgentIds) || _inTransitTasks.Contains(taskId))
+                        EnqueueDispatch(DispatchMode.Return, taskId, snapshot.NodeId, baseId, snapshot.AgentIds);
+                }
             }
         }
 
@@ -833,6 +834,9 @@ public class DispatchAnimationSystem : MonoBehaviour
 
         if (gc.State != null && gc.State.MovementLockCount > 0)
             gc.State.MovementLockCount -= 1;
+
+        // Sync off-base agents according to agent LocationKind after token landing
+        SyncOffBaseAgents();
 
         // Notify the controller that state has changed after token completion/unlock
         gc?.Notify();
