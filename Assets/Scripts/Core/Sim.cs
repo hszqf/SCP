@@ -347,6 +347,10 @@ namespace Core
                     if (kill <= 0) continue;
 
                     float range = registry.GetAnomalyFloatWithWarn(anomalyId, "range", 0f);
+                    // Track per-anomaly legacy log prints (limit to avoid spam)
+                    int printed = 0;
+                    const int PrintLimitPerAnom = 3;
+
                     foreach (var targetNode in s.Cities)
                     {
                         if (targetNode == null || targetNode.Type == 0) continue;
@@ -356,28 +360,39 @@ namespace Core
                             popLossByNode[targetNode.Id] = current + kill;
                         else
                             popLossByNode[targetNode.Id] = kill;
+
+                        // Legacy logging: limited per anomaly
+                        if (printed < PrintLimitPerAnom && !s.UseSettlement_AnomalyCityPop)
+                        {
+                            Debug.Log($"[Sim][LegacyPop] anom={anomalyId} city={targetNode.Id} deltaPop={kill}");
+                            printed++;
+                        }
                     }
                 }
             }
 
-            foreach (var node in s.Cities)
+            // Only perform legacy population deduction when flag is disabled
+            if (!s.UseSettlement_AnomalyCityPop)
             {
-                if (node == null) continue;
-                if (!popLossByNode.TryGetValue(node.Id, out var popLoss) || popLoss <= 0) continue;
-
-                int before = node.Population;
-                node.Population = Mathf.Max(0, before - popLoss);
-                int applied = before - node.Population;
-                if (applied > 0)
+                foreach (var node in s.Cities)
                 {
-                    totalPopLoss += applied;
-                    Debug.Log($"[AnomalyPopLoss] day={s.Day} node={node.Id} loss={applied} before={before} after={node.Population}");
-                }
-            }
+                    if (node == null) continue;
+                    if (!popLossByNode.TryGetValue(node.Id, out var popLoss) || popLoss <= 0) continue;
 
-            if (totalPopLoss > 0)
-            {
-                Debug.Log($"[AnomalyPopLossTotal] day={s.Day} totalLoss={totalPopLoss}");
+                    int before = node.Population;
+                    node.Population = Mathf.Max(0, before - popLoss);
+                    int applied = before - node.Population;
+                    if (applied > 0)
+                    {
+                        totalPopLoss += applied;
+                        Debug.Log($"[AnomalyPopLoss] day={s.Day} node={node.Id} loss={applied} before={before} after={node.Population}");
+                    }
+                }
+
+                if (totalPopLoss > 0)
+                {
+                    Debug.Log($"[AnomalyPopLossTotal] day={s.Day} totalLoss={totalPopLoss}");
+                }
             }
 
             int income = 0;
@@ -700,6 +715,46 @@ namespace Core
             var originPos = ResolveNodeLocation01(origin);
             var targetPos = ResolveNodeLocation01(target);
             return Vector2.Distance(originPos, targetPos) <= range;
+        }
+
+        // Calculate how many population to deduct for a given anomaly instance and target city
+        // This is a pure function: it does NOT modify state.
+        public static int CalcAnomalyCityPopDelta(GameState state, AnomalyState anom, CityState city)
+        {
+            if (state == null || anom == null || city == null) return 0;
+
+            var registry = DataRegistry.Instance;
+            if (registry == null) return 0;
+
+            // Legacy field: actPeopleKill (per-anomaly flat kill value)
+            int kill = registry.GetAnomalyIntWithWarn(anom.AnomalyDefId, "actPeopleKill", 0);
+            if (kill <= 0) return 0;
+
+            // Try to locate origin node by anomaly's NodeId
+            CityState origin = null;
+            if (!string.IsNullOrEmpty(anom.NodeId) && state.Cities != null)
+                origin = state.Cities.FirstOrDefault(n => n != null && string.Equals(n.Id, anom.NodeId, StringComparison.OrdinalIgnoreCase));
+
+            // If origin not found, we can't determine range; assume not affected
+            if (origin == null) return 0;
+
+            float range = registry.GetAnomalyFloatWithWarn(anom.AnomalyDefId, "range", 0f);
+            if (!IsNodeWithinRange(origin, city, range)) return 0;
+
+            return Math.Max(0, kill);
+        }
+
+        // Overload: compute delta when only anomaly def id and origin node are available (legacy Sim usage)
+        public static int CalcAnomalyCityPopDelta(GameState state, string anomalyDefId, CityState originNode, CityState city)
+        {
+            if (state == null || string.IsNullOrEmpty(anomalyDefId) || originNode == null || city == null) return 0;
+            var registry = DataRegistry.Instance;
+            if (registry == null) return 0;
+            int kill = registry.GetAnomalyIntWithWarn(anomalyDefId, "actPeopleKill", 0);
+            if (kill <= 0) return 0;
+            float range = registry.GetAnomalyFloatWithWarn(anomalyDefId, "range", 0f);
+            if (!IsNodeWithinRange(originNode, city, range)) return 0;
+            return Math.Max(0, kill);
         }
 
         private static Vector2 ResolveNodeLocation01(CityState node)

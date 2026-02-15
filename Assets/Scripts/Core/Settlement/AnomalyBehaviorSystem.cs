@@ -80,22 +80,42 @@ namespace Settlement
                     if (dist <= radius)
                     {
                         hitCount++;
-                        // still only logging; population change is deferred
-                        // log city name when available
-                        string cityName;
-                        if (MapEntityRegistry.I.TryGetCityView(cityKey, out var cityView) && cityView != null)
-                            cityName = cityView.CityName;
-                        else
-                            cityName = string.IsNullOrEmpty(city.Name) ? cityKey : city.Name;
 
-                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCityName={cityName} dist={dist:0.#} radius={radius}");
+                        int deltaPop = Sim.CalcAnomalyCityPopDelta(state, a, city);
+
+                        // Apply population change now (actual deduction) if delta > 0
+                        if (deltaPop > 0)
+                        {
+                            int beforePop = city.Population;
+                            int afterPop = Math.Max(0, beforePop - deltaPop);
+                            city.Population = afterPop;
+
+                            // log city name when available
+                            string cityName;
+                            if (MapEntityRegistry.I.TryGetCityView(cityKey, out var cityView) && cityView != null)
+                                cityName = cityView.CityName;
+                            else
+                                cityName = string.IsNullOrEmpty(city.Name) ? cityKey : city.Name;
+
+                            //Debug.Log($"[Settle][AnomPopLoss] day={state.Day} node={city.Id} loss={deltaPop} before={beforePop} after={afterPop}");
+                            r?.Log($"[Settle][AnomPopLoss] day={state.Day} Cityname={city.Name} loss={deltaPop} before={beforePop} after={afterPop}");
+                        }
+                        else
+                        {
+                            // no change, still log summary for hit
+                            r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCity={city.Id} deltaPop=0 dist={dist:0.###} radius={radius}");
+                        }
+
+                        // Debug original DRY message suppressed
+                        //Debug.Log($"[Settle][AnomBehavior][DRY] anom={a.Id} city={cityName} deltaPop={deltaPop} dist={dist:0.###} radius={radius} pop={city.Population}");
+                        //r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCityName={cityName} dist={dist:0.#} radius={radius}");
                     }
                 }
 
                 // Per-anomaly summary log
                 r?.Log($"[Settle][AnomBehavior] anom={a.Id} radius={radius} hitCount={hitCount} skippedNotRegistered={skippedNotRegistered}");
-            }
-        }
+             }
+         }
 
         private static float GetAnomalyRadius(Core.GameState state, Core.AnomalyState a)
         {

@@ -270,6 +270,10 @@ namespace Core
 
         // S1: deterministic spawn sequence counter for anomalies
         public int NextAnomalySpawnSeq = 0;
+
+        // New flag: if true, Settlement.AnomalyBehaviorSystem performs actual city population deduction
+        // Default true = enable new settlement-driven population deduction. When false, Sim performs legacy deductions.
+        public bool UseSettlement_AnomalyCityPop = true;
     }
 }
 // </EXPORT_BLOCK>
