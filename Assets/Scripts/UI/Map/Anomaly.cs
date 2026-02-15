@@ -263,6 +263,27 @@ public class Anomaly : MonoBehaviour
 
         UpdateRangeIndicator(_anomalyId);
         RefreshAgentAvatars();
+
+        // Short-term validation log: single line
+        int opArrivedCount = 0;
+        if (anom != null)
+        {
+            var state = gc?.State;
+            if (state?.Agents != null)
+            {
+                for (int i = 0; i < state.Agents.Count; i++)
+                {
+                    var ag = state.Agents[i];
+                    if (ag == null) continue;
+                    if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
+                    if (!string.Equals(ag.LocationAnomalyKey, anom.Id, System.StringComparison.Ordinal)) continue;
+                    if (ag.LocationSlot == AssignmentSlot.Operate)
+                        opArrivedCount++;
+                }
+            }
+        }
+
+        Debug.Log($"[AnomUI] node={_nodeId} key={_canonicalAnomalyKey} phase={(anom!=null?anom.Phase.ToString():"null")} inv={(anom!=null?anom.InvestigateProgress:-1f):0.###} con={(anom!=null?anom.ContainProgress:-1f):0.###} revealName={revealName} opArr={opArrivedCount}");
     }
 
     private void UpdateProgressBar(float progress01, string progressPrefix, bool alwaysVisible = false, string overrideText = null, bool showPercent = true)
