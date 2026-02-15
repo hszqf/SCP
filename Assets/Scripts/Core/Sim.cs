@@ -1166,6 +1166,17 @@ namespace Core
                 NodeId = node?.Id,
                 SpawnDay = state.Day,
             };
+            // S1: record spawn sequence for deterministic ordering of anomaly actions
+            try
+            {
+                created.SpawnSeq = state.NextAnomalySpawnSeq++;
+            }
+            catch
+            {
+                // In case state or NextAnomalySpawnSeq is null/uninitialized, fall back to 0
+                created.SpawnSeq = 0;
+                if (state != null) state.NextAnomalySpawnSeq = (state.NextAnomalySpawnSeq >= 0) ? state.NextAnomalySpawnSeq : 0;
+            }
             state.Anomalies.Add(created);
             return created;
         }

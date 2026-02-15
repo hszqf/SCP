@@ -714,9 +714,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIPanelRoot
   hudPrefab: {fileID: 6884090147384211870, guid: 294a53bebea415044a780e7989e57b65, type: 3}
   nodePanelPrefab: {fileID: 5064428021835867684, guid: dee39e5152c358a458bf9d5e5f0a6d3b, type: 3}
-  eventPanelPrefab: {fileID: 4121954257630186424, guid: 255b202c423efa343bbfea780ddac507, type: 3}
-  newsPanelPrefab: {fileID: 5476982729825800897, guid: 5947778c867db39458830230ff31d3d5, type: 3}
-  NewspaperPanelPrefab: {fileID: 1147849394989525079, guid: 3ebc2780f3c567245b065e708871214b, type: 3}
   agentPickerPrefab: {fileID: 7515083810427959721, guid: 57bb04d57c340e94eaa39ef2d3112740, type: 3}
   confirmDialogPrefab: {fileID: 8639386908128668977, guid: 443d7c44dc6ecff419aecfe2e57a2c7d, type: 3}
   managePanelPrefab: {fileID: 5526819420777000065, guid: e32b9f1e805088e48afc0644c360b814, type: 3}
@@ -1023,11 +1020,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DispatchAnimationSystem
   tokenLayer: {fileID: 582351644}
   agentPrefab: {fileID: 5703374399035949852, guid: 992cd55eb171b8f45b7c858893700a63, type: 3}
-  travelSeconds: 2
+  travelSeconds: 5
   baseSpawnRadius: 20
   launchInterval: 0.3
   arrivalProgressStepPercent: 0.01
   arrivalProgressInterval: 0.05
+  _fallbackTravelSeconds: 5
 --- !u!1001 &1654898055851204869
 PrefabInstance:
   m_ObjectHideFlags: 0

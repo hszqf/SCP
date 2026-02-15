@@ -258,6 +258,14 @@ public class GameController : MonoBehaviour
         {
             // Original core settlement logic
             Sim.StepDay(state, gc._rng);
+
+            // New: invoke settlement sub-systems in fixed order (no-op for now)
+            Settlement.AnomalyWorkSystem.Apply(gc, state, result);
+            Settlement.AnomalyBehaviorSystem.Apply(gc, state, result);
+            Settlement.CityEconomySystem.Apply(gc, state, result);
+            Settlement.BaseRecoverySystem.Apply(gc, state, result);
+            Settlement.SettlementCleanupSystem.Apply(gc, state, result);
+
             // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
             // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
             Core.PhaseCompletionRecallSystem.Apply(gc);
@@ -302,6 +310,22 @@ public class GameController : MonoBehaviour
         {
             reason = "DispatchAnimationSystem locked";
             return false;
+        }
+
+        // Fallback: if any agent is still travelling, block EndDay
+        if (State.Agents != null)
+        {
+            foreach (var agent in State.Agents)
+            {
+                if (agent == null) continue;
+                if (agent.LocationKind == Core.AgentLocationKind.TravellingToAnomaly ||
+                    agent.LocationKind == Core.AgentLocationKind.TravellingToBase ||
+                    agent.IsTravelling)
+                {
+                    reason = "有人仍在路上";
+                    return false;
+                }
+            }
         }
 
         return true;

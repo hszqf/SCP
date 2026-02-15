@@ -211,6 +211,9 @@ namespace Core
         public List<string> ContainmentIds = new List<string>();
         public List<string> OperateIds = new List<string>();
 
+        // S1: Spawn sequence key for deterministic ordering of anomaly actions
+        public int SpawnSeq;
+
         public List<string> GetRoster(AssignmentSlot slot)
         {
             switch (slot)
@@ -264,6 +267,9 @@ namespace Core
                 return c;
             }
         }
+
+        // S1: deterministic spawn sequence counter for anomalies
+        public int NextAnomalySpawnSeq = 0;
     }
 }
 // </EXPORT_BLOCK>
