@@ -218,12 +218,60 @@ namespace Core
                 var a = s.Anomalies[i];
                 if (a == null) continue;
 
-                // Support legacy Id, new-arch AnomalyId and AnomalyDefId
+                // Support both legacy Id and new-arch AnomalyId
                 if (a.Id == key) return a;
                 if (!string.IsNullOrEmpty(a.AnomalyId) && a.AnomalyId == key) return a;
-                if (!string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == key) return a;
+                if (!string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == key) return a; // added support
                 if (a.ManagedState != null && !string.IsNullOrEmpty(a.ManagedState.Id) && a.ManagedState.Id == key)
                     return a;
+            }
+
+            // Fallback: allow lookup by ManagedAnomalyState.Id across cities -> find or create AnomalyState
+            if (s.Cities != null)
+            {
+                for (int ci = 0; ci < s.Cities.Count; ci++)
+                {
+                    var city = s.Cities[ci];
+                    if (city == null || city.ManagedAnomalies == null) continue;
+
+                    for (int mi = 0; mi < city.ManagedAnomalies.Count; mi++)
+                    {
+                        var m = city.ManagedAnomalies[mi];
+                        if (m == null || string.IsNullOrEmpty(m.Id)) continue;
+                        if (m.Id != key) continue;
+
+                        // matched a managed anomaly id; try to find a corresponding AnomalyState by node and def id
+                        var nodeId = city.Id;
+                        var defId = m.AnomalyId;
+
+                        if (s.Anomalies != null)
+                        {
+                            for (int ai = 0; ai < s.Anomalies.Count; ai++)
+                            {
+                                var a2 = s.Anomalies[ai];
+                                if (a2 == null) continue;
+                                if (!string.IsNullOrEmpty(a2.NodeId) && a2.NodeId == nodeId &&
+                                    ((!string.IsNullOrEmpty(a2.AnomalyDefId) && a2.AnomalyDefId == defId) ||
+                                     (!string.IsNullOrEmpty(a2.AnomalyId) && a2.AnomalyId == defId)))
+                                {
+                                    return a2;
+                                }
+                            }
+                        }
+
+                        // Not found: create a new AnomalyState that uses managed Id as canonical key
+                        var created = new AnomalyState();
+                        created.Id = m.Id;
+                        created.NodeId = nodeId;
+                        created.AnomalyDefId = m.AnomalyId;
+                        created.ManagedState = m;
+                        created.Phase = AnomalyPhase.Contained;
+
+                        if (s.Anomalies == null) s.Anomalies = new List<AnomalyState>();
+                        s.Anomalies.Add(created);
+                        return created;
+                    }
+                }
             }
 
             return null;

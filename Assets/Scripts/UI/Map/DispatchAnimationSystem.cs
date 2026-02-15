@@ -840,8 +840,62 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     private System.Collections.IEnumerator PlayTokenAnimationOrFallback(GameController gc, Core.MovementToken token)
     {
-        // TODO: Hook into existing visual dispatch/recall animations here and yield until complete.
-        yield return new UnityEngine.WaitForSeconds(_fallbackTravelSeconds);
+        // Try to resolve anomaly and map points for a meaningful dispatch/recall animation.
+        if (gc == null || token == null)
+        {
+            yield return new UnityEngine.WaitForSeconds(_fallbackTravelSeconds);
+            yield break;
+        }
+
+        var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyKey);
+        var nodeId = anom?.NodeId;
+        var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyId ?? anom?.AnomalyId;
+
+        var baseId = ResolveBaseNodeId();
+
+        // Resolve base local point
+        Vector2 baseLocal = Vector2.zero;
+        bool haveBase = !string.IsNullOrEmpty(baseId) && TryGetNodeLocalPoint(baseId, out baseLocal);
+
+        // Resolve anomaly marker/local point (prefer explicit anomaly marker, fallback to node point)
+        Vector2 anomLocal = Vector2.zero;
+        bool haveAnom = false;
+
+        if (!string.IsNullOrEmpty(nodeId) && !string.IsNullOrEmpty(anomalyIdForMarker))
+        {
+            var key = BuildAnomalyKey(nodeId, anomalyIdForMarker);
+            if (_anomalies.TryGetValue(key, out var anomalyRT) && anomalyRT != null)
+            {
+                haveAnom = TryGetNodeLocalPoint(anomalyRT, out anomLocal);
+            }
+        }
+
+        if (!haveAnom && !string.IsNullOrEmpty(nodeId))
+        {
+            haveAnom = TryGetNodeLocalPoint(nodeId, out anomLocal);
+        }
+
+        // Need both points to play animation (from/to). Otherwise fallback to wait.
+        if (!haveBase || !haveAnom)
+        {
+            yield return new UnityEngine.WaitForSeconds(_fallbackTravelSeconds);
+            yield break;
+        }
+
+        Vector2 fromLocal, toLocal;
+        if (token.Type == Core.MovementTokenType.Dispatch)
+        {
+            fromLocal = ApplyBaseSpawnOffset(baseId, baseLocal);
+            toLocal = anomLocal;
+        }
+        else
+        {
+            fromLocal = anomLocal;
+            toLocal = baseLocal;
+        }
+
+        // Play the single-agent animate coroutine and yield until complete.
+        yield return AnimateAgent("token:" + token.TokenId, 1, 1, fromLocal, toLocal, Mathf.Max(0.01f, _fallbackTravelSeconds), null);
     }
 
     private void ApplyTokenLanding(GameController gc, Core.MovementToken token)

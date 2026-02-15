@@ -505,12 +505,18 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var slot = GetCurrentSlot();
         var ids = _selectedAgentIds.ToList();
 
+        // Log entering state: mode/slot/targetId/idsCount
+        Debug.Log($"[AssignPanel] ApplyRosterImmediate enter mode={_mode} slot={slot} targetId={_selectedTargetId} idsCount={ids.Count}");
+
         string err;
         if (!Core.DispatchSystem.TrySetRoster(gc.State, _selectedTargetId, slot, ids, out err))
         {
             Debug.LogError($"[AssignPanel] TrySetRoster failed: {err}");
             return;
         }
+
+        // Log success
+        Debug.Log("[AssignPanel] applied ok");
 
         // Sync legacy task system minimally (do not close panel)
         SyncLegacyTask(slot, _selectedTargetId, ids);
