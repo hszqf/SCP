@@ -403,13 +403,16 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             if (ag.IsDead || ag.IsInsane) continue;
 
+            // Move selected check earlier so selected agents remain visible even if busy
+            bool selected = _selectedAgentIds.Contains(ag.Id);
+
             // Determine global busy state early (for Base filtering)
             bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
 
             // If agent is at Base, only include if truly idle (not busy elsewhere)
             if (ag.LocationKind == AgentLocationKind.Base)
             {
-                if (busyTask) continue; // excluded from candidate list when busy
+                if (busyTask && !selected) continue; // excluded from candidate list when busy, but allow already-selected
                 // else allow
             }
             else
@@ -423,8 +426,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                     continue; // not relevant -> do not display
                 }
             }
-
-            bool selected = _selectedAgentIds.Contains(ag.Id);
 
             bool unusable = ag.IsDead || ag.IsInsane;
 
