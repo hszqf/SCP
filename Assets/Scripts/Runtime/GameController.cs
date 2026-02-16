@@ -268,9 +268,8 @@ public class GameController : MonoBehaviour
             }
 
             // Pipeline path: do NOT call Sim.StepDay
-            // TODO: 这里后续应换成 Sim.AdvanceDay_Only(state)（如果你已加过就直接调用）
-            // 暂时最小：只递增 Day（别做其它结算）
-            state.Day += 1;
+            // Use Sim.AdvanceDay_Only to centralize day increment and light initialization
+            Sim.AdvanceDay_Only(state);
 
             // 1..5 严格顺序
             Settlement.AnomalyWorkSystem.Apply(gc, state, result);
@@ -794,6 +793,10 @@ public static class GameControllerTaskExt
 
     public static bool AreAgentsBusy(GameController gc, List<string> agentIds, string _unusedCurrentNodeId = null)
     {
+        if (gc != null && gc.State != null && gc.State.UseSettlement_Pipeline)
+            return false;
+
+
         if (gc == null || gc.State?.Cities == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
 

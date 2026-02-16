@@ -467,6 +467,21 @@ namespace Core
             GenerateScheduledAnomalies(s, rng, registry, s.Day);
         }
 
+        // Advance day only: increment day counter and perform lightweight per-day initializations
+        // (used by pipeline path where full Sim.StepDay is executed via settlement systems)
+        public static void AdvanceDay_Only(GameState s)
+        {
+            if (s == null) return;
+            s.Day += 1;
+
+            if (s.RecruitPool != null)
+            {
+                s.RecruitPool.day = -1;
+                s.RecruitPool.refreshUsedToday = 0;
+                s.RecruitPool.candidates?.Clear();
+            }
+        }
+
 
         // =====================
         // Task completion rules
@@ -1408,6 +1423,21 @@ namespace Core
         /// </summary>
         public static string BuildAgentBusyText(GameState state, string agentId)
         {
+            if (state != null && state.UseSettlement_Pipeline)
+            {
+                var a = state.Agents?.FirstOrDefault(x => x != null && x.Id == agentId);
+                if (a == null) return "";
+                switch (a.LocationKind)
+                {
+                    case AgentLocationKind.TravellingToAnomaly: return "在途";
+                    case AgentLocationKind.TravellingToBase: return "返程";
+                    case AgentLocationKind.AtAnomaly: return "执行中";
+                    default: return "";
+                }
+            }
+
+
+
             if (state?.Cities == null || string.IsNullOrEmpty(agentId))
                 return string.Empty;
 
