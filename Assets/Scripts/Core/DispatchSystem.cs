@@ -220,7 +220,7 @@ namespace Core
 
                 // Support both legacy Id and new-arch AnomalyId
                 if (a.Id == key) return a;
-                if (!string.IsNullOrEmpty(a.AnomalyId) && a.AnomalyId == key) return a;
+                if (!string.IsNullOrEmpty(a.Id) && a.Id == key) return a;
                 if (a.ManagedState != null && !string.IsNullOrEmpty(a.ManagedState.Id) && a.ManagedState.Id == key)
                     return a;
             }
@@ -251,7 +251,7 @@ namespace Core
                                 if (a2 == null) continue;
                                 if (!string.IsNullOrEmpty(a2.NodeId) && a2.NodeId == nodeId &&
                                     ((!string.IsNullOrEmpty(a2.AnomalyDefId) && a2.AnomalyDefId == defId) ||
-                                     (!string.IsNullOrEmpty(a2.AnomalyId) && a2.AnomalyId == defId)))
+                                     (!string.IsNullOrEmpty(a2.Id) && a2.Id == defId)))
                                 {
                                     return a2;
                                 }

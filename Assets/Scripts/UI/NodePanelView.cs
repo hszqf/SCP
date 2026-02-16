@@ -176,7 +176,7 @@ public class NodePanelView : MonoBehaviour, IModalClosable
         if (string.IsNullOrEmpty(_nodeId)) return;
         if (GameController.I == null) return;
 
-        var n = GameController.I.GetNode(_nodeId);
+        var n = GameController.I.GetCity(_nodeId);
         if (n == null) return;
 
         if (titleText) titleText.text = $"{n.Name} ({n.Population}浜哄彛)";

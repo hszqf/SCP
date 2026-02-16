@@ -24,14 +24,12 @@ namespace Settlement
                 if (c == null) continue;
 
                 int pop = Math.Max(0, c.Population);
-                int delta = (int)(pop * popToMoneyRate); // TODO: later replace with data-driven formula
+                int delta = (int)(pop * popToMoneyRate); 
                 if (delta <= 0) continue;
 
                 state.Money += delta;
                 total += delta;
 
-                // 可选：只打少量，避免刷屏
-                // r?.Log($"[Settle][CityEco] city={c.Id} pop={pop} +Money={delta} money={state.Money}");
             }
 
             r?.Log($"[Settle][CityEco] +MoneyTotal={total} money={state.Money}");

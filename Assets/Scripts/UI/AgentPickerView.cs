@@ -129,10 +129,7 @@ public class AgentPickerView : MonoBehaviour, IModalClosable
             bool isBusy = isBusyOtherNode(agent.Id);
 
             // Get busy text using BuildAgentBusyText
-            string busyText = (gc != null) ? Sim.BuildAgentBusyText(gc.State, agent.Id) : null;
-            string statusText = isBusy
-                ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText)
-                : "IDLE";
+            string statusText = SettlementUtil.BuildAgentBusyText(gc.State, agent.Id);
 
             string displayName = string.IsNullOrEmpty(agent.Name) ? agent.Id : agent.Name;
             item.Bind(

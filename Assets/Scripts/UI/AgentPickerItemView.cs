@@ -138,60 +138,7 @@ public class AgentPickerItemView : MonoBehaviour
         BindCore(agent, displayName, agentId, attrLine, isBusyOtherNode, selected, onClick, busyText);
     }
 
-    // Backward-compatible overload (legacy signature)
-    public void Bind(
-        AgentState agent,
-        string attrLine,
-        bool isBusyOtherNode,
-        bool selected,
-        System.Action<string> onClick,
-        string busyText = null)
-    {
-        string displayName = agent == null ? "" : (string.IsNullOrEmpty(agent.Name) ? agent.Id : agent.Name);
-        Bind(agent, displayName, attrLine, isBusyOtherNode, selected, onClick, busyText);
-    }
-
-    // Backward-compatible overload (legacy callers)
-    public void Bind(
-        string agentId,
-        string displayName,
-        string attrLine,
-        bool isBusyOtherNode,
-        bool selected,
-        System.Action<string> onClick,
-        string busyText = null)
-    {
-        BindCore(null, displayName, agentId, attrLine, isBusyOtherNode, selected, onClick, busyText);
-    }
-
-    public void BindSimple(string displayName, string attrLine, string statusLine, bool selected = false)
-    {
-        AgentId = string.Empty;
-        string statusText = statusLine ?? string.Empty;
-        bool isIdle = statusText.IndexOf("IDLE", StringComparison.OrdinalIgnoreCase) >= 0;
-        _isBusy = !string.IsNullOrEmpty(statusText) && !isIdle;
-
-        if (!button) button = GetComponent<Button>();
-        if (!background) background = GetComponent<Image>();
-
-        if (nameText) nameText.text = displayName ?? string.Empty;
-        if (levelText) levelText.text = string.Empty;
-        if (attrText) attrText.text = attrLine;
-
-        if (busyTagText)
-        {
-            busyTagText.gameObject.SetActive(!string.IsNullOrEmpty(statusLine));
-            busyTagText.text = statusLine ?? string.Empty;
-        }
-
-        if (button)
-        {
-            button.onClick.RemoveAllListeners();
-            button.interactable = false;
-        }
-
-        UpdateVisuals(selected);
-    }
+    
 
     private Sprite ResolveAvatarSprite(AgentState agent, string agentId, string displayName)
     {

@@ -856,7 +856,7 @@ public class DispatchAnimationSystem : MonoBehaviour
 
         var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyKey);
         var nodeId = anom?.NodeId;
-        var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyId ?? anom?.AnomalyId;
+        var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyId ?? anom?.Id;
 
         var baseId = ResolveBaseNodeId();
 

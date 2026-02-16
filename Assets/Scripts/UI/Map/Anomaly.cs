@@ -414,13 +414,10 @@ public class Anomaly : MonoBehaviour
         if (DispatchAnimationSystem.I != null && DispatchAnimationSystem.I.IsInteractionLocked)
             return;
         var root = UIPanelRoot.I;
-        if (root == null || string.IsNullOrEmpty(_nodeId)) return;
-
         var gc = GameController.I;
-        var node = gc?.GetNode(_nodeId);
 
         // 关键：优先拿到 anomalyState（真源：phase）
-        var anomalyState = FindAnomalyState(gc?.State, node, _anomalyId);
+        var anomalyState = FindAnomalyState(gc?.State, _anomalyId);
 
         // 若能拿到 anomalyState，则完全按 phase 分流（不再看 _isKnown / managed）
         if (anomalyState != null)
@@ -429,38 +426,19 @@ public class Anomaly : MonoBehaviour
             {
 
                 case AnomalyPhase.Contain:
-                    root.OpenContainAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+                    root.OpenContainAssignPanelForAnomaly( anomalyState.Id);
                     return;
 
                 case AnomalyPhase.Operate:
-                    root.OpenOperateAssignPanelForAnomaly(_nodeId, anomalyState.Id);
+                    root.OpenOperateAssignPanelForAnomaly( anomalyState.Id);
                     return;
 
                 // Investigate/Investigating/Discovered/Unknown 统一走调查
                 default:
-                    root.OpenInvestigateAssignPanelForNode(_nodeId, _anomalyId);
+                    root.OpenInvestigateAssignPanelForNode(anomalyState.Id);
                     return;
             }
         }
-
-        // anomalyState 拿不到的兜底：旧逻辑（可保留）
-        // 这里只做 “managed -> manage；known -> contain；else investigate”
-        var managed = ResolveManagedAnomaly(node);
-        if (managed != null)
-        {
-            root.OpenManage(_nodeId, managed.Id);
-            return;
-        }
-
-        // determine known directly from node data rather than using legacy UI flag
-        var isKnownDirect = node != null && node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId);
-        if (isKnownDirect)
-        {
-            root.OpenContainAssignPanelForNode(_nodeId);
-            return;
-        }
-
-        root.OpenInvestigateAssignPanelForNode(_nodeId, _anomalyId);
     }
 
     private void CacheProgressWidth()
@@ -564,20 +542,6 @@ public class Anomaly : MonoBehaviour
 
 
 
-    private bool IsTaskForThisAnomaly(CityState node, NodeTask task)
-    {
-        if (task.Type == TaskType.Manage)
-        {
-            if (!string.IsNullOrEmpty(_managedAnomalyId))
-                return string.Equals(task.TargetManagedAnomalyId, _managedAnomalyId, System.StringComparison.OrdinalIgnoreCase);
-
-            var managed = node.ManagedAnomalies?.Find(m => m != null && m.Id == task.TargetManagedAnomalyId);
-            return managed != null && string.Equals(managed.AnomalyId, _anomalyId, System.StringComparison.OrdinalIgnoreCase);
-        }
-
-        var taskAnomalyId = ResolveTaskAnomalyId(node, task);
-        return !string.IsNullOrEmpty(taskAnomalyId) && string.Equals(taskAnomalyId, _anomalyId, System.StringComparison.OrdinalIgnoreCase);
-    }
 
     private static string ResolveTaskAnomalyId(CityState node, NodeTask task)
     {
@@ -639,7 +603,7 @@ public class Anomaly : MonoBehaviour
     private static float GetInvestigateProgress01(GameState state, CityState node, string anomalyId)
     {
         if (state == null || string.IsNullOrEmpty(anomalyId)) return 0f;
-        var anomalyState = FindAnomalyState(state, node, anomalyId);
+        var anomalyState = FindAnomalyState(state, anomalyId);
         if (anomalyState == null) return 0f;
         int baseDays = GetAnomalyBaseDays(anomalyId);
         return baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress) : 0f;
@@ -660,25 +624,7 @@ public class Anomaly : MonoBehaviour
     }
 
     // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays when missing
-    private float GetContainProgress01_FromAnomalyState(GameState s)
-    {
-        if (s == null) return 0f;
 
-        var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
-        var a = Core.DispatchSystem.FindAnomaly(s, preferKey);
-        if (a == null) return 0f;
-
-        return Mathf.Clamp01(a.ContainProgress);
-    }
-
-    private static float GetContainProgress01(GameState state, CityState node, string anomalyId)
-    {
-        if (state == null || string.IsNullOrEmpty(anomalyId)) return 0f;
-        var anomalyState = FindAnomalyState(state, node, anomalyId);
-        if (anomalyState == null) return 0f;
-        int baseDays = GetAnomalyBaseDays(anomalyId);
-        return baseDays > 0 ? Mathf.Clamp01(anomalyState.ContainProgress) : 0f;
-    }
 
     private static int GetAnomalyBaseDays(string anomalyId)
     {
@@ -688,7 +634,7 @@ public class Anomaly : MonoBehaviour
         return Mathf.Max(1, registry.GetAnomalyBaseDaysWithWarn(anomalyId, 1));
     }
 
-    private static AnomalyState FindAnomalyState(GameState state, CityState node, string anomalyId)
+    private static AnomalyState FindAnomalyState(GameState state, string anomalyId)
     {
         if (state?.Anomalies == null || string.IsNullOrEmpty(anomalyId)) return null;
         var found = state.Anomalies.FirstOrDefault(a => a != null && string.Equals(a.AnomalyDefId, anomalyId, System.StringComparison.OrdinalIgnoreCase));
@@ -696,42 +642,6 @@ public class Anomaly : MonoBehaviour
         return null;
     }
 
-    private static void LogAnomalyDescriptions(CityState node, AnomalyState anomalyState, string anomalyId)
-    {
-        if (string.IsNullOrEmpty(anomalyId)) return;
-        var registry = DataRegistry.Instance;
-        if (registry == null || !registry.AnomaliesById.TryGetValue(anomalyId, out var def) || def == null)
-            return;
-
-        var entries = new List<string>
-        {
-            def.desc1,
-            def.desc2,
-            def.desc3,
-            def.desc4,
-            def.desc5,
-        };
-
-        var filtered = entries.Where(e => !string.IsNullOrEmpty(e)).ToList();
-        if (filtered.Count == 0) return;
-
-        float progress01 = 0f;
-        if (anomalyState != null)
-        {
-            int baseDays = GetAnomalyBaseDays(anomalyId);
-            progress01 = baseDays > 0 ? Mathf.Clamp01(anomalyState.InvestigateProgress) : 0f;
-        }
-
-        int total = filtered.Count;
-        int unlocked = Mathf.Clamp(Mathf.FloorToInt(progress01 * total + 0.0001f), 0, total);
-
-        for (int i = 0; i < filtered.Count; i++)
-        {
-            var raw = filtered[i] ?? string.Empty;
-            var content = i < unlocked ? raw : new string('■', raw.Length);
-            Debug.Log($"[AnomalyDesc] anomaly={anomalyId} {i + 1}.{content}");
-        }
-    }
 
     // register anomaly views with the MapEntityRegistry for world position lookup
     private void RegisterToRegistry()

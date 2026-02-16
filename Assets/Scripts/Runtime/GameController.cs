@@ -211,11 +211,9 @@ public class GameController : MonoBehaviour
 
     public void Notify() => OnStateChanged?.Invoke();
 
-    public CityState GetNode(string nodeId)
-        => State.Cities.FirstOrDefault(n => n.Id == nodeId);
+    public CityState GetCity(string cityId)
+        => State.Cities.FirstOrDefault(n => n.Id == cityId);
 
-    public AgentState GetAgent(string agentId)
-        => State.Agents.FirstOrDefault(a => a.Id == agentId);
 
     public void EndDay()
     {
@@ -258,14 +256,6 @@ public class GameController : MonoBehaviour
         public void Execute(GameController gc, GameState state, DayEndResult result)
         {
             if (state == null) return;
-
-            if (!state.UseSettlement_Pipeline)
-            {
-                // Legacy path
-               // Sim.StepDay(state, gc._rng);
-                result?.Log("Stage_EndDay_Core legacy StepDay");
-                return;
-            }
 
             // Pipeline path: do NOT call Sim.StepDay
             // Use Sim.AdvanceDay_Only to centralize day increment and light initialization
@@ -346,42 +336,6 @@ public class GameController : MonoBehaviour
         return true;
     }
 
-    public void MarkGameOver(string reason)
-    {
-        if (IsGameOver) return;
-        IsGameOver = true;
-        Debug.Log($"[GameOver] {reason}");
-    }
-
-    public bool TryHireAgent(int cost, out AgentState agent)
-    {
-        agent = null;
-        if (cost < 0) cost = 0;
-        if (State == null) return false;
-        if (State.Money < cost) return false;
-
-        int clampMoneyMin = DataRegistry.Instance.GetBalanceIntWithWarn("ClampMoneyMin", 0);
-        int moneyAfter = Math.Max(clampMoneyMin, State.Money - cost);
-        State.Money = moneyAfter;
-
-        string agentId = GenerateNextAgentId();
-        agent = new AgentState
-        {
-            Id = agentId,
-            Name = $"Agent {agentId}",
-            Perception = 5,
-            Operation = 5,
-            Resistance = 5,
-            Power = 5,
-            AvatarSeed = _rng.Next(),
-        };
-
-        State.Agents.Add(agent);
-        Debug.Log($"[Hire] cost={cost} moneyAfter={moneyAfter} agentId={agentId}");
-        Notify();
-        RefreshMapNodes();
-        return true;
-    }
 
     public RecruitCandidate GenerateRecruitCandidate()
     {
@@ -487,7 +441,7 @@ public class GameController : MonoBehaviour
 
     public NodeTask CreateInvestigateTask(string nodeId)
     {
-        var n = GetNode(nodeId);
+        var n = GetCity(nodeId);
         if (n == null) return null;
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();
 
@@ -508,7 +462,7 @@ public class GameController : MonoBehaviour
 
     public NodeTask CreateContainTask(string nodeId, string containableId)
     {
-        var n = GetNode(nodeId);
+        var n = GetCity(nodeId);
         if (n == null) return null;
         if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return null;
 
@@ -548,7 +502,7 @@ public class GameController : MonoBehaviour
 
     public NodeTask CreateManageTask(string nodeId, string managedAnomalyId)
     {
-        var n = GetNode(nodeId);
+        var n = GetCity(nodeId);
         if (n == null) return null;
         if (n.ManagedAnomalies == null || n.ManagedAnomalies.Count == 0) return null;
 
@@ -686,80 +640,10 @@ public class GameController : MonoBehaviour
     private void RefreshMapNodes()
     {
         AnomalySpawner.I?.RefreshMapNodes();
-        UIPanelRoot.I?.RefreshNodePanel();
-    }
-
-    // =====================
-    // Legacy APIs (temporary)
-    // =====================
-
-    // Old UI calls these; keep them as wrappers.
-    public void AssignInvestigate(string nodeId, List<string> agentIds)
-    {
-        var t = CreateInvestigateTask(nodeId);
-        if (t == null) return;
-        AssignTask(t.Id, agentIds);
-    }
-
-    public void AssignContain(string nodeId, List<string> agentIds)
-    {
-        var n = GetNode(nodeId);
-        if (n == null) return;
-        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return;
-
-        HashSet<string> contained = null;
-        if (n.ManagedAnomalies != null && n.ManagedAnomalies.Count > 0)
-        {
-            contained = new HashSet<string>(n.ManagedAnomalies
-                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
-                .Select(m => m.AnomalyId));
-        }
-
-        string target = n.KnownAnomalyDefIds.FirstOrDefault(id => !string.IsNullOrEmpty(id) && (contained == null || !contained.Contains(id)));
-        if (string.IsNullOrEmpty(target)) return;
-
-        var t = CreateContainTask(nodeId, target);
-        if (t == null) return;
-        AssignTask(t.Id, agentIds);
+        //UIPanelRoot.I?.RefreshNodePanel();
     }
 
 
-    private static void EnsureCityIds(List<City> cities)
-    {
-        if (cities == null || cities.Count == 0) return;
-
-        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        int counter = 1;
-
-        foreach (var city in cities.OrderBy(c => c?.CityId))
-        {
-            if (city == null) continue;
-
-            var id = city.CityId;
-            if (string.IsNullOrEmpty(id) || used.Contains(id))
-            {
-                id = GenerateNextCityId(used, ref counter);
-                city.SetCityId(id, true);
-                Debug.Log($"[Boot] CityId assigned: {id}");
-            }
-
-            used.Add(id);
-        }
-    }
-
-    private static string GenerateNextCityId(HashSet<string> usedIds, ref int counter)
-    {
-        while (true)
-        {
-            string id = $"N{counter}";
-            if (!usedIds.Contains(id))
-            {
-                counter++;
-                return id;
-            }
-            counter++;
-        }
-    }
 }
 
 /// <summary>
@@ -826,128 +710,6 @@ public static class GameControllerTaskExt
         return true;
     }
 
-    // ---------- Legacy: task started? ----------
-
-    public static bool IsTaskStarted(this GameController gc, string nodeId)
-    {
-        var n = gc?.GetNode(nodeId);
-        if (n?.Tasks == null) return false;
-        // any active task with progress>0
-        return n.Tasks.Any(t => t != null && t.State == TaskState.Active && t.Progress > 0.0001f);
-    }
-
-    // ---------- Legacy: withdraw all on node ----------
-
-    public static bool ForceWithdraw(this GameController gc, string nodeId)
-    {
-        if (gc == null || string.IsNullOrEmpty(nodeId)) return false;
-        var n = gc.GetNode(nodeId);
-        if (n == null || n.Tasks == null || n.Tasks.Count == 0) return false;
-
-        bool any = false;
-        foreach (var t in n.Tasks)
-        {
-            if (t == null) continue;
-            if (t.State != TaskState.Active) continue;
-
-            // Cancel == progress==0 ; Retreat == progress>0 (same effect for legacy node-level withdraw)
-            if (t.AssignedAgentIds != null) t.AssignedAgentIds.Clear();
-            t.Progress = 0f;
-            t.State = TaskState.Cancelled;
-            any = true;
-        }
-
-        if (any && n.Status != NodeStatus.Secured)
-            n.Status = NodeStatus.Calm;
-
-        if (any)
-        {
-            GameControllerTaskExt.LogBusySnapshot(gc, $"ForceWithdraw(node:{nodeId})");
-            gc.Notify();
-        }
-        return any;
-    }
-
-    // ---------- Legacy: per-type assignment ----------
-
-    public static AssignResult TryAssignInvestigate(this GameController gc, string nodeId, List<string> agentIds)
-        => TryAssignLegacyCurrentTask(gc, nodeId, agentIds, TaskType.Investigate);
-
-    public static AssignResult TryAssignContain(this GameController gc, string nodeId, List<string> agentIds)
-        => TryAssignLegacyCurrentTask(gc, nodeId, agentIds, TaskType.Contain);
-
-    static AssignResult TryAssignLegacyCurrentTask(GameController gc, string nodeId, List<string> agentIds, TaskType type)
-    {
-        if (gc == null) return AssignResult.Fail("GameController is null");
-        if (string.IsNullOrEmpty(nodeId)) return AssignResult.Fail("nodeId 为空");
-        if (agentIds == null || agentIds.Count == 0) return AssignResult.Fail("未选择干员");
-
-        var n = gc.GetNode(nodeId);
-        if (n == null) return AssignResult.Fail("节点不存在");
-        if (n.Tasks == null) n.Tasks = new List<NodeTask>();
-
-        // 收容前置：必须有调查产出的可收容目标
-        if (type == TaskType.Contain)
-        {
-            int c = (n.KnownAnomalyDefIds != null) ? n.KnownAnomalyDefIds.Count : 0;
-            if (c <= 0)
-                return AssignResult.Fail("未发现可收容目标：请先派遣调查完成后再进行收容");
-        }
-
-        if (!AreAgentsUsable(gc, agentIds, out var usableReason))
-            return AssignResult.Fail(usableReason);
-
-        // Busy check (global)
-        if (AreAgentsBusy(gc, agentIds))
-            return AssignResult.Fail("部分干员正在其他任务执行中");
-
-        // Pick current task for this type (legacy behavior: only operate one visible task per type)
-        var current = n.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == type);
-        if (current == null)
-        {
-            // Create one
-            if (type == TaskType.Investigate)
-                current = gc.CreateInvestigateTask(nodeId);
-            else
-            {
-                // default to first known anomaly
-                string target = (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Count > 0) ? n.KnownAnomalyDefIds[0] : null;
-                current = gc.CreateContainTask(nodeId, target);
-            }
-        }
-
-        if (current == null) return AssignResult.Fail("创建任务失败");
-
-        // Validate containment target still exists
-        if (type == TaskType.Contain)
-        {
-            if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0)
-                return AssignResult.Fail("可收容目标已为空");
-
-            if (string.IsNullOrEmpty(current.SourceAnomalyId) || !n.KnownAnomalyDefIds.Contains(current.SourceAnomalyId))
-                current.SourceAnomalyId = n.KnownAnomalyDefIds[0];
-        }
-
-        // Enforce "no repick" per task
-        bool hasSquad = (current.AssignedAgentIds != null && current.AssignedAgentIds.Count > 0);
-        if (hasSquad)
-        {
-            bool started = current.Progress > 0.0001f;
-            bool sameSquad = current.AssignedAgentIds.Count == agentIds.Count && !current.AssignedAgentIds.Except(agentIds).Any();
-
-            if (sameSquad) return AssignResult.Ok();
-            return started
-                ? AssignResult.Fail("任务已开始：只能撤退后再更换派遣")
-                : AssignResult.Fail("任务已预定：请先取消任务后再重新派遣");
-        }
-
-        // Assign squad
-        current.AssignedAgentIds = new List<string>(agentIds);
-
-        LogBusySnapshot(gc, $"TryAssignLegacyCurrentTask(node:{nodeId}, type:{type}, agents:{string.Join(",", agentIds)})");
-
-        return AssignResult.Ok();
-    }
 
     // ---------- Busy derivation & debug ----------
 

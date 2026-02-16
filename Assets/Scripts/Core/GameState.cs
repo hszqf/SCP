@@ -182,7 +182,7 @@ namespace Core
     [Serializable]
     public class AnomalyState
     {
-        public string Id;
+        public string Id; // 实例唯一ID
         public string AnomalyDefId;
         public string NodeId;
         public bool IsKnown;
@@ -198,7 +198,7 @@ namespace Core
         public float ContainProgress;
 
         // new-arch: identity & spatial
-        public string AnomalyId;        // 实例唯一ID（将来替代/区分与配置ID）
+        //public string AnomalyId;        // 实例唯一ID（将来替代/区分与配置ID）
         public Vector2 Position;        // 世界坐标/生成位置（用于影响范围计算）
 
         // new-arch: lifecycle & reveal

@@ -133,11 +133,11 @@ public class RosterPanel : MonoBehaviour, IModalClosable
             if (agent == null) continue;
 
             // Get busy status using BuildAgentBusyText
-            string busyText = Sim.BuildAgentBusyText(gc.State, agent.Id);
+            string busyText = SettlementUtil.BuildAgentBusyText(gc.State, agent.Id);
             bool isBusy = !string.IsNullOrEmpty(busyText);
             string statusText = isBusy
                 ? $"<color=#FF6666>{busyText}</color>"
-                : "<color=#66FF66>IDLE</color>";
+                : "<color=#66FF66>ø’œ–÷–</color>";
 
             // Create agent item UI from prefab
             var item = Instantiate(itemPrefab, contentRoot, false);

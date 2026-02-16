@@ -276,7 +276,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var gc = GameController.I;
         if (gc == null) return;
 
-        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
+        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetCity(_nodeId) : null;
         string canonicalKeyForFilter = null;
 
         // Determine slot-driven roster source and sync selected ids from AnomalyState.GetRoster(slot) if available.
@@ -321,35 +321,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             // canonical key for filtering is anomaly state id
             canonicalKeyForFilter = anomState.Id;
         }
-        else
-        {
-            // Fallback: for Manage mode, try legacy manage task assigned ids
-            if (_mode == AssignPanelMode.Manage)
-            {
-                var managed = FindManagedAnomaly(node, _selectedTargetId);
-                if (managed != null)
-                {
-                    canonicalKeyForFilter = managed.Id;
-                    var mt = FindManageTask(node, managed.Id);
-                    if (mt?.AssignedAgentIds != null)
-                        foreach (var id in mt.AssignedAgentIds) _selectedAgentIds.Add(id);
-                }
-            }
-            else
-            {
-                // Investigate/Contain fallback: legacy current task AssignedAgentIds
-                if (slot == AssignmentSlot.Investigate || slot == AssignmentSlot.Contain)
-                {
-                    var legacyTask = node?.Tasks?.LastOrDefault(t => t != null && t.State == TaskState.Active &&
-                        ((slot == AssignmentSlot.Investigate && t.Type == TaskType.Investigate) || (slot == AssignmentSlot.Contain && t.Type == TaskType.Contain)));
-                    if (legacyTask?.AssignedAgentIds != null)
-                        foreach (var id in legacyTask.AssignedAgentIds) _selectedAgentIds.Add(id);
-                }
-
-                // Use selectedTargetId as filter if nothing else
-                canonicalKeyForFilter = anomState != null ? anomState.Id : _selectedTargetId;
-            }
-        }
 
         foreach (var ag in gc.State.Agents)
         {
@@ -357,40 +328,26 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             if (ag.IsDead || ag.IsInsane) continue;
 
-            // Determine global busy state early (for Base filtering)
-            bool busyTask = false;
-            if (!gc.State.UseSettlement_Pipeline)
-            {
-                busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
-            }
 
-            // If agent is at Base, only include if truly idle (not busy elsewhere) - legacy behavior only
-            if (ag.LocationKind == AgentLocationKind.Base)
-            {
-                if (busyTask) continue; // excluded from candidate list when busy (legacy)
-                // else allow
-            }
-            else
-            {
-                // Allow agents who are at/going-to/coming-from this anomaly (canonical key)
-                if (!(ag.LocationAnomalyKey == canonicalKeyForFilter &&
-                      (ag.LocationKind == AgentLocationKind.AtAnomaly ||
-                       ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
-                       ag.LocationKind == AgentLocationKind.TravellingToBase)))
-                {
-                    continue; // not relevant -> do not display
-                }
-            }
+
+            bool show =
+                ag.LocationKind == AgentLocationKind.Base
+                || (ag.LocationAnomalyKey == canonicalKeyForFilter &&
+                    (ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                     ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                     ag.LocationKind == AgentLocationKind.TravellingToBase));
+
+            if (!show) continue;
 
             bool selected = _selectedAgentIds.Contains(ag.Id);
 
             bool unusable = ag.IsDead || ag.IsInsane;
 
             // Disable interaction when unusable OR (legacy busy and not using pipeline)
-            bool disable = unusable || (!gc.State.UseSettlement_Pipeline && busyTask);
+            bool disable = unusable;
 
-            string busyText = Sim.BuildAgentBusyText(gc.State, ag.Id);
-            string statusText = string.IsNullOrEmpty(busyText) ? "<color=#66FF66>IDLE</color>" : busyText;
+            string statusText1 = SettlementUtil.BuildAgentBusyText(gc.State, ag.Id);
+            string statusText = string.IsNullOrEmpty(statusText1) ? "<color=#66FF66>空闲</color>" : statusText1;
 
             var go = Instantiate(agentPickerItemPrefab, contentRoot);
             go.name = "Agent_" + ag.Id;
@@ -544,7 +501,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         var gc = GameController.I;
         if (gc == null) return;
-        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetNode(_nodeId) : null;
+        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetCity(_nodeId) : null;
         if (node == null) return;
 
         // Manage -> NodeTask.Manage targeting managed anomaly id
@@ -671,7 +628,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         if (_mode != AssignPanelMode.Manage) return;
 
         var gc = GameController.I;
-        var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetNode(_nodeId) : null;
+        var node = (gc != null && !string.IsNullOrEmpty(_nodeId)) ? gc.GetCity(_nodeId) : null;
         var m = FindManagedAnomaly(node, _selectedTargetId);
 
         if (m == null)
@@ -686,7 +643,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         string nodeName = "";
         if (gc != null && !string.IsNullOrEmpty(_nodeId))
         {
-            var n = gc.GetNode(_nodeId);
+            var n = gc.GetCity(_nodeId);
             nodeName = n != null ? n.Name : "";
         }
 

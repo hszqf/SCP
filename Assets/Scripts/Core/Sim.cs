@@ -172,52 +172,7 @@ namespace Core
         }
 
 
-        // =====================
-        // Agent Busy Text
-        // =====================
-
-        /// <summary>
-        /// Builds a descriptive text for what an agent is currently doing.
-        /// Returns empty string if the agent is idle (not assigned to any active task).
-        /// New behavior: only use AgentState.LocationKind/LocationSlot/IsTravelling to determine text.
-        /// </summary>
-        public static string BuildAgentBusyText(GameState state, string agentId)
-        {
-            if (state == null || string.IsNullOrEmpty(agentId))
-                return string.Empty;
-
-            var agent = state.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
-            if (agent == null) return string.Empty;
-
-            // If at base and not travelling, consider idle
-            if (agent.LocationKind == AgentLocationKind.Base && !agent.IsTravelling)
-                return string.Empty;
-
-            // Map slot to Chinese label
-            string SlotToChinese(AssignmentSlot slot)
-            {
-                return slot switch
-                {
-                    AssignmentSlot.Investigate => "调查",
-                    AssignmentSlot.Contain => "收容",
-                    AssignmentSlot.Operate => "管理",
-                    _ => "管理",
-                };
-            }
-
-            switch (agent.LocationKind)
-            {
-                case AgentLocationKind.TravellingToAnomaly:
-                    return $"在途·前往{SlotToChinese(agent.LocationSlot)}";
-                case AgentLocationKind.AtAnomaly:
-                    return $"{SlotToChinese(agent.LocationSlot)}中";
-                case AgentLocationKind.TravellingToBase:
-                    return "返程·回基地";
-                case AgentLocationKind.Base:
-                default:
-                    return string.Empty;
-            }
-        }
+     
    
 
       

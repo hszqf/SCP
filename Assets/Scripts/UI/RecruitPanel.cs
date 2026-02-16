@@ -244,7 +244,7 @@ public class RecruitPanel : MonoBehaviour, IModalClosable
         bool isHired = candidate.isHired;
         string statusLine = isHired
             ? "<color=#AAAAAA>已雇佣</color>"
-            : "<color=#66FF66>HIRE</color>";
+            : "<color=#66FF66>未雇佣</color>";
         string displayName = BuildCandidateDisplayName(candidate);
         string attrLine = BuildCandidateAttrLine(candidate);
 
