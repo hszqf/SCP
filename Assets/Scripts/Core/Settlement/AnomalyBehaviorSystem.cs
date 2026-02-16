@@ -1,8 +1,9 @@
-using System;
-using System.Linq;
-using UnityEngine;
 using Core;
 using Data;
+using System;
+using System.Linq;
+using UnityEditor.Experimental.GraphView;
+using UnityEngine;
 
 namespace Settlement
 {
@@ -103,7 +104,7 @@ namespace Settlement
                         else
                         {
                             // no change, still log summary for hit
-                            r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCity={city.Id} deltaPop=0 dist={dist:0.###} radius={radius}");
+                            r?.Log($"[Settle][AnomBehavior] no change, anom={a.Id} hitCity={city.Id} deltaPop=0 dist={dist:0.###} radius={radius}");
                         }
 
                         // Debug original DRY message suppressed

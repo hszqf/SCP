@@ -31,7 +31,7 @@ public sealed class MapEntityRegistry : MonoBehaviour
         if (string.IsNullOrEmpty(key)) return;
         _cityById[key] = view;
 
-        Debug.Log($"[MapEntityRegistry] RegisterCity: key={key} totalCities={_cityById.Count}");
+        Debug.Log($"[MapEntityRegistry] RegisterCity: key={key} RegisterCityname: key={view.CityName} totalCities={_cityById.Count}");
     }
 
     public void UnregisterCity(City view)

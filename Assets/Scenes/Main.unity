@@ -798,7 +798,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityId
-      value: 2
+      value: NewAshton
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityName
@@ -894,7 +894,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5361395299990806203, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_Name
-      value: City (2)
+      value: NewAshton
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -921,7 +921,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityId
-      value: 1
+      value: BASE
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityName
@@ -1017,7 +1017,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5361395299990806203, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_Name
-      value: City (1)
+      value: BASE
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1168,7 +1168,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityId
-      value: 2
+      value: Rockford
       objectReference: {fileID: 0}
     - target: {fileID: 4095837198071127027, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: cityName
@@ -1264,7 +1264,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5361395299990806203, guid: 99517d8016e6cb54c8a0bc9e9158f040, type: 3}
       propertyPath: m_Name
-      value: City
+      value: Rockford
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -1,9 +1,12 @@
 using UnityEngine;
 
+
+
+
 [DisallowMultipleComponent]
 public class City : MonoBehaviour
 {
-    [SerializeField, HideInInspector] private string cityId;
+    [SerializeField] private string cityId;
     [SerializeField] private string cityName;
     [SerializeField] private int cityType = 1;
     [SerializeField] private int population = 10;

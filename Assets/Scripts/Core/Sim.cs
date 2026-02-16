@@ -797,18 +797,6 @@ namespace Core
             return Math.Max(0, kill);
         }
 
-        // Overload: compute delta when only anomaly def id and origin node are available (legacy Sim usage)
-        public static int CalcAnomalyCityPopDelta(GameState state, string anomalyDefId, CityState originNode, CityState city)
-        {
-            if (state == null || string.IsNullOrEmpty(anomalyDefId) || originNode == null || city == null) return 0;
-            var registry = DataRegistry.Instance;
-            if (registry == null) return 0;
-            int kill = registry.GetAnomalyIntWithWarn(anomalyDefId, "actPeopleKill", 0);
-            if (kill <= 0) return 0;
-            float range = registry.GetAnomalyFloatWithWarn(anomalyDefId, "range", 0f);
-            if (!IsNodeWithinRange(originNode, city, range)) return 0;
-            return Math.Max(0, kill);
-        }
 
         private static Vector2 ResolveNodeLocation01(CityState node)
         {

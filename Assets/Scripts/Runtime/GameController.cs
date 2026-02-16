@@ -156,7 +156,7 @@ public class GameController : MonoBehaviour
             .Where(c => c != null)
             .ToList();
 
-        EnsureCityIds(cities);
+        //EnsureCityIds(cities);
 
         cities = cities
             .Where(c => c != null && !string.IsNullOrEmpty(c.CityId))
@@ -170,7 +170,7 @@ public class GameController : MonoBehaviour
 
         foreach (var city in cities)
         {
-            var nodeState = new CityState
+            var cityState = new CityState
             {
                 Id = city.CityId,
                 Name = city.CityName,
@@ -184,13 +184,13 @@ public class GameController : MonoBehaviour
             var rt = city.transform as RectTransform;
             if (rt != null)
             {
-                nodeState.X = rt.anchoredPosition.x;
-                nodeState.Y = rt.anchoredPosition.y;
+                cityState.X = rt.anchoredPosition.x;
+                cityState.Y = rt.anchoredPosition.y;
             }
 
-            nodeState.HasAnomaly = nodeState.ActiveAnomalyIds.Count > 0;
+            cityState.HasAnomaly = cityState.ActiveAnomalyIds.Count > 0;
 
-            State.Cities.Add(nodeState);
+            State.Cities.Add(cityState);
         }
 
         // ---- 初始异常生成（AnomaliesGen day=1）----
@@ -723,13 +723,6 @@ public class GameController : MonoBehaviour
         AssignTask(t.Id, agentIds);
     }
 
-    // Optional convenience API for UI: assign management squad to a managed anomaly.
-    public void AssignManage(string nodeId, string managedAnomalyId, List<string> agentIds)
-    {
-        var t = CreateManageTask(nodeId, managedAnomalyId);
-        if (t == null) return;
-        AssignTask(t.Id, agentIds);
-    }
 
     private static void EnsureCityIds(List<City> cities)
     {
