@@ -60,6 +60,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private int _slotsMax = int.MaxValue;
     private AssignPanelMode _mode = AssignPanelMode.Manage;
     private Action<string, List<string>> _onConfirm;
+    private bool _listenStateChanged;
 
     void Awake()
     {
@@ -103,7 +104,23 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         _nodeId = root != null ? root.ManageNodeId : null;
         // IMPORTANT: do not auto RefreshUI here.
         // This panel is reused for Investigate/Contain assignment and auto-refresh would rebuild Manage mode & spam logs.
-        // Only RefreshUI will be called by explicit Show() calls.
+        // Only RefreshUI here.
+        var gc = GameController.I;
+        if (!_listenStateChanged && gc != null)
+        {
+            gc.OnStateChanged += HandleStateChanged;
+            _listenStateChanged = true;
+        }
+    }
+
+    void OnDisable()
+    {
+        var gc = GameController.I;
+        if (_listenStateChanged && gc != null)
+        {
+            gc.OnStateChanged -= HandleStateChanged;
+            _listenStateChanged = false;
+        }
     }
 
     public void Show()
@@ -413,12 +430,16 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             if (ag.IsDead || ag.IsInsane) continue;
 
             // Determine global busy state early (for Base filtering)
-            bool busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
+            bool busyTask = false;
+            if (!gc.State.UseSettlement_Pipeline)
+            {
+                busyTask = GameControllerTaskExt.AreAgentsBusy(gc, new List<string> { ag.Id });
+            }
 
-            // If agent is at Base, only include if truly idle (not busy elsewhere)
+            // If agent is at Base, only include if truly idle (not busy elsewhere) - legacy behavior only
             if (ag.LocationKind == AgentLocationKind.Base)
             {
-                if (busyTask) continue; // excluded from candidate list when busy
+                if (busyTask) continue; // excluded from candidate list when busy (legacy)
                 // else allow
             }
             else
@@ -437,13 +458,11 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             bool unusable = ag.IsDead || ag.IsInsane;
 
-            // Allow clicking to deselect even if currently busy (soft lock)
-            bool isBusyOther = (busyTask || unusable) && !selected;
+            // Disable interaction when unusable OR (legacy busy and not using pipeline)
+            bool disable = unusable || (!gc.State.UseSettlement_Pipeline && busyTask);
 
             string busyText = Sim.BuildAgentBusyText(gc.State, ag.Id);
-            string statusText = isBusyOther
-                ? (string.IsNullOrEmpty(busyText) ? "BUSY" : busyText)
-                : "<color=#66FF66>IDLE</color>";
+            string statusText = string.IsNullOrEmpty(busyText) ? "<color=#66FF66>IDLE</color>" : busyText;
 
             var go = Instantiate(agentPickerItemPrefab, contentRoot);
             go.name = "Agent_" + ag.Id;
@@ -457,7 +476,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                 ag,
                 displayName,
                 BuildAgentAttrLine(ag),
-                isBusyOther,
+                disable,
                 selected,
                 OnAgentClicked,
                 statusText);
@@ -786,6 +805,18 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         headerText.text = string.IsNullOrEmpty(nodeName)
             ? $"管理：{m.Name}  Lv{m.Level}  管理人数:{mgr}  累计负熵:{m.TotalNegEntropy}"
             : $"管理：[{nodeName}] {m.Name}  Lv{m.Level}  管理人数:{mgr}  累计负熵:{m.TotalNegEntropy}";
+    }
+
+    private void HandleStateChanged()
+    {
+        if (!isActiveAndEnabled) return;
+
+        // Manage 模式不要自动刷新（历史原因：以前会重建 targets / spam）
+        if (_mode == AssignPanelMode.Manage) return;
+
+        // Generic/Investigate/Contain/Operate：只要面板在开着就刷新列表
+        RebuildAgentList();
+        RefreshConfirmState();
     }
 
     private void HandleManageConfirm(string targetId, List<string> agentIds)

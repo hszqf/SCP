@@ -61,8 +61,6 @@ namespace Core
             return leveled;
         }
 
-        private const string RequirementAny = "ANY";
-
         public static void StepDay(GameState s, Random rng)
         {
             var registry = DataRegistry.Instance;
@@ -1420,130 +1418,46 @@ namespace Core
         /// <summary>
         /// Builds a descriptive text for what an agent is currently doing.
         /// Returns empty string if the agent is idle (not assigned to any active task).
+        /// New behavior: only use AgentState.LocationKind/LocationSlot/IsTravelling to determine text.
         /// </summary>
         public static string BuildAgentBusyText(GameState state, string agentId)
         {
-            if (state != null && state.UseSettlement_Pipeline)
-            {
-                var a = state.Agents?.FirstOrDefault(x => x != null && x.Id == agentId);
-                if (a == null) return "";
-                switch (a.LocationKind)
-                {
-                    case AgentLocationKind.TravellingToAnomaly: return "在途";
-                    case AgentLocationKind.TravellingToBase: return "返程";
-                    case AgentLocationKind.AtAnomaly: return "执行中";
-                    default: return "";
-                }
-            }
-
-
-
-            if (state?.Cities == null || string.IsNullOrEmpty(agentId))
+            if (state == null || string.IsNullOrEmpty(agentId))
                 return string.Empty;
 
-            var registry = DataRegistry.Instance;
-
             var agent = state.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
-            if (agent != null)
-            {
-                if (agent.IsDead) return "死亡";
-                if (agent.IsInsane) return "疯狂";
-            }
+            if (agent == null) return string.Empty;
 
-            // Traverse all nodes and tasks to find where this agent is assigned
-            foreach (var node in state.Cities)
-            {
-                if (node?.Tasks == null) continue;
+            // If at base and not travelling, consider idle
+            if (agent.LocationKind == AgentLocationKind.Base && !agent.IsTravelling)
+                return string.Empty;
 
-                foreach (var task in node.Tasks)
+            // Map slot to Chinese label
+            string SlotToChinese(AssignmentSlot slot)
+            {
+                return slot switch
                 {
-                    if (task == null || task.State != TaskState.Active) continue;
-                    if (task.AssignedAgentIds == null || !task.AssignedAgentIds.Contains(agentId)) continue;
-
-                    // Found the task this agent is working on
-                    string busyText = string.Empty;
-
-                    switch (task.Type)
-                    {
-                        case TaskType.Investigate:
-                            busyText = $"在{node.Name}调查";
-                            break;
-
-                        case TaskType.Contain:
-                            {
-                                // Get anomaly name from SourceAnomalyId or TargetContainableId
-                                string anomalyId = task.SourceAnomalyId ?? task.TargetContainableId;
-                                string anomalyName = anomalyId;
-                                if (!string.IsNullOrEmpty(anomalyId) && registry?.AnomaliesById != null)
-                                {
-                                    if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
-                                    {
-                                        anomalyName = anomalyDef.name;
-                                    }
-                                }
-                                busyText = $"在{node.Name}收容 {anomalyName}";
-                            }
-                            break;
-
-                        case TaskType.Manage:
-                            {
-                                // Get managed anomaly name
-                                string anomalyId = task.TargetManagedAnomalyId;
-                                string anomalyName = anomalyId;
-
-                                // Try to find the managed anomaly to get its name
-                                if (!string.IsNullOrEmpty(anomalyId) && node.ManagedAnomalies != null)
-                                {
-                                    var managed = node.ManagedAnomalies.FirstOrDefault(m => m.Id == anomalyId);
-                                    if (managed != null)
-                                    {
-                                        anomalyName = managed.Name;
-                                    }
-                                    else if (registry?.AnomaliesById != null && registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef))
-                                    {
-                                        anomalyName = anomalyDef.name;
-                                    }
-                                }
-                                busyText = $"在{node.Name}管理 {anomalyName}";
-                            }
-                            break;
-
-                        default:
-                            Debug.LogWarning($"[AgentBusy] Unhandled task type: {task.Type} for agent {agentId}");
-                            busyText = $"在{node.Name}执行任务";
-                            break;
-                    }
-
-                    // Optional debug log (only when agent is busy)
-                    if (!string.IsNullOrEmpty(busyText))
-                    {
-                        Debug.Log($"[AgentBusy] agent={agentId} task={task.Id} text={busyText}");
-                    }
-
-                    return busyText;
-                }
+                    AssignmentSlot.Investigate => "调查",
+                    AssignmentSlot.Contain => "收容",
+                    AssignmentSlot.Operate => "管理",
+                    _ => "管理",
+                };
             }
 
-            // Agent not found in any active task - idle
-            return string.Empty;
+            switch (agent.LocationKind)
+            {
+                case AgentLocationKind.TravellingToAnomaly:
+                    return $"在途·前往{SlotToChinese(agent.LocationSlot)}";
+                case AgentLocationKind.AtAnomaly:
+                    return $"{SlotToChinese(agent.LocationSlot)}中";
+                case AgentLocationKind.TravellingToBase:
+                    return "返程·回基地";
+                case AgentLocationKind.Base:
+                default:
+                    return string.Empty;
+            }
         }
-
-        // =====================
-        // Fact System
-        // =====================
-
-        /// <summary>
-        /// Calculate fact severity from anomaly threat level.
-        /// Severity is clamped to 1-5 range.
-        /// </summary>
-        private static int CalculateSeverityFromThreatLevel(int threatLevel)
-        {
-            int severity = threatLevel / 2;
-            return Math.Min(5, Math.Max(1, severity));
-        }
-
-
-      
+   
 
         // =====================
         // Math helpers
