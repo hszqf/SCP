@@ -188,7 +188,7 @@ public class AnomalySpawner : MonoBehaviour
                     LogAnomalyPlacement(node.Id, entry.anomalyId, offsetKey, anchorPos, rt.anchoredPosition);
                 }
 
-                anomaly.Bind(node.Id, entry.anomalyId, entry.managedId);
+                anomaly.Bind( entry.anomalyId, entry.managedId);
 
                 if (rt != null)
                     DispatchAnimationSystem.I?.RegisterAnomaly(node.Id, entry.anomalyId, rt);

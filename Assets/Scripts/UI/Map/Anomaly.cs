@@ -28,7 +28,6 @@ public class Anomaly : MonoBehaviour
 
     private static Sprite _rangeSprite;
 
-    private string _nodeId;
     private string _canonicalAnomalyKey;
     private string _anomalyId;
     private string _managedAnomalyId;
@@ -36,9 +35,8 @@ public class Anomaly : MonoBehaviour
     // registration key actually registered in MapEntityRegistry
     private string _regKeyCanonical;
 
-    public void Bind(string nodeId, string anomalyId, string managedAnomalyId)
+    public void Bind(string anomalyId, string managedAnomalyId)
     {
-        _nodeId = nodeId;
         _anomalyId = anomalyId;
         _managedAnomalyId = managedAnomalyId;
 
@@ -62,7 +60,7 @@ public class Anomaly : MonoBehaviour
                     {
                         var a = list[i];
                         if (a == null) continue;
-                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                        if (!string.IsNullOrEmpty(a.NodeId) &&
                             !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
                         {
                             anomBind = a;
@@ -121,10 +119,10 @@ public class Anomaly : MonoBehaviour
     private void Refresh()
     {
         var gc = GameController.I;
-        if (gc?.State?.Cities == null || string.IsNullOrEmpty(_nodeId) || string.IsNullOrEmpty(_anomalyId))
+        if (gc?.State?.Cities == null || string.IsNullOrEmpty(_anomalyId))
             return;
 
-        var node = gc.State.Cities.Find(n => n != null && n.Id == _nodeId);
+        var node = gc.State.Cities.Find(n => n != null);
         if (node == null) return;
 
         var managed = ResolveManagedAnomaly(node);
@@ -156,7 +154,7 @@ public class Anomaly : MonoBehaviour
                     {
                         var a = list[i];
                         if (a == null) continue;
-                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
+                        if (!string.IsNullOrEmpty(a.NodeId) &&
                             !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
                         {
                             anom = a;
@@ -283,7 +281,7 @@ public class Anomaly : MonoBehaviour
             }
         }
 
-        Debug.Log($"[AnomUI] node={_nodeId} key={_canonicalAnomalyKey} phase={(anom!=null?anom.Phase.ToString():"null")} inv={(anom!=null?anom.InvestigateProgress:-1f):0.###} con={(anom!=null?anom.ContainProgress:-1f):0.###} revealName={revealName} opArr={opArrivedCount}");
+        Debug.Log($"[AnomUI] key={_canonicalAnomalyKey} phase={(anom!=null?anom.Phase.ToString():"null")} inv={(anom!=null?anom.InvestigateProgress:-1f):0.###} con={(anom!=null?anom.ContainProgress:-1f):0.###} revealName={revealName} opArr={opArrivedCount}");
     }
 
     private void UpdateProgressBar(float progress01, string progressPrefix, bool alwaysVisible = false, string overrideText = null, bool showPercent = true)
@@ -484,7 +482,7 @@ public class Anomaly : MonoBehaviour
             return;
         }
 
-        var node = gc.State.Cities.Find(n => n != null && n.Id == _nodeId);
+        var node = gc.State.Cities.Find(n => n != null);
         if (node == null)
         {
             Debug.Log("2");
