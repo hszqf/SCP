@@ -31,7 +31,7 @@ namespace Settlement
                 {
                     case AnomalyPhase.Investigate:
                         {
-                            float d01 = Sim.CalcInvestigateDelta01_FromRoster(state, anom, invArrived, DataRegistry.Instance);
+                            float d01 = SettlementUtil.CalcInvestigateDelta01_FromRoster(state, anom, invArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} invArr={invArrived.Count} addInv01={d01:0.###} cur={anom.InvestigateProgress:0.###}");
 
                             if (state.UseSettlement_AnomalyWork)
@@ -42,7 +42,7 @@ namespace Settlement
                         break;
                     case AnomalyPhase.Contain:
                         {
-                            float d01 = Sim.CalcContainDelta01_FromRoster(state, anom, conArrived, DataRegistry.Instance);
+                            float d01 = SettlementUtil.CalcContainDelta01_FromRoster(state, anom, conArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} conArr={conArrived.Count} addCon01={d01:0.###} cur={anom.ContainProgress:0.###}");
 
                             if (state.UseSettlement_AnomalyWork)
@@ -53,7 +53,7 @@ namespace Settlement
                         break;
                     case AnomalyPhase.Operate:
                         {
-                            int dNE = Sim.CalcNegEntropyDelta_FromRoster(state, anom, opArrived, DataRegistry.Instance);
+                            int dNE = SettlementUtil.CalcNegEntropyDelta_FromRoster(state, anom, opArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} opArr={opArrived.Count} addNegEntropy={dNE}");
 
                             if (state.UseSettlement_AnomalyWork)

@@ -82,7 +82,7 @@ namespace Settlement
                     {
                         hitCount++;
 
-                        int deltaPop = Sim.CalcAnomalyCityPopDelta(state, a, city);
+                        int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
 
                         // Apply population change now (actual deduction) if delta > 0
                         if (deltaPop > 0)

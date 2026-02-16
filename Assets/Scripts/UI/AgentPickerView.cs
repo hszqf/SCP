@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using Core;
+using Settlement;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -153,7 +154,7 @@ public class AgentPickerView : MonoBehaviour, IModalClosable
         int level = Mathf.Max(1, a.Level);
         int hpMax = Mathf.Max(1, a.MaxHP);
         int sanMax = Mathf.Max(1, a.MaxSAN);
-        int expNeed = Sim.ExpToNext(level);
+        int expNeed = SettlementUtil.ExpToNext(level);
         string vitals = $"HP {a.HP}/{hpMax}  SAN {a.SAN}/{sanMax}  EXP {a.Exp}/{expNeed}";
         string attrSummary = $"P{a.Perception} O{a.Operation} R{a.Resistance} Pow{a.Power}";
         return $"{vitals}  {attrSummary}";

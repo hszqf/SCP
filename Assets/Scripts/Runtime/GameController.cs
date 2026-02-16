@@ -262,7 +262,7 @@ public class GameController : MonoBehaviour
             if (!state.UseSettlement_Pipeline)
             {
                 // Legacy path
-                Sim.StepDay(state, gc._rng);
+               // Sim.StepDay(state, gc._rng);
                 result?.Log("Stage_EndDay_Core legacy StepDay");
                 return;
             }
