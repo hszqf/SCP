@@ -257,36 +257,35 @@ public class GameController : MonoBehaviour
         public string Name => "EndDay.Core";
         public void Execute(GameController gc, GameState state, DayEndResult result)
         {
-            // Original core settlement logic
-            Sim.StepDay(state, gc._rng);
+            if (state == null) return;
 
-            // New: invoke settlement sub-systems in fixed order (no-op for now)
+            if (!state.UseSettlement_Pipeline)
+            {
+                // Legacy path
+                Sim.StepDay(state, gc._rng);
+                result?.Log("Stage_EndDay_Core legacy StepDay");
+                return;
+            }
+
+            // Pipeline path: do NOT call Sim.StepDay
+            // TODO: 这里后续应换成 Sim.AdvanceDay_Only(state)（如果你已加过就直接调用）
+            // 暂时最小：只递增 Day（别做其它结算）
+            state.Day += 1;
+
+            // 1..5 严格顺序
             Settlement.AnomalyWorkSystem.Apply(gc, state, result);
-            // T6.6: After main settlement is applied (progress updated), recall agents for completed phases.
-            // Must run before Notify() so UI sees recall tokens / Travelling state in the same frame.
-            Core.PhaseCompletionRecallSystem.Apply(gc);
             Settlement.AnomalyBehaviorSystem.Apply(gc, state, result);
             Settlement.CityEconomySystem.Apply(gc, state, result);
             Settlement.BaseRecoverySystem.Apply(gc, state, result);
             Settlement.SettlementCleanupSystem.Apply(gc, state, result);
 
-            // Generate scheduled anomalies after settlement pipeline if the GameState requests it.
-            // This prevents newly spawned anomalies from being processed by the same day's settlement systems.
-            try
-            {
-                if (state != null && state.UseSettlement_Pipeline)
-                {
-                    Core.Sim.GenerateScheduledAnomalies_Public(state, gc._rng);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-            
+            // 完成判定与自动召回（你现在放哪都行，但至少不要在 Sim.StepDay 之前）
+            Core.PhaseCompletionRecallSystem.Apply(gc);
 
+            // 仅 pipeline 下：结算完成后再生成当日计划异常（避免同日被处理）
+            Core.Sim.GenerateScheduledAnomalies_Public(state, gc._rng);
 
-            result?.Log("Stage_EndDay_Core executed");
+            result?.Log("Stage_EndDay_Core pipeline executed");
         }
     }
 
