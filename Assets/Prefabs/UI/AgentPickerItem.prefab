@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 1120503368642989573}
   - component: {fileID: 1191648588066900927}
   m_Layer: 0
-  m_Name: AgentPickerItemNew
+  m_Name: AgentPickerItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
