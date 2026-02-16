@@ -518,8 +518,6 @@ public class Anomaly : MonoBehaviour
         var agentIds = CollectArrivedAgentIds(node);
         if (agentIds.Count == 0)
         {
-            Debug.Log("3");
-
             agentGridRoot.gameObject.SetActive(false);
             return;
         }

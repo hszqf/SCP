@@ -34,8 +34,10 @@ public class City : MonoBehaviour
 
     private void OnEnable()
     {
+
         var rt = transform as RectTransform;
         if (rt == null || string.IsNullOrEmpty(cityId)) return;
+
 
         if (DispatchAnimationSystem.I != null)
             DispatchAnimationSystem.I.RegisterNode(cityId, rt);

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+[DefaultExecutionOrder(-1000)]
+
 public sealed class MapEntityRegistry : MonoBehaviour
 {
     public static MapEntityRegistry I { get; private set; }
@@ -24,6 +26,7 @@ public sealed class MapEntityRegistry : MonoBehaviour
     public void RegisterCity(City view)
     {
         if (view == null) return;
+
         var key = NormalizeKey(view.CityId);
         if (string.IsNullOrEmpty(key)) return;
         _cityById[key] = view;
