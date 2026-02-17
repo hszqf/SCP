@@ -459,72 +459,36 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         var gc = GameController.I;
         if (gc == null) return;
+
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetCity(_nodeId) : null;
         if (node == null) return;
 
-        // Manage -> NodeTask.Manage targeting managed anomaly id
-        if (slot == AssignmentSlot.Operate)
-        {
-            // try to resolve managed anomaly in this node
-            var managed = FindManagedAnomaly(node, targetId);
-            if (managed == null && node.ManagedAnomalies != null)
-            {
-                managed = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyDefId == targetId);
-            }
-            if (managed == null) return;
+        // ✅ 从现在开始：不再创建/更新/取消 NodeTask。派遣真相已由 TrySetRoster + MovementToken 表达。
 
-            var mt = gc.CreateManageTask(_nodeId, managed.AnomalyInstanceId);
-            if (mt == null) return;
-
-            if (ids == null || ids.Count == 0)
-            {
-                gc.CancelOrRetreatTask(mt.Id);
-            }
-            else
-            {
-                gc.AssignTask(mt.Id, ids);
-                if (managed.StartDay <= 0) managed.StartDay = gc.State.Day;
-            }
-
-            return;
-        }
-
-        // Investigate
-        if (slot == AssignmentSlot.Investigate)
-        {
-            var t = node.Tasks?.LastOrDefault(x => x != null && x.Type == TaskType.Investigate && x.State == TaskState.Active && x.SourceAnomalyId == targetId);
-            if (t == null)
-            {
-                t = gc.CreateInvestigateTask(_nodeId);
-                if (t != null) t.SourceAnomalyId = targetId;
-            }
-
-            if (t == null) return;
-            if (ids == null || ids.Count == 0) gc.CancelOrRetreatTask(t.Id);
-            else gc.AssignTask(t.Id, ids);
-
-            return;
-        }
-
-        // Contain
+        // Contain：仍可维护“已知异常 defId”列表（如果你后续还用它做解锁/提示）
         if (slot == AssignmentSlot.Contain)
         {
             if (string.IsNullOrEmpty(targetId)) return;
+
             if (node.KnownAnomalyDefIds == null) node.KnownAnomalyDefIds = new List<string>();
             if (!node.KnownAnomalyDefIds.Contains(targetId)) node.KnownAnomalyDefIds.Add(targetId);
+            return;
+        }
 
-            var t = node.Tasks?.LastOrDefault(x => x != null && x.Type == TaskType.Contain && x.State == TaskState.Active && x.SourceAnomalyId == targetId);
-            if (t == null)
-            {
-                t = gc.CreateContainTask(_nodeId, targetId);
-            }
+        // Operate：写 managed.StartDay（可选，保留你原行为）
+        if (slot == AssignmentSlot.Operate)
+        {
+            var managed = FindManagedAnomaly(node, targetId);
+            if (managed == null && node.ManagedAnomalies != null)
+                managed = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyDefId == targetId);
 
-            if (t == null) return;
-            if (ids == null || ids.Count == 0) gc.CancelOrRetreatTask(t.Id);
-            else gc.AssignTask(t.Id, ids);
+            if (managed != null && managed.StartDay <= 0)
+                managed.StartDay = gc.State.Day;
 
             return;
         }
+
+        // Investigate：不做任何 legacy 同步
     }
 
     // --------------------
