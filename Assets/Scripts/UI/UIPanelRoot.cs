@@ -38,12 +38,9 @@ public class UIPanelRoot : MonoBehaviour
     private List<GameObject> _modalStack = new List<GameObject>();
     private bool _confirmDialogOnClosedHooked;
 
-    private string _currentCityId;
     private string _manageCityId; // 当前打开的管理面板所对应的节点（与 NodePanel 的当前节点解耦）
-    private string _pickerTaskId;
-    private string _manageTargetAnomalyId;
 
-    public string CurrentNodeId => _currentCityId;
+
     public string ManageNodeId => _manageCityId;
 
     private void Awake()
