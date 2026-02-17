@@ -135,32 +135,55 @@ public class UIPanelRoot : MonoBehaviour
     }
 
     // ================== ASSIGNMENT PANEL (Investigate / Contain) ==================
-
-    public void OpenInvestigateAssignPanelForNode(string targetAnomalyId)
+    public void OpenInvestigateAssignPanelForAnomaly(string anomalyInstanceId)
     {
         if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(anomalyInstanceId)) return;
 
         EnsureManagePanel();
         if (!_managePanelView) return;
 
         var gc = GameController.I;
-
+        var state = gc.State;
         var registry = DataRegistry.Instance;
-        var targets = BuildInvestigateTargets(registry, targetAnomalyId);
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Investigate, 1, int.MaxValue);
 
+        // Resolve anomaly + display name (def name)
+        var anom = Core.DispatchSystem.FindAnomaly(state, anomalyInstanceId);
+        var defId = anom?.AnomalyDefId;
+
+        string displayName = null;
+        if (!string.IsNullOrEmpty(defId) &&
+            registry != null &&
+            registry.AnomaliesById != null &&
+            registry.AnomaliesById.TryGetValue(defId, out var def) &&
+            def != null)
+        {
+            displayName = def.name;
+        }
+        if (string.IsNullOrEmpty(displayName))
+            displayName = !string.IsNullOrEmpty(defId) ? defId : anomalyInstanceId;
+
+        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Investigate, 1, int.MaxValue);
 
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
         PushModal(_managePanel, "open manage");
         RefreshModalStack("open manage", _managePanel);
-        string hint = string.IsNullOrEmpty(targetAnomalyId)
-            ? "派遣干员进行调查"
-            : "派遣干员调查该异常";
+
+        var targets = new List<AnomalyManagePanel.TargetEntry>
+    {
+        new AnomalyManagePanel.TargetEntry
+        {
+            id = anomalyInstanceId,
+            title = $"调查：{displayName}",
+            subtitle = null,
+            disabled = false
+        }
+    };
 
         _managePanelView.ShowGeneric(
-            header: $"调查",
-            hint: hint,
+            header: "调查",
+            hint: "派遣干员调查该异常",
             targets: targets,
             agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
@@ -172,42 +195,11 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
-                // New: ensure a target is selected
-                if (string.IsNullOrEmpty(targetId))
-                {
-                    ShowInfo("派遣失败", "未选择调查目标");
-                    return;
-                }
-
-                // New: write roster into AnomalyState before creating legacy task
-                var state = gc.State;
-                var anomalyKey = targetId; // migration: ManagedAnomalyState.Id (may be defId)
-
-                // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
-                Core.AnomalyState anom = null;
-                anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
-                if (anom == null && !string.IsNullOrEmpty(anomalyKey))
-                {
-                    var list = state.Anomalies;
-                    if (list != null)
-                    {
-                        for (int i = 0; i < list.Count; i++)
-                        {
-                            var a = list[i];
-                            if (a == null) continue;
-                            if (!string.IsNullOrEmpty(a.NodeId) &&
-                                !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
-                            {
-                                anom = a;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (anom != null) anomalyKey = anom.Id;
+                // single-target flow: fallback to anomalyInstanceId
+                var key = string.IsNullOrEmpty(targetId) ? anomalyInstanceId : targetId;
 
                 string err;
-                if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, AssignmentSlot.Investigate, agentIds, out err))
+                if (!Core.DispatchSystem.TrySetRoster(state, key, AssignmentSlot.Investigate, agentIds, out err))
                 {
                     ShowInfo("派遣失败", err);
                     return;
@@ -225,138 +217,13 @@ public class UIPanelRoot : MonoBehaviour
                     return;
                 }
 
-                if (_managePanel)
-                {
-                    CloseModal(_managePanel, "assign_confirm");
-                }
-                else
-                {
-                    _managePanelView.Hide();
-                }
-                //RefreshNodePanel();
+                CloseModal(_managePanel, "assign_confirm");
+                // RefreshNodePanel(); // 新结构不需要
             },
             modeLabel: "Investigate"
         );
-    }
 
-    public void OpenContainAssignPanelForNode(string cityId)
-    {
-        if (GameController.I == null) return;
-        if (string.IsNullOrEmpty(cityId)) return;
-
-        EnsureManagePanel();
-        if (!_managePanelView) return;
-
-        var gc = GameController.I;
-        var city = gc.GetCity(cityId);
-        if (city == null)
-        {
-            ShowInfo("派遣失败", "节点不存在");
-            return;
-        }
-
-        var registry = DataRegistry.Instance;
-        var targets = BuildContainTargets(city, registry);
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Contain, 1, int.MaxValue);
-
-        string hint = targets.Count == 0
-            ? "无已确认异常：请先调查（随意或针对新闻）以发现异常"
-            : "选择要收容的异常并派遣干员";
-
-        _currentCityId = cityId;
-        _manageCityId = cityId;
-        if (_managePanel) _managePanel.SetActive(true);
-        _managePanel.transform.SetAsLastSibling();
-        PushModal(_managePanel, "open manage");
-        RefreshModalStack("open manage", _managePanel);
-        _managePanelView.ShowGeneric(
-            header: $"Contain | {cityId}",
-            hint: hint,
-            targets: targets,
-            agentSlotsMin: slotsMin,
-            agentSlotsMax: slotsMax,
-            onConfirm: (targetAnomalyId, agentIds) =>
-            {
-                if (string.IsNullOrEmpty(targetAnomalyId))
-                {
-                    ShowInfo("派遣失败", "未选择收容目标");
-                    return;
-                }
-
-                if (agentIds == null || agentIds.Count == 0)
-                {
-                    ShowInfo("派遣失败", "未选择干员");
-                    return;
-                }
-
-                // New: write roster into AnomalyState before creating legacy task
-                var state = gc.State;
-                var anomalyKey = targetAnomalyId; // migration: ManagedAnomalyState.Id (may be defId)
-
-                // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
-                Core.AnomalyState anom = null;
-                anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
-                if (anom == null && !string.IsNullOrEmpty(cityId) && !string.IsNullOrEmpty(anomalyKey))
-                {
-                    var list = state.Anomalies;
-                    if (list != null)
-                    {
-                        for (int i = 0; i < list.Count; i++)
-                        {
-                            var a = list[i];
-                            if (a == null) continue;
-                            if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == cityId &&
-                                !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
-                            {
-                                anom = a;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (anom != null) anomalyKey = anom.Id;
-
-                string err;
-                if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, AssignmentSlot.Contain, agentIds, out err))
-                {
-                    ShowInfo("派遣失败", err);
-                    return;
-                }
-
-                if (!GameControllerTaskExt.AreAgentsUsable(gc, agentIds, out var usableReason))
-                {
-                    ShowInfo("派遣失败", usableReason);
-                    return;
-                }
-
-                if (GameControllerTaskExt.AreAgentsBusy(gc, agentIds, null))
-                {
-                    ShowInfo("派遣失败", "部分干员正在其他任务执行中");
-                    return;
-                }
-
-                string containableId = EnsureContainableForAnomaly(city, registry, targetAnomalyId);
-                var task = gc.CreateContainTask(cityId, containableId);
-                if (task == null)
-                {
-                    ShowInfo("派遣失败", "创建任务失败");
-                    return;
-                }
-
-                task.SourceAnomalyId = targetAnomalyId;
-                gc.AssignTask(task.Id, agentIds);
-                if (_managePanel)
-                {
-                    CloseModal(_managePanel, "assign_confirm");
-                }
-                else
-                {
-                    _managePanelView.Hide();
-                }
-                //RefreshNodePanel();
-            },
-            modeLabel: "Contain"
-        );
+        // AnomalyManagePanel.ShowGeneric already auto-selects single target when targets.Count == 1.
     }
 
     // 新增：针对指定 anomalyKey 打开的 Contain 指派面板（targets 只有 1 个并自动选中）
@@ -484,74 +351,6 @@ public class UIPanelRoot : MonoBehaviour
         // AnomalyManagePanel.ShowGeneric will auto-select the single provided target.
     }
 
-    private List<AnomalyManagePanel.TargetEntry> BuildInvestigateTargets(DataRegistry registry, string targetAnomalyId)
-    {
-        var targets = new List<AnomalyManagePanel.TargetEntry>();
-        if (!string.IsNullOrEmpty(targetAnomalyId))
-        {
-            string title = targetAnomalyId;
-            if (registry != null && registry.AnomaliesById.TryGetValue(targetAnomalyId, out var def) && def != null && !string.IsNullOrEmpty(def.name))
-                title = def.name;
-
-            targets.Add(new AnomalyManagePanel.TargetEntry
-            {
-                id = targetAnomalyId,
-                title = $"调查异常：{title}",
-                subtitle = null,
-                disabled = false
-            });
-            return targets;
-        }
-
-        targets.Add(new AnomalyManagePanel.TargetEntry
-        {
-            id = "",
-            title = "随意调查",
-            subtitle = null,
-            disabled = false
-        });
-
-        return targets;
-    }
-
-    private List<AnomalyManagePanel.TargetEntry> BuildContainTargets(CityState city, DataRegistry registry)
-    {
-        var targets = new List<AnomalyManagePanel.TargetEntry>();
-        var known = city?.KnownAnomalyDefIds;
-        if (known == null || known.Count == 0) return targets;
-
-        // Use intersection: Known ∩ ActiveAnomalyIds (to avoid containing anomalies that have disappeared)
-        var activeSet = new HashSet<string>(city.ActiveAnomalyIds ?? new List<string>());
-
-        foreach (var anomalyId in known)
-        {
-            if (string.IsNullOrEmpty(anomalyId)) continue;
-            if (!activeSet.Contains(anomalyId)) continue;  // Only include if still active
-
-            var def = registry.AnomaliesById.TryGetValue(anomalyId, out var anomalyDef) ? anomalyDef : null;
-            string title = def?.name ?? anomalyId;
-
-            targets.Add(new AnomalyManagePanel.TargetEntry
-            {
-                id = anomalyId,
-                title = title,
-                subtitle = null,
-                disabled = false
-            });
-        }
-
-        return targets;
-    }
-
-    private string EnsureContainableForAnomaly(CityState city, DataRegistry registry, string anomalyId)
-    {
-        if (city == null || string.IsNullOrEmpty(anomalyId)) return null;
-        city.KnownAnomalyDefIds ??= new List<string>();
-        if (!city.KnownAnomalyDefIds.Contains(anomalyId))
-            city.KnownAnomalyDefIds.Add(anomalyId);
-        return anomalyId;
-    }
-
     // ================== MANAGE PANEL ==================
 
     void EnsureManagePanel()
@@ -567,40 +366,6 @@ public class UIPanelRoot : MonoBehaviour
         _managePanel.SetActive(false);
     }
 
-    // 由 NodePanel 的“管理”按钮调用（推荐：传入当前节点 id）
-    public void OpenManage(string nodeId)
-    {
-        _manageCityId = nodeId;
-        _manageTargetAnomalyId = null;
-        OpenManage();
-    }
-
-    public void OpenManage(string cityId, string managedAnomalyId)
-    {
-        _manageCityId = cityId;
-        _manageTargetAnomalyId = managedAnomalyId;
-        OpenManage();
-    }
-
-    // 兼容旧调用：若未传 nodeId，则默认使用当前打开的节点
-    public void OpenManage()
-    {
-        EnsureManagePanel();
-        if (_managePanel)
-        {
-            if (_managePanelView) _managePanelView.ShowForNode(_manageCityId, _manageTargetAnomalyId);
-            _managePanel.SetActive(true);
-            if (_managePanelView) _managePanelView.ShowForNode(_manageCityId, _manageTargetAnomalyId);
-            _managePanel.transform.SetAsLastSibling();
-            PushModal(_managePanel, "open manage");
-            RefreshModalStack("open manage", _managePanel);
-        }
-    }
-
-    public void CloseManage()
-    {
-        if (_managePanel) CloseModal(_managePanel, "close manage");
-    }
 
     // ================== ROSTER ==================
 

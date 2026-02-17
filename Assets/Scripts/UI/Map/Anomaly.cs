@@ -433,7 +433,7 @@ public class Anomaly : MonoBehaviour
 
                 // Investigate/Investigating/Discovered/Unknown 统一走调查
                 default:
-                    root.OpenInvestigateAssignPanelForNode(anomalyState.Id);
+                    root.OpenInvestigateAssignPanelForAnomaly(anomalyState.Id);
                     return;
             }
         }
