@@ -139,6 +139,14 @@
           ],
           "p2": [],
           "p3": []
+        },
+        {
+          "key": "AnomalySlotsMax",
+          "p1": [
+            5
+          ],
+          "p2": [],
+          "p3": []
         }
       ]
     },
@@ -5060,54 +5068,6 @@
         {
           "day": 500,
           "AnomaliesGenNum": 4
-        }
-      ]
-    },
-    "TaskDefs": {
-      "idField": "taskDefId",
-      "columns": [
-        {
-          "name": "taskDefId",
-          "type": "string"
-        },
-        {
-          "name": "taskType",
-          "type": "string"
-        },
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "agentSlotsMin",
-          "type": "int"
-        },
-        {
-          "name": "agentSlotsMax",
-          "type": "int"
-        }
-      ],
-      "rows": [
-        {
-          "taskDefId": "TASK_INVESTIGATE",
-          "taskType": "Investigate",
-          "name": "调查",
-          "agentSlotsMin": 1,
-          "agentSlotsMax": 5
-        },
-        {
-          "taskDefId": "TASK_CONTAIN",
-          "taskType": "Contain",
-          "name": "收容",
-          "agentSlotsMin": 1,
-          "agentSlotsMax": 5
-        },
-        {
-          "taskDefId": "TASK_MANAGE",
-          "taskType": "Manage",
-          "name": "管理",
-          "agentSlotsMin": 1,
-          "agentSlotsMax": 5
         }
       ]
     }

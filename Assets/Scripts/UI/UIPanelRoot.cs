@@ -159,7 +159,7 @@ public class UIPanelRoot : MonoBehaviour
         if (string.IsNullOrEmpty(displayName))
             displayName = !string.IsNullOrEmpty(defId) ? defId : anomalyInstanceId;
 
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Investigate, 1, int.MaxValue);
+        int slotsMax = Mathf.Max(1, registry.GetBalanceIntWithWarn("AnomalySlotsMax", 5));
 
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
@@ -181,7 +181,6 @@ public class UIPanelRoot : MonoBehaviour
             header: "调查",
             hint: "派遣干员调查该异常",
             targets: targets,
-            agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
             onConfirm: (targetId, agentIds) =>
             {
@@ -234,7 +233,7 @@ public class UIPanelRoot : MonoBehaviour
         var gc = GameController.I;
 
         var registry = DataRegistry.Instance;
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Contain, 1, int.MaxValue);
+        int slotsMax = Mathf.Max(1, registry.GetBalanceIntWithWarn("AnomalySlotsMax", 5));
 
         if (_managePanel) _managePanel.SetActive(true);
         _managePanel.transform.SetAsLastSibling();
@@ -256,7 +255,6 @@ public class UIPanelRoot : MonoBehaviour
             header: $"收容",
             hint: "派遣干员进行收容",
             targets: targets,
-            agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
             onConfirm: (targetId, agentIds) =>
             {
@@ -299,7 +297,7 @@ public class UIPanelRoot : MonoBehaviour
 
 
         var registry = DataRegistry.Instance;
-        var (slotsMin, slotsMax) = registry.GetTaskAgentSlotRangeWithWarn(TaskType.Manage, 0, int.MaxValue);
+        int slotsMax = Mathf.Max(1, registry.GetBalanceIntWithWarn("AnomalySlotsMax", 5));
 
 
         if (_managePanel) _managePanel.SetActive(true);
@@ -322,7 +320,6 @@ public class UIPanelRoot : MonoBehaviour
             header: $"管理",
             hint: "派遣干员进行管理（产出负熵）",
             targets: targets,
-            agentSlotsMin: slotsMin,
             agentSlotsMax: slotsMax,
             onConfirm: (targetId, agentIds) =>
             {

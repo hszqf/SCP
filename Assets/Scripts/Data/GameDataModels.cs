@@ -9,9 +9,6 @@ namespace Data
         public MetaRow meta = new();
         public Dictionary<string, BalanceValue> balance = new();
         public List<AnomalyDef> anomalies = new();
-        public List<TaskDef> taskDefs = new();
-        public List<EffectDef> effects = new();
-        public List<EffectOpRow> effectOps = new();
         public Dictionary<string, GameDataTable> tables = new();
     }
 
@@ -66,15 +63,7 @@ namespace Data
         public int[] manReq = new int[4];
     }
 
-    [Serializable]
-    public class TaskDef
-    {
-        public string taskDefId;
-        public string taskType;
-        public string name;
-        public int agentSlotsMin;
-        public int agentSlotsMax;
-    }
+
 
     [Serializable]
     public class AnomaliesGenDef
@@ -83,25 +72,7 @@ namespace Data
         public int AnomaliesGenNum;
     }
 
-    [Serializable]
-    public class EffectDef
-    {
-        public string effectId;
-        public string comment;
-    }
 
-    [Serializable]
-    public class EffectOpRow
-    {
-        public string effectId;
-        public string scope;
-        public string statKey;
-        public string op;
-        public float value;
-        public float? min;
-        public float? max;
-        public string comment;
-    }
 
     [Serializable]
     public class GameDataTable

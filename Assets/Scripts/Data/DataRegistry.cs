@@ -21,14 +21,10 @@ namespace Data
         private static DataRegistry _instance;
         public static DataRegistry Instance => _instance ??= LoadFromStreamingAssets();
 
-        private readonly HashSet<TaskType> _taskDefMissingWarned = new();
-        private bool _hasTaskDefsTable;
+  
 
         public GameDataRoot Root { get; private set; }
         public Dictionary<string, AnomalyDef> AnomaliesById { get; private set; } = new();
-        public Dictionary<TaskType, TaskDef> TaskDefsByType { get; private set; } = new();
-        public Dictionary<string, TaskDef> TaskDefsById { get; private set; } = new();
-
         public Dictionary<string, BalanceValue> Balance { get; private set; } = new();
         public TableRegistry Tables { get; private set; } = new();
         public List<AnomaliesGenDef> AnomaliesGen { get; private set; } = new();
@@ -129,13 +125,11 @@ namespace Data
 
         private void BuildIndexes()
         {
-            _taskDefMissingWarned.Clear();
             Balance = Root.balance ?? new Dictionary<string, BalanceValue>();
 
             Tables = new TableRegistry(Root.tables);
             Debug.Log($"[Tables] loaded {Tables.TableCount} tables");
             LogTablesSanity();
-            _hasTaskDefsTable = Tables.TryGetTable("TaskDefs", out _);
 
             AnomaliesById = new Dictionary<string, AnomalyDef>();
             foreach (var row in Tables.GetRows("Anomalies"))
@@ -268,23 +262,7 @@ namespace Data
             => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim().ToLowerInvariant();
 
 
-        private int GetTableRowCountWithWarn(string tableName)
-        {
-            if (Tables == null || !Tables.TryGetTable(tableName, out var table) || table?.rows == null)
-            {
-                Debug.LogWarning($"[WARN] Missing table: {tableName}.");
-                return 0;
-            }
 
-            return table.rows.Count;
-        }
-
-        private void LogGroupIndexSummary<T>(string tableName, string columnName, Dictionary<string, List<T>> groups)
-        {
-            var rows = Tables?.GetRows(tableName)?.Count ?? 0;
-            var groupCount = groups?.Count ?? 0;
-            Debug.Log($"[DataIndex] {tableName} rows={rows} groups({columnName})={groupCount}");
-        }
 
         private static string GetRowString(Dictionary<string, object> row, string column, string fallback = "")
         {
@@ -298,11 +276,6 @@ namespace Data
             return TableRegistry.TryCoerceInt(raw, out var value) ? value : fallback;
         }
 
-        private static int? GetRowIntNullable(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return null;
-            return TableRegistry.TryCoerceInt(raw, out var value) ? value : null;
-        }
 
         private static float GetRowFloat(Dictionary<string, object> row, string column, float fallback = 0f)
         {
@@ -310,18 +283,7 @@ namespace Data
             return TableRegistry.TryCoerceFloat(raw, out var value) ? value : fallback;
         }
 
-        private static float? GetRowFloatNullable(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return null;
-            return TableRegistry.TryCoerceFloat(raw, out var value) ? value : null;
-        }
 
-        private static float[] GetRowFloatList(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return null;
-            var list = TableRegistry.CoerceFloatList(raw);
-            return list != null && list.Count > 0 ? list.ToArray() : null;
-        }
 
         private static int[] GetRowIntArray4(Dictionary<string, object> row, string column, string anomalyId)
         {
@@ -373,56 +335,9 @@ namespace Data
             return $"[{string.Join(",", values)}]";
         }
 
-        private static bool? GetRowBoolNullable(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return null;
-            return TableRegistry.TryCoerceBool(raw, out var value) ? value : null;
-        }
 
-        private static List<string> GetRowStringList(Dictionary<string, object> row, string column)
-        {
-            if (row == null || !row.TryGetValue(column, out var raw)) return new List<string>();
-            return TableRegistry.CoerceStringList(raw);
-        }
 
-     
-
-        public TaskDef GetTaskDefById(string taskDefId)
-            => !string.IsNullOrEmpty(taskDefId) && TaskDefsById.TryGetValue(taskDefId, out var def) ? def : null;
-
-        public bool TryGetTaskDefForType(TaskType type, out TaskDef def)
-        {
-            if (!_hasTaskDefsTable)
-            {
-                def = null;
-                return false;
-            }
-            if (TaskDefsByType.TryGetValue(type, out def)) return true;
-            WarnMissingTaskDef(type);
-            def = null;
-            return false;
-        }
-
-        public (int min, int max) GetTaskAgentSlotRangeWithWarn(TaskType type, int fallbackMin, int fallbackMax)
-        {
-            if (TryGetTaskDefForType(type, out var def))
-            {
-                int min = def.agentSlotsMin > 0 ? def.agentSlotsMin : fallbackMin;
-                int max = def.agentSlotsMax > 0 ? def.agentSlotsMax : fallbackMax;
-                if (max < min) max = min;
-                return (min, max);
-            }
-
-            return (fallbackMin, fallbackMax);
-        }
-
-        private void WarnMissingTaskDef(TaskType type)
-        {
-            if (!_hasTaskDefsTable) return;
-            if (_taskDefMissingWarned.Add(type))
-                Debug.LogWarning($"[TaskDef] Missing TaskDefs entry for taskType={type}. Using fallback values.");
-        }
-
+    
         private int GetBalanceInt(string key, int fallback)
         {
             if (!TryGetBalanceRow(key, out _))

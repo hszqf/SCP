@@ -132,19 +132,17 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         string header,
         string hint,
         List<TargetEntry> targets,
-        int agentSlotsMin,
         int agentSlotsMax,
         Action<string, List<string>> onConfirm,
         string modeLabel = "Generic")
     {
-        ShowGenericInternal(header, hint, targets, agentSlotsMin, agentSlotsMax, onConfirm, modeLabel);
+        ShowGenericInternal(header, hint, targets, agentSlotsMax, onConfirm, modeLabel);
     }
 
     private void ShowGenericInternal(
         string header,
         string hint,
         List<TargetEntry> targets,
-        int agentSlotsMin,
         int agentSlotsMax,
         Action<string, List<string>> onConfirm,
         string modeLabel)
@@ -156,7 +154,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         else if (string.Equals(modeLabel, "Operate", StringComparison.OrdinalIgnoreCase)) _mode = AssignPanelMode.Operate;
         else _mode = AssignPanelMode.Generic;
         _onConfirm = onConfirm;
-        _slotsMin = agentSlotsMin;
         _slotsMax = agentSlotsMax;
 
         // Allow zero-agent selection for all modes (withdraw)
