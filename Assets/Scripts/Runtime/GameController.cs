@@ -470,8 +470,8 @@ public class GameController : MonoBehaviour
         if (n.ManagedAnomalies != null && n.ManagedAnomalies.Count > 0)
         {
             contained = new HashSet<string>(n.ManagedAnomalies
-                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyId))
-                .Select(m => m.AnomalyId));
+                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyDefId))
+                .Select(m => m.AnomalyDefId));
         }
 
         // Validate target; fallback to first
@@ -508,17 +508,17 @@ public class GameController : MonoBehaviour
 
         // Validate target
         string target = managedAnomalyId;
-        if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.Id == target))
+        if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.AnomalyInstanceId == target))
             return null;
 
-        var managed = n.ManagedAnomalies.FirstOrDefault(m => m != null && m.Id == target);
+        var managed = n.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyInstanceId == target);
         if (managed == null)
             return null;
 
-        string defId = managed.AnomalyId;
+        string defId = managed.AnomalyDefId;
         if (string.IsNullOrEmpty(defId))
         {
-            Debug.LogWarning($"[ManageTask] managedAnomalyId={target} missing AnomalyId; ManageDaily impacts will be skipped.");
+            Debug.LogWarning($"[ManageTask] managedAnomalyId={target} missing AnomalyDefId; ManageDaily impacts will be skipped.");
         }
 
         if (n.Tasks == null) n.Tasks = new List<NodeTask>();

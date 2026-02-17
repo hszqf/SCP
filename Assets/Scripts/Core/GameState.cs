@@ -88,10 +88,10 @@ namespace Core
     [Serializable]
     public class ManagedAnomalyState
     {
-        public string Id;
+        public string AnomalyInstanceId;
         public string Name;
         public int Level = 1;
-        public string AnomalyId;
+        public string AnomalyDefId;
         public string AnomalyClass;
 
         // 左侧“已收藏异常”列表使用（后续可做收藏/取消收藏筛选）

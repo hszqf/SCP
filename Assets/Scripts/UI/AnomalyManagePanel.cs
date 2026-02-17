@@ -511,11 +511,11 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             var managed = FindManagedAnomaly(node, targetId);
             if (managed == null && node.ManagedAnomalies != null)
             {
-                managed = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyId == targetId);
+                managed = node.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyDefId == targetId);
             }
             if (managed == null) return;
 
-            var mt = gc.CreateManageTask(_nodeId, managed.Id);
+            var mt = gc.CreateManageTask(_nodeId, managed.AnomalyInstanceId);
             if (mt == null) return;
 
             if (ids == null || ids.Count == 0)
@@ -576,7 +576,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private static ManagedAnomalyState FindManagedAnomaly(CityState node, string anomalyId)
     {
         if (node?.ManagedAnomalies == null || string.IsNullOrEmpty(anomalyId)) return null;
-        return node.ManagedAnomalies.FirstOrDefault(x => x != null && x.Id == anomalyId);
+        return node.ManagedAnomalies.FirstOrDefault(x => x != null && x.AnomalyInstanceId == anomalyId);
     }
 
     private static NodeTask FindManageTask(CityState node, string anomalyId)
@@ -638,7 +638,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         }
 
         int mgr = 0;
-        var mt = FindManageTask(node, m.Id);
+        var mt = FindManageTask(node, m.AnomalyInstanceId);
         if (mt?.AssignedAgentIds != null) mgr = mt.AssignedAgentIds.Count;
         string nodeName = "";
         if (gc != null && !string.IsNullOrEmpty(_nodeId))

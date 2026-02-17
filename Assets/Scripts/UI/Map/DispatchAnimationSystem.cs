@@ -698,8 +698,8 @@ public class DispatchAnimationSystem : MonoBehaviour
 
         if (task.Type == TaskType.Manage)
         {
-            var managed = node.ManagedAnomalies?.Find(m => m != null && m.Id == task.TargetManagedAnomalyId);
-            return managed?.AnomalyId ?? task.SourceAnomalyId;
+            var managed = node.ManagedAnomalies?.Find(m => m != null && m.AnomalyInstanceId == task.TargetManagedAnomalyId);
+            return managed?.AnomalyDefId ?? task.SourceAnomalyId;
         }
 
         if (!string.IsNullOrEmpty(task.SourceAnomalyId))
@@ -856,7 +856,7 @@ public class DispatchAnimationSystem : MonoBehaviour
 
         var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyKey);
         var nodeId = anom?.NodeId;
-        var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyId ?? anom?.Id;
+        var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyDefId ?? anom?.Id;
 
         var baseId = ResolveBaseNodeId();
 

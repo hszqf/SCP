@@ -140,7 +140,7 @@ namespace Core
                 bool alreadySpawned = s.Cities.Any(n =>
                     n != null &&
                     ((n.ActiveAnomalyIds != null && n.ActiveAnomalyIds.Contains(anomalyId)) ||
-                     (n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null && m.AnomalyId == anomalyId)) ||
+                     (n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null && m.AnomalyDefId == anomalyId)) ||
                      (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Contains(anomalyId))));
                 if (alreadySpawned)
                     continue;

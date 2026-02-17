@@ -155,8 +155,8 @@ public class AnomalySpawner : MonoBehaviour
             {
                 foreach (var managed in node.ManagedAnomalies)
                 {
-                    if (managed == null || string.IsNullOrEmpty(managed.AnomalyId)) continue;
-                    entries.Add((managed.AnomalyId, managed.Id));
+                    if (managed == null || string.IsNullOrEmpty(managed.AnomalyDefId)) continue;
+                    entries.Add((managed.AnomalyDefId, managed.AnomalyInstanceId));
                 }
             }
 

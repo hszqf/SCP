@@ -126,7 +126,7 @@ public class Anomaly : MonoBehaviour
         if (node == null) return;
 
         var managed = ResolveManagedAnomaly(node);
-        _managedAnomalyId = managed?.Id ?? _managedAnomalyId;
+        _managedAnomalyId = managed?.AnomalyInstanceId ?? _managedAnomalyId;
 
         // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
         var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
@@ -403,8 +403,8 @@ public class Anomaly : MonoBehaviour
     {
         if (node?.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return null;
         if (!string.IsNullOrEmpty(_managedAnomalyId))
-            return node.ManagedAnomalies.Find(m => m != null && m.Id == _managedAnomalyId);
-        return node.ManagedAnomalies.Find(m => m != null && string.Equals(m.AnomalyId, _anomalyId, System.StringComparison.OrdinalIgnoreCase));
+            return node.ManagedAnomalies.Find(m => m != null && m.AnomalyInstanceId == _managedAnomalyId);
+        return node.ManagedAnomalies.Find(m => m != null && string.Equals(m.AnomalyDefId, _anomalyId, System.StringComparison.OrdinalIgnoreCase));
     }
 
     private void HandleClick()
