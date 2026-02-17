@@ -22,7 +22,7 @@ namespace Settlement
             foreach (var a in state.Agents)
             {
                 if (a.LocationKind != AgentLocationKind.AtAnomaly) continue;
-                if (a.LocationAnomalyKey != canonicalKey) continue;
+                if (a.LocationAnomalyInstanceId != canonicalKey) continue;
                 if (!set.Contains(a.Id)) continue;
                 list.Add(a);
             }

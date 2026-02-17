@@ -21,7 +21,7 @@ namespace Core
     {
         public string TokenId;          // unique
         public string AgentId;
-        public string AnomalyKey;       // migration: ManagedAnomalyState.Id
+        public string AnomalyInstanceId;       // == AnomalyState.Id
         public AssignmentSlot Slot;     // Investigate/Contain/Operate
         public MovementTokenType Type;  // Dispatch/Recall
         public MovementTokenState State = MovementTokenState.Pending;

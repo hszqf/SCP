@@ -854,7 +854,7 @@ public class DispatchAnimationSystem : MonoBehaviour
             yield break;
         }
 
-        var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyKey);
+        var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyInstanceId);
         var nodeId = anom?.NodeId;
         var anomalyIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyDefId ?? anom?.Id;
 
@@ -922,7 +922,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         {
             // TravellingToAnomaly -> AtAnomaly
             if (ag.LocationKind == Core.AgentLocationKind.TravellingToAnomaly &&
-                ag.LocationAnomalyKey == token.AnomalyKey)
+                ag.LocationAnomalyInstanceId == token.AnomalyInstanceId)
             {
                 ag.LocationKind = Core.AgentLocationKind.AtAnomaly;
             }
@@ -930,7 +930,7 @@ public class DispatchAnimationSystem : MonoBehaviour
             {
                 // Tolerant: if state drifted, still land at anomaly
                 ag.LocationKind = Core.AgentLocationKind.AtAnomaly;
-                ag.LocationAnomalyKey = token.AnomalyKey;
+                ag.LocationAnomalyInstanceId = token.AnomalyInstanceId;
             }
             ag.LocationSlot = token.Slot;
         }
@@ -938,7 +938,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         {
             // Recall -> Base
             ag.LocationKind = Core.AgentLocationKind.Base;
-            ag.LocationAnomalyKey = null;
+            ag.LocationAnomalyInstanceId = null;
             ag.LocationSlot = token.Slot;
         }
     }

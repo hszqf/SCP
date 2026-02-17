@@ -53,7 +53,7 @@ namespace Core
 
         // When LocationKind is AtAnomaly / TravellingToAnomaly / TravellingToBase, this stores the anomaly key.
         // IMPORTANT: for now use AnomalyState.Id as the key (legacy stable id).
-        public string LocationAnomalyKey = null;
+        public string LocationAnomalyInstanceId = null;
 
         // Which roster slot this agent is assigned to while at an anomaly (for UI tag/debug).
         // Default Operate; meaningful only when LocationKind != Base.

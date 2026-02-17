@@ -274,7 +274,7 @@ public class Anomaly : MonoBehaviour
                     var ag = state.Agents[i];
                     if (ag == null) continue;
                     if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
-                    if (!string.Equals(ag.LocationAnomalyKey, anom.Id, System.StringComparison.Ordinal)) continue;
+                    if (!string.Equals(ag.LocationAnomalyInstanceId, anom.Id, System.StringComparison.Ordinal)) continue;
                     if (ag.LocationSlot == AssignmentSlot.Operate)
                         opArrivedCount++;
                 }
@@ -530,7 +530,7 @@ public class Anomaly : MonoBehaviour
 
             // only show agents whose location is at this anomaly
             if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
-            if (!string.Equals(ag.LocationAnomalyKey, _canonicalAnomalyKey, System.StringComparison.Ordinal)) continue;
+            if (!string.Equals(ag.LocationAnomalyInstanceId, _canonicalAnomalyKey, System.StringComparison.Ordinal)) continue;
 
             result.Add(ag.Id);
         }

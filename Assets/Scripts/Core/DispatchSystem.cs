@@ -110,8 +110,8 @@ namespace Core
                 {
                     // If already at this anomaly, skip enqueue
                     if (existing.LocationKind == AgentLocationKind.AtAnomaly &&
-                        !string.IsNullOrEmpty(existing.LocationAnomalyKey) &&
-                        existing.LocationAnomalyKey == canonicalKey)
+                        !string.IsNullOrEmpty(existing.LocationAnomalyInstanceId) &&
+                        existing.LocationAnomalyInstanceId == canonicalKey)
                     {
                         continue;
                     }
@@ -122,7 +122,7 @@ namespace Core
                 {
                     TokenId = Guid.NewGuid().ToString("N"),
                     AgentId = id,
-                    AnomalyKey = canonicalKey,
+                    AnomalyInstanceId = canonicalKey,
                     Slot = slot,
                     Type = MovementTokenType.Dispatch,
                     State = MovementTokenState.Pending,
@@ -139,8 +139,8 @@ namespace Core
                 {
                     if (!((existing.LocationKind == AgentLocationKind.AtAnomaly ||
                            existing.LocationKind == AgentLocationKind.TravellingToAnomaly) &&
-                          !string.IsNullOrEmpty(existing.LocationAnomalyKey) &&
-                          existing.LocationAnomalyKey == canonicalKey &&
+                          !string.IsNullOrEmpty(existing.LocationAnomalyInstanceId) &&
+                          existing.LocationAnomalyInstanceId == canonicalKey &&
                           existing.LocationSlot == slot))
                     {
                         // Not at/travelling to this anomaly+slot -> skip enqueue
@@ -153,7 +153,7 @@ namespace Core
                 {
                     TokenId = Guid.NewGuid().ToString("N"),
                     AgentId = id,
-                    AnomalyKey = canonicalKey,
+                    AnomalyInstanceId = canonicalKey,
                     Slot = slot,
                     Type = MovementTokenType.Recall,
                     State = MovementTokenState.Pending,
@@ -174,8 +174,8 @@ namespace Core
                     {
                         // If already at this anomaly, no travel needed (slot change / re-confirm)
                         if (ag.LocationKind == AgentLocationKind.AtAnomaly &&
-                            !string.IsNullOrEmpty(ag.LocationAnomalyKey) &&
-                            ag.LocationAnomalyKey == canonicalKey)
+                            !string.IsNullOrEmpty(ag.LocationAnomalyInstanceId) &&
+                            ag.LocationAnomalyInstanceId == canonicalKey)
                         {
                             ag.LocationKind = AgentLocationKind.AtAnomaly;
                         }
@@ -184,19 +184,19 @@ namespace Core
                             ag.LocationKind = AgentLocationKind.TravellingToAnomaly;
                         }
 
-                        ag.LocationAnomalyKey = canonicalKey;
+                        ag.LocationAnomalyInstanceId = canonicalKey;
                         ag.LocationSlot = slot;
                     }
                     else if (oldSet.Contains(ag.Id))
                     {
                         if ((ag.LocationKind == AgentLocationKind.AtAnomaly ||
                              ag.LocationKind == AgentLocationKind.TravellingToAnomaly) &&
-                            !string.IsNullOrEmpty(ag.LocationAnomalyKey) &&
-                            ag.LocationAnomalyKey == canonicalKey &&
+                            !string.IsNullOrEmpty(ag.LocationAnomalyInstanceId) &&
+                            ag.LocationAnomalyInstanceId == canonicalKey &&
                             ag.LocationSlot == slot)
                         {
                             ag.LocationKind = AgentLocationKind.TravellingToBase;
-                            ag.LocationAnomalyKey = canonicalKey; // keep until animation completes
+                            ag.LocationAnomalyInstanceId = canonicalKey; // keep until animation completes
                             ag.LocationSlot = slot;
                         }
                     }

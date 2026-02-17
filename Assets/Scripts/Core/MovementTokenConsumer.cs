@@ -46,7 +46,7 @@ namespace Core
                 {
                     // TravellingToAnomaly -> AtAnomaly
                     if (ag.LocationKind == AgentLocationKind.TravellingToAnomaly &&
-                        ag.LocationAnomalyKey == token.AnomalyKey)
+                        ag.LocationAnomalyInstanceId == token.AnomalyInstanceId)
                     {
                         ag.LocationKind = AgentLocationKind.AtAnomaly;
                     }
@@ -54,7 +54,7 @@ namespace Core
                     {
                         // Be tolerant: if state drifted, still land at anomaly
                         ag.LocationKind = AgentLocationKind.AtAnomaly;
-                        ag.LocationAnomalyKey = token.AnomalyKey;
+                        ag.LocationAnomalyInstanceId = token.AnomalyInstanceId;
                     }
                     ag.LocationSlot = token.Slot;
                 }
@@ -62,7 +62,7 @@ namespace Core
                 {
                     // TravellingToBase -> Base
                     ag.LocationKind = AgentLocationKind.Base;
-                    ag.LocationAnomalyKey = null;
+                    ag.LocationAnomalyInstanceId = null;
                     ag.LocationSlot = token.Slot;
                 }
             }

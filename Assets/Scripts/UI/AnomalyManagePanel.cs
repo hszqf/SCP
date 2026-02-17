@@ -332,7 +332,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             bool show =
                 ag.LocationKind == AgentLocationKind.Base
-                || (ag.LocationAnomalyKey == canonicalKeyForFilter &&
+                || (ag.LocationAnomalyInstanceId == canonicalKeyForFilter &&
                     (ag.LocationKind == AgentLocationKind.AtAnomaly ||
                      ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
                      ag.LocationKind == AgentLocationKind.TravellingToBase));
