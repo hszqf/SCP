@@ -247,7 +247,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         }
     }
 
-    private void RebuildAgentList()
+    void RebuildAgentList()
     {
         // Clear
         for (int i = 0; i < _agentItems.Count; i++)
@@ -276,7 +276,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var gc = GameController.I;
         if (gc == null) return;
 
-        var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetCity(_nodeId) : null;
         string canonicalKeyForFilter = null;
 
         // Determine slot-driven roster source and sync selected ids from AnomalyState.GetRoster(slot) if available.
@@ -285,32 +284,20 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Core.AnomalyState anomState = null;
         if (!string.IsNullOrEmpty(_selectedTargetId) && gc?.State != null)
         {
-            // 1) managedId/instanceId/legacy id 先尝试直接找
+            // 只认实例 id：直接 resolve
             anomState = Core.DispatchSystem.FindAnomaly(gc.State, _selectedTargetId);
-
-            // 2) 如果找不到，视为 defId：按 node+def 消歧（避免跨节点同 def 串台）
-            if (anomState == null && !string.IsNullOrEmpty(_nodeId))
-            {
-                var list = gc.State.Anomalies;
-                if (list != null)
-                {
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        var a = list[i];
-                        if (a == null) continue;
-                        if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
-                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _selectedTargetId)
-                        {
-                            anomState = a;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
-        // canonical key: 一律用实例 id（能找到就用 anomState.Id），找不到才退回 targetId（迁移期兜底）
-        canonicalKeyForFilter = anomState != null ? anomState.Id : _selectedTargetId;
+        // canonical key: 一律用实例 id（必须能 resolve 到 AnomalyState）
+        if (anomState == null)
+        {
+            Debug.LogError($"[AssignPanel] RebuildAgentList: instance not found. instanceId={_selectedTargetId}");
+            canonicalKeyForFilter = _selectedTargetId;
+        }
+        else
+        {
+            canonicalKeyForFilter = anomState.Id;
+        }
 
         // Sync selected ids: if anomState exists and has a roster for this slot, use it even if empty.
         _selectedAgentIds.Clear();
@@ -328,8 +315,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             if (ag.IsDead || ag.IsInsane) continue;
 
-
-
             bool show =
                 ag.LocationKind == AgentLocationKind.Base
                 || (ag.LocationAnomalyInstanceId == canonicalKeyForFilter &&
@@ -339,14 +324,34 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
             if (!show) continue;
 
+            // Disable rule
+            bool disable = false;
+
+            // if already selected & exceeding max slot count, disable others later in RefreshConfirmState
+            // Here we only disable if busy on another anomaly or traveling to another anomaly.
+            if (ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                ag.LocationKind == AgentLocationKind.TravellingToBase)
+            {
+                if (!string.Equals(ag.LocationAnomalyInstanceId, canonicalKeyForFilter, System.StringComparison.Ordinal))
+                    disable = true;
+            }
+
             bool selected = _selectedAgentIds.Contains(ag.Id);
 
-            bool unusable = ag.IsDead || ag.IsInsane;
+            // Status text 目前基地一定是空闲
+            string statusText1 = string.Empty;
+            if (ag.LocationKind == AgentLocationKind.Base)
+                statusText1 = "<color=#66FF66>空闲</color>";
+            else if (ag.LocationKind == AgentLocationKind.AtAnomaly)
+                statusText1 = "已到达";
+            else if (ag.LocationKind == AgentLocationKind.TravellingToAnomaly)
+                statusText1 = "前往中";
+            else if (ag.LocationKind == AgentLocationKind.TravellingToBase)
+                statusText1 = "返程中";
+            else
+                statusText1 = ag.LocationKind.ToString();
 
-            // Disable interaction when unusable OR (legacy busy and not using pipeline)
-            bool disable = unusable;
-
-            string statusText1 = SettlementUtil.BuildAgentBusyText(gc.State, ag.Id);
             string statusText = string.IsNullOrEmpty(statusText1) ? "<color=#66FF66>空闲</color>" : statusText1;
 
             var go = Instantiate(agentPickerItemPrefab, contentRoot);
@@ -445,51 +450,38 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         // Log entering state: mode/slot/targetId/idsCount
         Debug.Log($"[AssignPanel] ApplyRosterImmediate enter mode={_mode} slot={slot} targetId={_selectedTargetId} idsCount={ids.Count}");
 
-        string err;
         var state = gc.State;
-        var anomalyKey = _selectedTargetId;
 
-        // Canonicalize anomalyKey: prefer instance id (AnomalyState.Id) if resolvable.
-        Core.AnomalyState anom = null;
+        // 只认 instanceId：selectedTargetId 就是 AnomalyState.Id
+        var anomalyInstanceId = _selectedTargetId;
 
-        // First try using DispatchSystem.FindAnomaly with the provided key (managedId / instanceId / legacy id).
-        anom = Core.DispatchSystem.FindAnomaly(state, anomalyKey);
-
-        // If not found, treat anomalyKey as defId and disambiguate by node+def.
-        if (anom == null && !string.IsNullOrEmpty(_nodeId) && !string.IsNullOrEmpty(anomalyKey))
+        // 必须能用 instanceId 直接 resolve 到 AnomalyState；找不到就失败，不允许猜 defId
+        var anom = Core.DispatchSystem.FindAnomaly(state, anomalyInstanceId);
+        if (anom == null)
         {
-            var list = state.Anomalies;
-            if (list != null)
-            {
-                for (int i = 0; i < list.Count; i++)
-                {
-                    var a = list[i];
-                    if (a == null) continue;
-                    if (!string.IsNullOrEmpty(a.NodeId) && a.NodeId == _nodeId &&
-                        !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == anomalyKey)
-                    {
-                        anom = a;
-                        break;
-                    }
-                }
-            }
+            Debug.LogError($"[AssignPanel] ApplyRosterImmediate: instance not found. instanceId={anomalyInstanceId}");
+            return;
         }
 
-        // If resolved, use canonical instance key.
-        if (anom != null)
-            anomalyKey = anom.Id;
-
-        if (!Core.DispatchSystem.TrySetRoster(state, anomalyKey, slot, ids, out err))
+        string err;
+        if (!Core.DispatchSystem.TrySetRoster(state, anomalyInstanceId, slot, ids, out err))
         {
             Debug.LogError($"[AssignPanel] TrySetRoster failed: {err}");
             return;
         }
 
-        // Log success
         Debug.Log("[AssignPanel] applied ok");
 
-        // Sync legacy task system minimally (do not close panel)
-        SyncLegacyTask(slot, _selectedTargetId, ids);
+        // Legacy task sync:
+        // - Operate: legacy manage task targets managed anomaly instanceId
+        // - Investigate/Contain: legacy tasks & KnownAnomalyDefIds are defId-based
+        string legacyTargetId;
+        if (slot == AssignmentSlot.Operate)
+            legacyTargetId = anomalyInstanceId;
+        else
+            legacyTargetId = !string.IsNullOrEmpty(anom.AnomalyDefId) ? anom.AnomalyDefId : anomalyInstanceId;
+
+        SyncLegacyTask(slot, legacyTargetId, ids);
 
         // Do not rebuild left targets (legacy Manage RefreshUI). Only refresh agent list & confirm state.
         RebuildAgentList();
