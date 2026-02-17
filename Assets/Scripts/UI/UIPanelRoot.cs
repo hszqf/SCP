@@ -2,7 +2,6 @@
 // Source: Assets/Scripts/UI/UIPanelRoot.cs
 // Version: UI_UIPanelRoot_v2_20260114a
 // Updated for N-task backend:
-// - Each click on 调查/收容 creates a NEW task (NodeTask) and opens AgentPicker bound to that taskId.
 // - This enables multiple investigate tasks and multiple contain tasks (one per containable).
 // - On picker cancel (or close), the newly created task is cancelled to avoid leaving invisible active tasks.
 //
@@ -595,25 +594,5 @@ public class UIPanelRoot : MonoBehaviour
         }
     }
 
-    // Pick a containable that is not already targeted by an active containment task when possible.
-    string PickNextContainableId(CityState node)
-    {
-        if (node == null || node.KnownAnomalyDefIds == null || node.KnownAnomalyDefIds.Count == 0) return null;
-
-        var activeTargets = (node.Tasks == null)
-            ? new HashSet<string>()
-            : new HashSet<string>(node.Tasks
-                .Where(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Contain)
-                .Select(t => t.SourceAnomalyId)
-                .Where(x => !string.IsNullOrEmpty(x)));
-
-        foreach (var defId in node.KnownAnomalyDefIds)
-        {
-            if (!activeTargets.Contains(defId)) return defId;
-        }
-
-        // Fallback: allow multiple tasks for same anomaly if all are already targeted.
-        return node.KnownAnomalyDefIds[0];
-    }
 }
 // </EXPORT_BLOCK>

@@ -48,9 +48,7 @@ namespace Core
 
 
 
-        // =====================
-        // Management (NegEntropy) - formalized as NodeTask.Manage
-        // =====================
+
 
 
         private static void EnsureActiveAnomaly(GameState state, CityState node, string anomalyDefId, DataRegistry registry)

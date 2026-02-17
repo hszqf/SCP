@@ -1,13 +1,4 @@
 // Canvas-maintained file: Assets/Scripts/UI/AnomalyManagePanel.cs
-// Purpose: Management panel for contained anomalies (NODE-SCOPED).
-// - Left: favorited managed anomalies of a specific node (NodeState.ManagedAnomalies)
-// - Right: agent list (reuses AgentPickerItemView) to assign managers
-// - Confirm creates/updates a NodeTask (TaskType.Manage) and assigns agents via NodeTask.AssignedAgentIds.
-//   Sim awards daily NegEntropy based on active Manage tasks.
-//
-// Data scope note:
-// - Containables & post-containment management belong to the node that contained them.
-// - Global currency NegEntropy is accumulated in GameState, but per-anomaly state is stored under NodeState.
 // <EXPORT_BLOCK>
 
 using Core;
@@ -463,7 +454,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var node = !string.IsNullOrEmpty(_nodeId) ? gc.GetCity(_nodeId) : null;
         if (node == null) return;
 
-        // ✅ 从现在开始：不再创建/更新/取消 NodeTask。派遣真相已由 TrySetRoster + MovementToken 表达。
 
         // Contain：仍可维护“已知异常 defId”列表（如果你后续还用它做解锁/提示）
         if (slot == AssignmentSlot.Contain)
@@ -499,18 +489,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         if (node?.ManagedAnomalies == null || string.IsNullOrEmpty(anomalyId)) return null;
         return node.ManagedAnomalies.FirstOrDefault(x => x != null && x.AnomalyInstanceId == anomalyId);
-    }
-
-    private static NodeTask FindManageTask(CityState node, string anomalyId)
-    {
-        if (node?.Tasks == null || string.IsNullOrEmpty(anomalyId)) return null;
-
-        // Prefer active task
-        var active = node.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
-        if (active != null) return active;
-
-        // Fallback: any manage task (history)
-        return node.Tasks.LastOrDefault(t => t != null && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == anomalyId);
     }
 
 
@@ -560,8 +538,13 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         }
 
         int mgr = 0;
-        var mt = FindManageTask(node, m.AnomalyInstanceId);
-        if (mt?.AssignedAgentIds != null) mgr = mt.AssignedAgentIds.Count;
+        if (gc != null && gc.State != null && !string.IsNullOrEmpty(m.AnomalyInstanceId))
+        {
+            var anom = Core.DispatchSystem.FindAnomaly(gc.State, m.AnomalyInstanceId);
+            var roster = anom?.GetRoster(AssignmentSlot.Operate);
+            mgr = roster != null ? roster.Count : 0;
+        }
+
         string nodeName = "";
         if (gc != null && !string.IsNullOrEmpty(_nodeId))
         {

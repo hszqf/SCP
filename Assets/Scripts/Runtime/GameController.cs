@@ -1,11 +1,6 @@
 // Canvas-maintained file: Runtime/GameController (v3 - N tasks backend, legacy UI compatibility)
 // Source target: Assets/Scripts/Runtime/GameController.cs
 //
-// What changed vs v2:
-// - NodeStatus no longer has Investigating/Containing; tasks are stored in NodeState.Tasks (unlimited).
-// - Assign/Busy/Cancel/Retreat all operate on NodeTask.
-// - Legacy APIs (TryAssignInvestigate/TryAssignContain/ForceWithdraw(nodeId)) are kept so existing UI can compile.
-//   They intentionally operate on a single "current" task per type to avoid creating invisible tasks before UI is upgraded.
 // <EXPORT_BLOCK>
 
 using System;
@@ -432,207 +427,7 @@ public class GameController : MonoBehaviour
         return candidate;
     }
 
-    // =====================
-    // N-task APIs (new)
-    // =====================
 
-    public NodeTask CreateInvestigateTask(string nodeId)
-    {
-        var n = GetCity(nodeId);
-        if (n == null) return null;
-        if (n.Tasks == null) n.Tasks = new List<NodeTask>();
-
-        var t = new NodeTask
-        {
-            Id = "T_" + Guid.NewGuid().ToString("N")[..10],
-            Type = TaskType.Investigate,
-            State = TaskState.Active,
-            CreatedDay = State.Day,
-            Progress = 0f,
-        };
-        WireTaskDefOnCreate(t);
-        n.Tasks.Add(t);
-        LogTaskDefSummary(TaskType.Investigate);
-        GameControllerTaskExt.LogBusySnapshot(this, $"CreateInvestigateTask(node:{nodeId})");
-        return t;
-    }
-
-    public NodeTask CreateContainTask(string nodeId, string containableId)
-    {
-        var n = GetCity(nodeId);
-        if (n == null) return null;
-        if (n.KnownAnomalyDefIds == null || n.KnownAnomalyDefIds.Count == 0) return null;
-
-        HashSet<string> contained = null;
-        if (n.ManagedAnomalies != null && n.ManagedAnomalies.Count > 0)
-        {
-            contained = new HashSet<string>(n.ManagedAnomalies
-                .Where(m => m != null && !string.IsNullOrEmpty(m.AnomalyDefId))
-                .Select(m => m.AnomalyDefId));
-        }
-
-        // Validate target; fallback to first
-        string target = containableId;
-        if (string.IsNullOrEmpty(target))
-            target = n.KnownAnomalyDefIds.FirstOrDefault(id => !string.IsNullOrEmpty(id) && (contained == null || !contained.Contains(id)));
-        else if (!n.KnownAnomalyDefIds.Contains(target) || (contained != null && contained.Contains(target)))
-            return null;
-        if (string.IsNullOrEmpty(target)) return null;
-
-        if (n.Tasks == null) n.Tasks = new List<NodeTask>();
-
-        var t = new NodeTask
-        {
-            Id = "T_" + Guid.NewGuid().ToString("N")[..10],
-            Type = TaskType.Contain,
-            State = TaskState.Active,
-            CreatedDay = State.Day,
-            Progress = 0f,
-            SourceAnomalyId = target,
-        };
-        WireTaskDefOnCreate(t);
-        n.Tasks.Add(t);
-        LogTaskDefSummary(TaskType.Contain);
-        GameControllerTaskExt.LogBusySnapshot(this, $"CreateContainTask(node:{nodeId}, target:{target})");
-        return t;
-    }
-
-    public NodeTask CreateManageTask(string nodeId, string managedAnomalyId)
-    {
-        var n = GetCity(nodeId);
-        if (n == null) return null;
-        if (n.ManagedAnomalies == null || n.ManagedAnomalies.Count == 0) return null;
-
-        // Validate target
-        string target = managedAnomalyId;
-        if (string.IsNullOrEmpty(target) || !n.ManagedAnomalies.Any(m => m != null && m.AnomalyInstanceId == target))
-            return null;
-
-        var managed = n.ManagedAnomalies.FirstOrDefault(m => m != null && m.AnomalyInstanceId == target);
-        if (managed == null)
-            return null;
-
-        string defId = managed.AnomalyDefId;
-        if (string.IsNullOrEmpty(defId))
-        {
-            Debug.LogWarning($"[ManageTask] managedAnomalyId={target} missing AnomalyDefId; ManageDaily impacts will be skipped.");
-        }
-
-        if (n.Tasks == null) n.Tasks = new List<NodeTask>();
-
-        // If already has an active manage task for this anomaly, reuse (idempotent)
-        var existing = n.Tasks.LastOrDefault(t => t != null && t.State == TaskState.Active && t.Type == TaskType.Manage && t.TargetManagedAnomalyId == target);
-        if (existing != null)
-        {
-            if (string.IsNullOrEmpty(existing.SourceAnomalyId) && !string.IsNullOrEmpty(defId))
-            {
-                existing.SourceAnomalyId = defId;
-                Debug.Log($"[ManageTask] taskId={existing.Id} restored SourceAnomalyId={defId} from managed anomaly {target}.");
-            }
-            return existing;
-        }
-
-        var t = new NodeTask
-        {
-            Id = "T_" + Guid.NewGuid().ToString("N")[..10],
-            Type = TaskType.Manage,
-            State = TaskState.Active,
-            CreatedDay = State.Day,
-            Progress = 0f,
-            TargetManagedAnomalyId = target,
-            SourceAnomalyId = string.IsNullOrEmpty(defId) ? null : defId,
-        };
-        WireTaskDefOnCreate(t);
-        n.Tasks.Add(t);
-        LogTaskDefSummary(TaskType.Manage);
-        GameControllerTaskExt.LogBusySnapshot(this, $"CreateManageTask(node:{nodeId}, anomaly:{target})");
-        return t;
-    }
-
-    public bool TryGetTask(string taskId, out CityState node, out NodeTask task)
-    {
-        node = null;
-        task = null;
-        if (string.IsNullOrEmpty(taskId) || State?.Cities == null) return false;
-
-        foreach (var n in State.Cities)
-        {
-            if (n?.Tasks == null) continue;
-            var t = n.Tasks.FirstOrDefault(x => x != null && x.Id == taskId);
-            if (t != null)
-            {
-                node = n;
-                task = t;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public bool CancelOrRetreatTask(string taskId)
-    {
-        if (!TryGetTask(taskId, out var n, out var t)) return false;
-        if (t.State != TaskState.Active) return false;
-
-        // Cancel == progress==0 ; Retreat == progress>0 (same effect for now: mark cancelled + release squad)
-        if (t.AssignedAgentIds != null) t.AssignedAgentIds.Clear();
-        t.Progress = 0f;
-        t.State = TaskState.Cancelled;
-
-        // Node status: only coarse
-        if (n != null && n.Status != NodeStatus.Secured)
-            n.Status = NodeStatus.Calm;
-
-        GameControllerTaskExt.LogBusySnapshot(this, $"CancelOrRetreatTask(task:{taskId})");
-        Notify();
-        return true;
-    }
-
-    public void AssignTask(string taskId, List<string> agentIds)
-    {
-        if (!TryGetTask(taskId, out var n, out var t)) return;
-        if (t.State != TaskState.Active) return;
-
-        if (!GameControllerTaskExt.AreAgentsUsable(this, agentIds, out var _))
-            return;
-
-        t.AssignedAgentIds = new List<string>(agentIds);
-
-        // Node-level bookkeeping
-        if (n != null && n.Status != NodeStatus.Secured)
-            n.Status = NodeStatus.Calm;
-
-
-        GameControllerTaskExt.LogBusySnapshot(this, $"AssignTask(task:{taskId}, agents:{string.Join(",", agentIds)})");
-        Notify();
-    }
-
-    private void LogTaskDefSummary(TaskType type)
-    {
-        var registry = DataRegistry.Instance;
-        var (minSlots, maxSlots) = registry.GetTaskAgentSlotRangeWithWarn(type, 1, int.MaxValue);
-        Debug.Log($"[TaskDef] taskType={type} slotsMin={minSlots} slotsMax={maxSlots}");
-    }
-
-    private void WireTaskDefOnCreate(NodeTask task)
-    {
-        if (task == null) return;
-        TaskDef def = null;
-        var registry = DataRegistry.Instance;
-        if (registry != null && registry.TryGetTaskDefForType(task.Type, out def))
-        {
-            task.TaskDefId = def.taskDefId;
-        }
-        LogTaskCreate(task, def);
-    }
-
-    private static void LogTaskCreate(NodeTask task, TaskDef def)
-    {
-        if (task == null) return;
-        string taskDefId = def?.taskDefId ?? task.TaskDefId ?? "";
-        string taskDefName = def?.name ?? "";
-        Debug.Log($"[TaskCreate] taskId={task.Id} type={task.Type} taskDefId={taskDefId} name={taskDefName}");
-    }
 
     private void RefreshMapNodes()
     {
@@ -644,13 +439,7 @@ public class GameController : MonoBehaviour
 }
 
 /// <summary>
-/// Dispatch rules (extensions) - v3:
-/// - 预定占用：派遣=占用（progress==0 也占用）。busy 判定遍历所有节点所有 Active 任务。
-/// - progress==0：不允许在选人面板改派；必须先取消该任务。
-/// - progress>0：不允许更换；必须撤退该任务。
-///
-/// 注意：为了兼容旧 UI（尚未支持任务列表），TryAssignInvestigate/TryAssignContain 只操作“当前任务”（每类取一条）。
-/// 等 NodePanelView 升级为任务列表后，再引入基于 taskId 的 UI 调度。
+
 /// </summary>
 public static class GameControllerTaskExt
 {
@@ -710,31 +499,22 @@ public static class GameControllerTaskExt
 
     // ---------- Busy derivation & debug ----------
 
-    public static HashSet<String> DeriveBusyAgentIdsFromTasks(GameController gc)
+    public static HashSet<string> DeriveBusyAgentIdsFromTasks(GameController gc)
     {
-        var result = new HashSet<String>();
-        if (gc?.State?.Cities == null) return result;
+        var result = new HashSet<string>();
+        var agents = gc?.State?.Agents;
+        if (agents == null) return result;
 
-        foreach (var node in gc.State.Cities)
+        foreach (var a in agents)
         {
-            if (node?.Tasks == null) continue;
-            foreach (var t in node.Tasks)
-            {
-                if (t == null || t.State != TaskState.Active) continue;
-                if (t.AssignedAgentIds == null) continue;
-                foreach (var id in t.AssignedAgentIds)
-                {
-                    if (string.IsNullOrEmpty(id)) continue;
-                    var agent = gc.State?.Agents?.FirstOrDefault(a => a != null && a.Id == id);
-                    if (agent != null && (agent.IsDead || agent.IsInsane)) continue;
-                    result.Add(id);
-                }
-            }
+            if (a == null || string.IsNullOrEmpty(a.Id)) continue;
+            if (a.IsDead || a.IsInsane) continue;
+            if (a.LocationKind != AgentLocationKind.Base)
+                result.Add(a.Id);
         }
 
         return result;
     }
-
     public static void LogBusySnapshot(GameController gc, string context)
     {
         if (gc == null) return;

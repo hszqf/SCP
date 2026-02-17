@@ -1,9 +1,5 @@
 // Canvas-maintained file: Core/GameState (v3 - N tasks)
 // Source target: Assets/Scripts/Core/GameState.cs
-// Goal: Support unlimited per-node tasks (investigate/contain) via NodeState.Tasks.
-// Notes:
-// - Legacy single-task fields are kept temporarily for compatibility with existing UI/code.
-// - New systems should only use NodeState.Tasks.
 // <EXPORT_BLOCK>
 
 using System;
@@ -12,11 +8,9 @@ using UnityEngine;
 
 namespace Core
 {
-    // Keep for legacy UI and map display. In N-task model, task state is derived from NodeState.Tasks.
     public enum NodeStatus { Calm, Secured }
 
     public enum TaskType { Investigate, Contain, Manage }
-    public enum TaskState { Active, Completed, Cancelled }
 
     public enum AgentLocationKind
     {
@@ -105,44 +99,6 @@ namespace Core
     }
 
     [Serializable]
-    public class NodeTask
-    {
-        public string Id;
-        public TaskType Type;
-        public TaskState State = TaskState.Active;
-        public string TaskDefId;
-
-        // 0..1
-        public float Progress = 0f;
-
-        // UI-only progress for dispatch roll-in effect (same units as Progress; -1 means disabled)
-        public float VisualProgress = -1f;
-
-        // 预定占用：progress==0 也算占用。
-        public List<string> AssignedAgentIds = new();
-
-        // Only for containment tasks: which containable we are trying to contain.
-        public string TargetContainableId;
-
-        // Investigate/Contain: anomaly id associated with this task (optional).
-        public string SourceAnomalyId;
-
-        // Investigate: whether we have already attempted to lock a target anomaly.
-        public bool InvestigateTargetLocked;
-
-        // Investigate: baseDays for a no-result investigation (random 2..5). 0 means not applicable.
-        public int InvestigateNoResultBaseDays;
-
-        // Only for management tasks: which managed anomaly we are managing.
-        public string TargetManagedAnomalyId;
-
-        public int CreatedDay;
-        public int CompletedDay;
-
-        public bool IsStarted => Progress > 0.0001f;
-    }
-
-    [Serializable]
     public class CityState
     {
         public string Id;
@@ -161,7 +117,6 @@ namespace Core
 
         public List<string> KnownAnomalyDefIds = new();
         public List<ManagedAnomalyState> ManagedAnomalies = new();
-        public List<NodeTask> Tasks = new();
 
         public int LocalPanic = 0;
         public int Population = 10;
