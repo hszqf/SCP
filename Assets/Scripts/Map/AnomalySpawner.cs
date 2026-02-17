@@ -154,9 +154,10 @@ public class AnomalySpawner : MonoBehaviour
                 if (string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(defId) || string.IsNullOrEmpty(instanceId))
                     continue;
 
-                // 只显示已解锁城市附近的异常（维持你旧逻辑：围绕 city anchor）
-                var node = state.Cities.Find(n => n != null && n.Id == nodeId);
+                state.EnsureIndex();
+                var node = state.Index.GetCity(nodeId);
                 if (node == null || !node.Unlocked) continue;
+
 
                 Vector2 fallbackPos = ResolveNodeAnchoredPosition(node);
 
@@ -322,9 +323,12 @@ public class AnomalySpawner : MonoBehaviour
     private static string ResolveNodeName(string nodeId)
     {
         if (string.IsNullOrEmpty(nodeId)) return string.Empty;
-        var nodes = GameController.I?.State?.Cities;
-        if (nodes == null) return nodeId;
-        var node = nodes.Find(n => n != null && n.Id == nodeId);
+
+        var state = GameController.I?.State;
+        if (state == null) return nodeId;
+
+        state.EnsureIndex();
+        var node = state.Index.GetCity(nodeId);
         return node?.Name ?? nodeId;
     }
 
