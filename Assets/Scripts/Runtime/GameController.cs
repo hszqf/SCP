@@ -151,7 +151,7 @@ public class GameController : MonoBehaviour
             .Where(c => c != null)
             .ToList();
 
-        //EnsureCityIds(cities);
+        EnsureCityIds(cities);
 
         cities = cities
             .Where(c => c != null && !string.IsNullOrEmpty(c.CityId))
@@ -207,10 +207,22 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void Notify() => OnStateChanged?.Invoke();
+    public void Notify()
+    {
+        if (State != null)
+        {
+            State.Index ??= new GameStateIndex();
+            State.Index.Rebuild(State); // ✅ 强制刷新，杜绝 stale
+        }
+        OnStateChanged?.Invoke();
+    }
 
     public CityState GetCity(string cityId)
-        => State.Cities.FirstOrDefault(n => n.Id == cityId);
+    {
+        if (State == null || string.IsNullOrEmpty(cityId)) return null;
+        State.EnsureIndex();
+        return State.Index.GetCity(cityId);
+    }
 
 
     public void EndDay()
@@ -439,6 +451,67 @@ public class GameController : MonoBehaviour
     {
         AnomalySpawner.I?.RefreshMapNodes();
         //UIPanelRoot.I?.RefreshNodePanel();
+    }
+
+
+    private static void EnsureCityIds(List<City> cities)
+    {
+        if (cities == null || cities.Count == 0) return;
+
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < cities.Count; i++)
+        {
+            var city = cities[i];
+            if (city == null) continue;
+
+            string oldId = city.CityId;
+            string id = SanitizeId(oldId);
+
+            bool needFix = string.IsNullOrEmpty(id) || used.Contains(id);
+
+            if (needFix)
+            {
+                // 1) 优先用 CityName（如果它不是回退到 CityId 的那种）
+                string candidate = SanitizeId(city.CityName);
+                if (string.IsNullOrEmpty(candidate) || string.Equals(candidate, id, StringComparison.OrdinalIgnoreCase))
+                    candidate = SanitizeId(city.gameObject != null ? city.gameObject.name : null);
+
+                if (string.IsNullOrEmpty(candidate))
+                    candidate = "City";
+
+                string final = candidate;
+                int suffix = 1;
+                while (used.Contains(final))
+                    final = $"{candidate}_{suffix++}";
+
+                // 尽量把旧 key 从 registry 里移除（如果之前注册过）
+                MapEntityRegistry.I?.UnregisterCity(city);
+
+                city.SetCityId(final, true);
+
+                // 重新注册到 registry（OnEnable 不会自动重跑）
+                MapEntityRegistry.I?.RegisterCity(city);
+
+                Debug.Log($"[Boot] CityId fixed: '{oldId}' -> '{final}' (name='{city.CityName}', go='{city.gameObject?.name}')");
+
+                id = final;
+            }
+
+            if (!string.IsNullOrEmpty(id))
+                used.Add(id);
+        }
+    }
+
+    private static string SanitizeId(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return null;
+        s = s.Trim();
+        if (s.Length == 0) return null;
+
+        // 避免空格/不可见字符造成“看似不同实际相同”的问题
+        s = s.Replace(" ", "_");
+        return s;
     }
 
 

@@ -64,11 +64,11 @@ namespace Settlement
 
         private static CityState ResolveAnchorCity(Core.GameState state, Core.AnomalyState a)
         {
-            if (state?.Cities == null || a == null) return null;
+            if (state == null || a == null) return null;
             if (string.IsNullOrEmpty(a.NodeId)) return null;
 
-            return state.Cities.FirstOrDefault(c =>
-                c != null && string.Equals(c.Id, a.NodeId, StringComparison.OrdinalIgnoreCase));
+            state.EnsureIndex();
+            return state.Index.GetCity(a.NodeId);
         }
 
         private static bool IsCityInRange(CityState origin, Vector2 originPos, CityState target, float range)

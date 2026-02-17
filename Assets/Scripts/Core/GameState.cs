@@ -205,6 +205,14 @@ namespace Core
         // UI/过天锁：当 >0 时，不允许 EndDay/NextDay
         public int MovementLockCount = 0;
 
+        [NonSerialized] public GameStateIndex Index = new GameStateIndex();
+
+        public void EnsureIndex()
+        {
+            if (Index == null) Index = new GameStateIndex();
+            Index.EnsureUpToDate(this);
+        }
+
         // Convenience: number of pending movement tokens (not serialized)
         public int PendingMovementCount
         {

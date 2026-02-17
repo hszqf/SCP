@@ -211,16 +211,10 @@ namespace Core
 
         public static AnomalyState FindAnomaly(GameState s, string instanceId)
         {
-            if (s?.Anomalies == null) return null;
-            if (string.IsNullOrEmpty(instanceId)) return null;
+            if (s == null || string.IsNullOrEmpty(instanceId)) return null;
 
-            for (int i = 0; i < s.Anomalies.Count; i++)
-            {
-                var a = s.Anomalies[i];
-                if (a == null) continue;
-                if (a.Id == instanceId) return a;
-            }
-            return null;
+            s.EnsureIndex();
+            return s.Index.GetAnomaly(instanceId);
         }
     }
 }
