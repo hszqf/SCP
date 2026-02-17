@@ -463,17 +463,6 @@ public class Anomaly : MonoBehaviour
     }
 
 
-
-
-    private static string ResolveTaskAnomalyId(CityState node, NodeTask task)
-    {
-        if (task == null || node == null) return null;
-        if (!string.IsNullOrEmpty(task.SourceAnomalyId)) return task.SourceAnomalyId;
-        if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0)
-            return node.ActiveAnomalyIds[0];
-        return null;
-    }
-
     private static Image CreateAvatarImage(Transform parent)
     {
         var go = new GameObject("Avatar", typeof(RectTransform), typeof(Image));

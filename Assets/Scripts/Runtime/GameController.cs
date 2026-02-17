@@ -178,7 +178,6 @@ public class GameController : MonoBehaviour
                 Type = city.CityType,
                 LocalPanic = 0,
                 Population = Math.Max(0, city.Population),
-                ActiveAnomalyIds = new List<string>(),
             };
 
             var rt = city.transform as RectTransform;
@@ -187,8 +186,6 @@ public class GameController : MonoBehaviour
                 cityState.X = rt.anchoredPosition.x;
                 cityState.Y = rt.anchoredPosition.y;
             }
-
-            cityState.HasAnomaly = cityState.ActiveAnomalyIds.Count > 0;
 
             State.Cities.Add(cityState);
         }

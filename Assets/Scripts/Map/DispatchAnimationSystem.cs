@@ -696,18 +696,18 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         if (node == null || task == null) return null;
 
+        // Manage：优先用 managed 实例反查 defId；找不到则退回 task.SourceAnomalyId（仍是 defId）
         if (task.Type == TaskType.Manage)
         {
             var managed = node.ManagedAnomalies?.Find(m => m != null && m.AnomalyInstanceId == task.TargetManagedAnomalyId);
             return managed?.AnomalyDefId ?? task.SourceAnomalyId;
         }
 
+        // Investigate/Contain：task.SourceAnomalyId 就是 defId
         if (!string.IsNullOrEmpty(task.SourceAnomalyId))
             return task.SourceAnomalyId;
 
-        if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Count > 0)
-            return node.ActiveAnomalyIds[0];
-
+        // 不再允许从 city 推断 anomaly（ActiveAnomalyIds 已移除）
         return null;
     }
 

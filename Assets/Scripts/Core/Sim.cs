@@ -43,7 +43,7 @@ namespace Core
         }
 
 
-    
+
 
 
 
@@ -53,18 +53,18 @@ namespace Core
         // =====================
 
 
-        private static void EnsureActiveAnomaly(GameState state, CityState node, string anomalyId, DataRegistry registry)
+        private static void EnsureActiveAnomaly(GameState state, CityState node, string anomalyDefId, DataRegistry registry)
         {
-            if (node.ActiveAnomalyIds == null) node.ActiveAnomalyIds = new List<string>();
-            if (!node.ActiveAnomalyIds.Contains(anomalyId)) node.ActiveAnomalyIds.Add(anomalyId);
-            node.HasAnomaly = node.ActiveAnomalyIds.Count > 0;
+            if (state == null || node == null || string.IsNullOrEmpty(anomalyDefId) || registry == null) return;
 
-            if (registry.AnomaliesById.TryGetValue(anomalyId, out var anomaly))
-            {
-                node.AnomalyLevel = Math.Max(node.AnomalyLevel, 1);
-            }
+            // 如果配置存在，先把等级拉到至少 1（保留你原有语义）
+            if (registry.AnomaliesById != null && registry.AnomaliesById.TryGetValue(anomalyDefId, out var _))
+                node.AnomalyLevel = System.Math.Max(node.AnomalyLevel, 1);
 
-            var anomalyState = GetOrCreateAnomalyState(state, node, anomalyId);
+            // 真实实例真相：只在 state.Anomalies 里
+            var anomalyState = GetOrCreateAnomalyState(state, node, anomalyDefId);
+
+            // 目前版本仍用 NodeId 作为“生成锚点城市”（不是包含关系真相）
             if (anomalyState != null && string.IsNullOrEmpty(anomalyState.NodeId))
                 anomalyState.NodeId = node.Id;
         }
@@ -134,30 +134,36 @@ namespace Core
             while (spawned < genNum && attempts < maxAttempts)
             {
                 attempts++;
-                var anomalyId = PickRandomAnomalyId(registry, rng);
-                if (string.IsNullOrEmpty(anomalyId)) break;
 
-                bool alreadySpawned = s.Cities.Any(n =>
-                    n != null &&
-                    ((n.ActiveAnomalyIds != null && n.ActiveAnomalyIds.Contains(anomalyId)) ||
-                     (n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null && m.AnomalyDefId == anomalyId)) ||
-                     (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Contains(anomalyId))));
+                var anomalyDefId = PickRandomAnomalyId(registry, rng);
+                if (string.IsNullOrEmpty(anomalyDefId)) break;
+
+                // ✅ 新重复规则：以 state.Anomalies 为真相（实例已存在就不再生成）
+                bool alreadySpawned =
+                    (s.Anomalies != null && s.Anomalies.Any(a =>
+                        a != null && string.Equals(a.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
+                    || (s.Cities != null && s.Cities.Any(n =>
+                        n != null &&
+                        ((n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null &&
+                            string.Equals(m.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
+                         || (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Contains(anomalyDefId)))));
+
                 if (alreadySpawned)
                     continue;
 
                 var node = nodes[rng.Next(nodes.Count)];
                 if (node == null) continue;
 
-                if (node.ActiveAnomalyIds != null && node.ActiveAnomalyIds.Contains(anomalyId))
-                    continue;
+                // ✅ 不再读/写 node.ActiveAnomalyIds
+                EnsureActiveAnomaly(s, node, anomalyDefId, registry);
+                GetOrCreateAnomalyState(s, node, anomalyDefId);
 
-                EnsureActiveAnomaly(s, node, anomalyId, registry);
-                GetOrCreateAnomalyState(s, node, anomalyId);
                 spawned++;
 
-                // Emit fact for anomaly spawn
-                var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyId);
+                // Emit fact for anomaly spawn (保留你原来的占位行为)
+                var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyDefId);
             }
+
 
             if (spawned < genNum)
             {

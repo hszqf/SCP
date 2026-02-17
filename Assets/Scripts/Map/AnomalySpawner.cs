@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+Ôªøusing System.Collections.Generic;
 using Core;
 using UnityEngine;
 
@@ -139,75 +139,31 @@ public class AnomalySpawner : MonoBehaviour
         var toKeep = new HashSet<string>();
         var offsetKeysToKeep = new HashSet<string>();
 
-        // Helper: resolve active defId -> instanceId from state.Anomalies
-        static string ResolveInstanceIdForCityDef(GameState s, string nodeId, string defId)
+        // Âè™‰ªé state.Anomalies ÁîüÊàêÂú∞ÂõæÂºÇÂ∏∏ÔºàÂîØ‰∏ÄÁúüÁõ∏Ôºâ
+        if (state.Anomalies != null)
         {
-            var list = s?.Anomalies;
-            if (list == null || string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(defId)) return null;
-
-            for (int i = 0; i < list.Count; i++)
+            for (int i = 0; i < state.Anomalies.Count; i++)
             {
-                var a = list[i];
-                if (a == null) continue;
+                var anom = state.Anomalies[i];
+                if (anom == null) continue;
 
-                // NOTE: ’‚¿Ô»‘ π”√ NodeId ◊˜Œ™µ±«∞∞Ê±æ°∞…˙≥…√™µ„≥« –°±µƒπ˝¬ÀÃıº˛
-                if (!string.Equals(a.NodeId, nodeId, System.StringComparison.Ordinal)) continue;
-                if (!string.Equals(a.AnomalyDefId, defId, System.StringComparison.OrdinalIgnoreCase)) continue;
+                var nodeId = anom.NodeId;
+                var defId = anom.AnomalyDefId;
+                var instanceId = anom.Id;
 
-                return a.Id;
-            }
+                if (string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(defId) || string.IsNullOrEmpty(instanceId))
+                    continue;
 
-            return null;
-        }
+                // Âè™ÊòæÁ§∫Â∑≤Ëß£ÈîÅÂüéÂ∏ÇÈôÑËøëÁöÑÂºÇÂ∏∏ÔºàÁª¥ÊåÅ‰Ω†ÊóßÈÄªËæëÔºöÂõ¥Áªï city anchorÔºâ
+                var node = state.Cities.Find(n => n != null && n.Id == nodeId);
+                if (node == null || !node.Unlocked) continue;
 
-        foreach (var node in state.Cities)
-        {
-            if (node == null || !node.Unlocked) continue;
+                Vector2 fallbackPos = ResolveNodeAnchoredPosition(node);
 
-            // entries: (defId, instanceId)
-            var entries = new List<(string defId, string instanceId)>();
-
-            // Active anomalies (defId list) -> resolve to instanceId
-            if (node.ActiveAnomalyIds != null)
-            {
-                foreach (var defId in node.ActiveAnomalyIds)
-                {
-                    if (string.IsNullOrEmpty(defId)) continue;
-
-                    var instanceId = ResolveInstanceIdForCityDef(state, node.Id, defId);
-                    if (string.IsNullOrEmpty(instanceId))
-                    {
-                        Debug.LogWarning($"[AnomalySpawner] Active defId={defId} has no instance in state.Anomalies (node={node.Id})");
-                        continue;
-                    }
-
-                    entries.Add((defId, instanceId));
-                }
-            }
-
-            // Managed anomalies already carry instanceId
-            if (node.ManagedAnomalies != null)
-            {
-                foreach (var managed in node.ManagedAnomalies)
-                {
-                    if (managed == null) continue;
-                    if (string.IsNullOrEmpty(managed.AnomalyDefId) || string.IsNullOrEmpty(managed.AnomalyInstanceId)) continue;
-
-                    entries.Add((managed.AnomalyDefId, managed.AnomalyInstanceId));
-                }
-            }
-
-            if (entries.Count == 0) continue;
-
-            Vector2 fallbackPos = ResolveNodeAnchoredPosition(node);
-
-            foreach (var entry in entries)
-            {
-                // Key now always includes instanceId as suffix to avoid collisions
-                string key = BuildAnomalyKey(node.Id, entry.defId, entry.instanceId);
-
-                // OffsetKey stays node+defId so all same-def markers share a stable anchor/cluster around the city
-                var offsetKey = BuildAnomalyOffsetKey(node.Id, entry.defId);
+                // KeyÔºönode:def:instanceÔºàÈÅøÂÖçÂêå def Á¢∞ÊíûÔºâ
+                string key = BuildAnomalyKey(nodeId, defId, instanceId);
+                // OffsetKeyÔºönode:defÔºà‰øùÊåÅÂêå def Á®≥ÂÆöÁ∞áÔºâ
+                var offsetKey = BuildAnomalyOffsetKey(nodeId, defId);
 
                 toKeep.Add(key);
                 offsetKeysToKeep.Add(offsetKey);
@@ -225,14 +181,14 @@ public class AnomalySpawner : MonoBehaviour
                 {
                     var anchorPos = GetOrCreateAnomalyAnchorPosition(offsetKey, fallbackPos);
                     rt.anchoredPosition = anchorPos + GetOrCreateAnomalyOffset(offsetKey);
-                    LogAnomalyPlacement(node.Id, entry.defId, offsetKey, anchorPos, rt.anchoredPosition);
+                    LogAnomalyPlacement(nodeId, defId, offsetKey, anchorPos, rt.anchoredPosition);
                 }
 
-                // IMPORTANT: bind must carry instanceId (active also has one now)
-                anomaly.Bind(entry.defId, entry.instanceId);
+                // ‚úÖ Ê∞∏ËøúÊê∫Â∏¶ instanceId
+                anomaly.Bind(defId, instanceId);
 
                 if (rt != null)
-                    DispatchAnimationSystem.I?.RegisterAnomaly(node.Id, entry.defId, rt);
+                    DispatchAnimationSystem.I?.RegisterAnomaly(nodeId, defId, rt);
             }
         }
 
@@ -249,9 +205,7 @@ public class AnomalySpawner : MonoBehaviour
         }
 
         foreach (var key in toRemove)
-        {
             _anomalies.Remove(key);
-        }
 
         // Remove stale offsets
         var offsetsToRemove = new List<string>();
@@ -260,11 +214,8 @@ public class AnomalySpawner : MonoBehaviour
             if (!offsetKeysToKeep.Contains(kvp.Key))
                 offsetsToRemove.Add(kvp.Key);
         }
-
         foreach (var key in offsetsToRemove)
-        {
             _anomalyOffsets.Remove(key);
-        }
 
         // Remove stale anchors
         var anchorsToRemove = new List<string>();
@@ -273,7 +224,6 @@ public class AnomalySpawner : MonoBehaviour
             if (!offsetKeysToKeep.Contains(kvp.Key))
                 anchorsToRemove.Add(kvp.Key);
         }
-
         foreach (var key in anchorsToRemove)
         {
             _anomalyAnchorPositions.Remove(key);
@@ -352,7 +302,7 @@ public class AnomalySpawner : MonoBehaviour
                 return offset;
         }
 
-        // »°µ•Œª‘≤œÚ¡ø£¨≥§∂»‘⁄[min, max]÷Æº‰
+        // ÂèñÂçï‰ΩçÂúÜÂêëÈáèÔºåÈïøÂ∫¶Âú®[min, max]‰πãÈó¥
         Vector2 dir = Random.insideUnitCircle.normalized;
         float len = Random.Range(min, max);
         offset = dir * len;
