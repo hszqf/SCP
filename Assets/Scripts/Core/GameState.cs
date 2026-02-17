@@ -159,7 +159,6 @@ namespace Core
         // Legacy: node-scoped status during migration.
         public NodeStatus Status = NodeStatus.Calm;
 
-        public int AnomalyLevel = 0;
         public List<string> KnownAnomalyDefIds = new();
         public List<ManagedAnomalyState> ManagedAnomalies = new();
         public List<NodeTask> Tasks = new();

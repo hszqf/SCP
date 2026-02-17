@@ -57,9 +57,7 @@ namespace Core
         {
             if (state == null || node == null || string.IsNullOrEmpty(anomalyDefId) || registry == null) return;
 
-            // 如果配置存在，先把等级拉到至少 1（保留你原有语义）
-            if (registry.AnomaliesById != null && registry.AnomaliesById.TryGetValue(anomalyDefId, out var _))
-                node.AnomalyLevel = System.Math.Max(node.AnomalyLevel, 1);
+
 
             // 真实实例真相：只在 state.Anomalies 里
             var anomalyState = GetOrCreateAnomalyState(state, node, anomalyDefId);
