@@ -124,20 +124,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         }
     }
 
-    public void Show()
-    {
-        ClearSelectionState();
-        _mode = AssignPanelMode.Manage;
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-    }
-
-    // Optional explicit node binding (recommended if you call panel directly)
-    public void Show(string nodeId)
-    {
-        ClearSelectionState();
-        ShowForNode(nodeId);
-    }
 
     public void Hide()
     {
@@ -149,26 +135,6 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         Hide();
     }
-
-    public void ShowForNode(string nodeId)
-    {
-        ClearSelectionState();
-        _mode = AssignPanelMode.Manage;
-        _nodeId = nodeId;
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-    }
-
-    public void ShowForNode(string nodeId, string preselectTargetId)
-    {
-        ClearSelectionState();
-        _mode = AssignPanelMode.Manage;
-        _nodeId = nodeId;
-        _selectedTargetId = preselectTargetId;
-        gameObject.SetActive(true);
-        transform.SetAsLastSibling();
-    }
-
    
 
     public void ShowGeneric(
