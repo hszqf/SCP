@@ -1,4 +1,4 @@
-using Core;
+﻿using Core;
 using Data;
 using System;
 using System.Linq;
@@ -10,137 +10,112 @@ namespace Settlement
     {
         public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
         {
-            if (state == null)
-                return;
+            if (state == null) return;
 
             var anomalies = state.Anomalies;
             var cities = state.Cities;
             if (anomalies == null || anomalies.Count == 0 || cities == null || cities.Count == 0)
                 return;
 
-            if (MapEntityRegistry.I == null)
-            {
-                Debug.LogWarning("[Settle][AnomBehavior] MapEntityRegistry missing, skipping anomaly behavior");
-                r?.Log("[Settle][AnomBehavior] MapEntityRegistry missing, skipped all anomalies");
-                return;
-            }
-
-            int missingAnomPosWarns = 0;
-            const int MissingAnomPosWarnLimit = 3;
-
-            // Iterate anomalies by SpawnSeq ascending
             foreach (var a in anomalies.OrderBy(x => x.SpawnSeq))
             {
                 if (a == null) continue;
 
-                float radius = GetAnomalyRadius(state, a);
-                if (radius <= 0f)
+                float range = GetAnomalyRange(a); // >=0；0 表示仅影响锚点城市
+
+                // 以 NodeId 作为“异常锚点城市”（当前版本的生成逻辑就是这么写的）
+                var origin = ResolveAnchorCity(state, a);
+                if (origin == null)
                 {
-                    Debug.LogWarning($"[Settle][AnomBehavior] anomaly radius missing for anom={a.Id} def={a.AnomalyDefId}");
-                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} missing radius");
+                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} anchorCity=NULL nodeId={a.NodeId} skipped");
                     continue;
                 }
 
-                // Resolve anomaly world position using canonical key only (a.Id)
-                Vector3 anomPos3 = default;
-                if (!MapEntityRegistry.I.TryGetAnomalyWorldPos(a.Id, out anomPos3))
-                {
-                    if (missingAnomPosWarns < MissingAnomPosWarnLimit)
-                    {
-                        Debug.LogWarning($"[Settle][AnomBehavior] can't resolve world pos for anom={a.Id} def={a.AnomalyDefId} (tried key '{a.Id}')");
-                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} missing worldPos");
-                        missingAnomPosWarns++;
-                    }
-                    // skip this anomaly if we can't resolve a world position
-                    continue;
-                }
-
-                var anomPos = (Vector2)anomPos3;
+                var originPos = ResolveCityPos(origin);
 
                 int hitCount = 0;
-                int skippedNotRegistered = 0;
 
-                // Check all cities for being within radius
                 foreach (var city in cities)
                 {
                     if (city == null) continue;
 
-                    var cityKey = city.Id.ToString();
-
-                    Vector3 cityPos3;
-                    if (!MapEntityRegistry.I.TryGetCityWorldPos(cityKey, out cityPos3))
-                    {
-                        // city not registered/visible, skip without spamming warnings
-                        skippedNotRegistered++;
+                    if (!IsCityInRange(origin, originPos, city, range))
                         continue;
-                    }
 
-                    var cityPos = (Vector2)cityPos3;
-                    float dist = Vector2.Distance(anomPos, cityPos);
-                    if (dist <= radius)
-                    {
-                        hitCount++;
+                    int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
+                    if (deltaPop <= 0) continue;
 
-                        int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
+                    hitCount++;
 
-                        // Apply population change now (actual deduction) if delta > 0
-                        if (deltaPop > 0)
-                        {
-                            int beforePop = city.Population;
-                            int afterPop = Math.Max(0, beforePop - deltaPop);
-                            city.Population = afterPop;
+                    int beforePop = city.Population;
+                    int afterPop = Math.Max(0, beforePop - deltaPop);
+                    city.Population = afterPop;
 
-                            // log city name when available
-                            string cityName;
-                            if (MapEntityRegistry.I.TryGetCityView(cityKey, out var cityView) && cityView != null)
-                                cityName = cityView.CityName;
-                            else
-                                cityName = string.IsNullOrEmpty(city.Name) ? cityKey : city.Name;
+                    var cityName = string.IsNullOrEmpty(city.Name) ? city.Id : city.Name;
 
-                            //Debug.Log($"[Settle][AnomPopLoss] day={state.Day} node={city.Id} loss={deltaPop} before={beforePop} after={afterPop}");
-                            r?.Log($"[Settle][AnomPopLoss] day={state.Day} Cityname={city.Name} loss={deltaPop} before={beforePop} after={afterPop}");
-                        }
-                        else
-                        {
-                            // no change, still log summary for hit
-                            r?.Log($"[Settle][AnomBehavior] no change, anom={a.Id} hitCity={city.Id} deltaPop=0 dist={dist:0.###} radius={radius}");
-                        }
-
-                        // Debug original DRY message suppressed
-                        //Debug.Log($"[Settle][AnomBehavior][DRY] anom={a.Id} city={cityName} deltaPop={deltaPop} dist={dist:0.###} radius={radius} pop={city.Population}");
-                        //r?.Log($"[Settle][AnomBehavior] anom={a.Id} hitCityName={cityName} dist={dist:0.#} radius={radius}");
-                    }
+                    // 额外打印 dist/range，方便你肉眼确认“为什么命中”
+                    float dist = (city.Id == origin.Id) ? 0f : Vector2.Distance(originPos, ResolveCityPos(city));
+                    r?.Log($"[Settle][AnomPopLoss] day={state.Day} city={cityName} dist={dist:0.##} range={range:0.##} loss={deltaPop} before={beforePop} after={afterPop} anom={a.Id} def={a.AnomalyDefId}");
                 }
 
-                // Per-anomaly summary log
-                r?.Log($"[Settle][AnomBehavior] anom={a.Id} radius={radius} hitCount={hitCount} skippedNotRegistered={skippedNotRegistered}");
-             }
-         }
+                r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount={hitCount} anchorCity={origin.Id}");
+            }
+        }
 
-        private static float GetAnomalyRadius(Core.GameState state, Core.AnomalyState a)
+        private static CityState ResolveAnchorCity(Core.GameState state, Core.AnomalyState a)
+        {
+            if (state?.Cities == null || a == null) return null;
+            if (string.IsNullOrEmpty(a.NodeId)) return null;
+
+            return state.Cities.FirstOrDefault(c =>
+                c != null && string.Equals(c.Id, a.NodeId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool IsCityInRange(CityState origin, Vector2 originPos, CityState target, float range)
+        {
+            if (origin == null || target == null) return false;
+
+            // range<=0：只影响锚点城市自身
+            if (range <= 0f)
+                return string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase);
+
+            // 锚点城市永远命中（避免坐标缺失时“锚点也不扣”）
+            if (string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var targetPos = ResolveCityPos(target);
+
+            // 若任一坐标缺失：宁可不误伤范围外城市
+            if (originPos == Vector2.zero || targetPos == Vector2.zero)
+                return false;
+
+            return Vector2.Distance(originPos, targetPos) <= range;
+        }
+
+        private static Vector2 ResolveCityPos(CityState c)
+        {
+            if (c == null) return Vector2.zero;
+
+            // ✅ 优先 world Position（你在 InitGame 里写了 rt.position）
+            if (c.Position != Vector2.zero) return c.Position;
+
+            // 兼容：若 Position 没写入，退回 anchored X/Y
+            if (Mathf.Abs(c.X) > 0.001f || Mathf.Abs(c.Y) > 0.001f)
+                return new Vector2(c.X, c.Y);
+
+            return Vector2.zero;
+        }
+
+        private static float GetAnomalyRange(Core.AnomalyState a)
         {
             if (a == null) return 0f;
 
             var registry = DataRegistry.Instance;
-            if (registry != null && !string.IsNullOrEmpty(a.AnomalyDefId) && registry.AnomaliesById != null)
-            {
-                if (registry.AnomaliesById.TryGetValue(a.AnomalyDefId, out var def) && def != null)
-                    return Mathf.Max(0f, def.range);
+            if (registry == null || string.IsNullOrEmpty(a.AnomalyDefId)) return 0f;
 
-                // fallback: try registry helper
-                try
-                {
-                    float val = registry.GetAnomalyFloatWithWarn(a.AnomalyDefId, "range", 0f);
-                    return Mathf.Max(0f, val);
-                }
-                catch
-                {
-                    // ignore and warn below
-                }
-            }
-
-            Debug.LogWarning($"[Settle][AnomBehavior] can't resolve anomaly radius for anom={a.Id} defId={a.AnomalyDefId}");
-            return 0f;
+            // 统一口径：只认表字段 range
+            float val = registry.GetAnomalyFloatWithWarn(a.AnomalyDefId, "range", 0f);
+            return Mathf.Max(0f, val);
         }
     }
 }

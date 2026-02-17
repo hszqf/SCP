@@ -1,4 +1,4 @@
-// Assets/Scripts/Core/Settlement/SettlementUtil.cs
+﻿// Assets/Scripts/Core/Settlement/SettlementUtil.cs
 using Core;
 using Data;
 using System;
@@ -118,43 +118,41 @@ namespace Settlement
             var registry = DataRegistry.Instance;
             if (registry == null) return 0;
 
-            // Legacy field: actPeopleKill (per-anomaly flat kill value)
+            // 只返回该异常的“每日人口减少值”，范围判定由 AnomalyBehaviorSystem 统一处理（worldPos）。
             int kill = registry.GetAnomalyIntWithWarn(anom.AnomalyDefId, "actPeopleKill", 0);
-            if (kill <= 0) return 0;
-
-            // Try to locate origin node by anomaly's NodeId
-            CityState origin = null;
-            if (!string.IsNullOrEmpty(anom.NodeId) && state.Cities != null)
-                origin = state.Cities.FirstOrDefault(n => n != null && string.Equals(n.Id, anom.NodeId, StringComparison.OrdinalIgnoreCase));
-
-            // If origin not found, we can't determine range; assume not affected
-            if (origin == null) return 0;
-
-            float range = registry.GetAnomalyFloatWithWarn(anom.AnomalyDefId, "range", 0f);
-            if (!IsNodeWithinRange(origin, city, range)) return 0;
-
             return Math.Max(0, kill);
         }
+
         private static bool IsNodeWithinRange(CityState origin, CityState target, float range)
         {
             if (origin == null || target == null) return false;
+
+            // range<=0：只影响自身城市
             if (range <= 0f)
                 return string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase);
 
-            var originPos = ResolveNodeLocation01(origin);
-            var targetPos = ResolveNodeLocation01(target);
+            var originPos = ResolveNodeWorldPos(origin);
+            var targetPos = ResolveNodeWorldPos(target);
+
+            // 如果位置缺失，直接判定不在范围（不做“猜测/兜底扫描”）
+            if (originPos.sqrMagnitude < 0.0001f || targetPos.sqrMagnitude < 0.0001f)
+                return false;
+
             return Vector2.Distance(originPos, targetPos) <= range;
         }
-        private static Vector2 ResolveNodeLocation01(CityState node)
+
+        private static Vector2 ResolveNodeWorldPos(CityState node)
         {
-            if (node?.Location != null && node.Location.Length >= 2)
-                return new Vector2(node.Location[0], node.Location[1]);
+            if (node == null) return Vector2.zero;
 
-            if (node != null && node.Type == 0 && Mathf.Abs(node.X) < 0.0001f && Mathf.Abs(node.Y) < 0.0001f)
-                return new Vector2(0.5f, 0.5f);
+            // ✅ 优先使用 Position（world）
+            if (node.Position.sqrMagnitude >= 0.0001f)
+                return node.Position;
 
-            return node != null ? new Vector2(node.X, node.Y) : new Vector2(0.5f, 0.5f);
+            // 兼容：如果没初始化 Position，才退回 X/Y（历史上它可能是 anchoredPosition）
+            return new Vector2(node.X, node.Y);
         }
+
 
 
         public static float CalcInvestigateDelta01_FromRoster(GameState state, AnomalyState anom, List<AgentState> arrived, DataRegistry registry)
@@ -163,11 +161,11 @@ namespace Settlement
             if (registry == null) return 0f;
 
 
-            if (anom == null) return 0f; // �� 0
+            if (anom == null) return 0f; // 或 0
             if (string.IsNullOrEmpty(anom.AnomalyDefId))
             {
                 Debug.LogWarning($"[SettleCalc] Missing anom.AnomalyDefId for anomStateId={anom?.Id ?? "null"}");
-                return 0f; // NegEntropy �ĺ������� 0
+                return 0f; // NegEntropy 的函数返回 0
             }
 
             if (!registry.AnomaliesById.TryGetValue(anom.AnomalyDefId, out var def) || def == null)
@@ -371,21 +369,21 @@ namespace Settlement
             {
                 return slot switch
                 {
-                    AssignmentSlot.Investigate => "����",
-                    AssignmentSlot.Contain => "����",
-                    AssignmentSlot.Operate => "����",
-                    _ => "����",
+                    AssignmentSlot.Investigate => "调查",
+                    AssignmentSlot.Contain => "收容",
+                    AssignmentSlot.Operate => "管理",
+                    _ => "管理",
                 };
             }
 
             switch (agent.LocationKind)
             {
                 case AgentLocationKind.TravellingToAnomaly:
-                    return $"��;��ǰ��{SlotToChinese(agent.LocationSlot)}";
+                    return $"在途·前往{SlotToChinese(agent.LocationSlot)}";
                 case AgentLocationKind.AtAnomaly:
-                    return $"{SlotToChinese(agent.LocationSlot)}��";
+                    return $"{SlotToChinese(agent.LocationSlot)}中";
                 case AgentLocationKind.TravellingToBase:
-                    return "���̡��ػ���";
+                    return "返程·回基地";
                 case AgentLocationKind.Base:
                 default:
                     return string.Empty;

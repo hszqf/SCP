@@ -107,6 +107,8 @@ namespace Core
         public bool Unlocked = true;
         public int Type = 1;
         public float[] Location;
+        public Vector2 Position; // ✅ 唯一可信：地图/Canvas world space，用于结算距离
+
 
         // 0..1 百分比坐标：左下(0,0) 右上(1,1)
         public float X;

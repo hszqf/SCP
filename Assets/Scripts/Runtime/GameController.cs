@@ -180,7 +180,13 @@ public class GameController : MonoBehaviour
             {
                 cityState.X = rt.anchoredPosition.x;
                 cityState.Y = rt.anchoredPosition.y;
+                cityState.Position = rt.position; // ✅ world pos
             }
+            else
+            {
+                cityState.Position = city.transform.position; // 兜底（正常 UI 城市一般不会走到这）
+            }
+
 
             State.Cities.Add(cityState);
         }
