@@ -35,47 +35,19 @@ public class Anomaly : MonoBehaviour
     // registration key actually registered in MapEntityRegistry
     private string _regKeyCanonical;
 
-    public void Bind(string anomalyId, string managedAnomalyId)
+    public void Bind(string anomalyDefId, string anomalyInstanceId)
     {
-        _anomalyId = anomalyId;
-        _managedAnomalyId = managedAnomalyId;
+        _anomalyId = anomalyDefId;
 
-        // compute canonical anomaly key if possible
-        var gcBind = GameController.I;
-        var preferKeyBind = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
-        AnomalyState anomBind = null;
-        if (gcBind != null && gcBind.State != null)
-        {
-            if (!string.IsNullOrEmpty(_managedAnomalyId))
-            {
-                anomBind = Core.DispatchSystem.FindAnomaly(gcBind.State, _managedAnomalyId);
-            }
-            else
-            {
-                // node+def disambiguation: avoid cross-node same def
-                var list = gcBind.State.Anomalies;
-                if (list != null)
-                {
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        var a = list[i];
-                        if (a == null) continue;
-                        if (!string.IsNullOrEmpty(a.NodeId) &&
-                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
-                        {
-                            anomBind = a;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        _canonicalAnomalyKey = anomBind != null ? anomBind.Id : preferKeyBind;
+        // 兼容现有字段：本工程已不再区分“managedId”，这里用它来存 instanceId（唯一真相）
+        _managedAnomalyId = anomalyInstanceId;
+
+        // MapEntityRegistry 的注册 key：必须是实例ID
+        _canonicalAnomalyKey = anomalyInstanceId;
 
         EnsureRefs();
         Refresh();
         // registration moved to Refresh() only to avoid duplicate registration from Bind+Refresh
-        // RegisterToRegistry();
     }
 
     private void OnEnable()
@@ -119,55 +91,17 @@ public class Anomaly : MonoBehaviour
     private void Refresh()
     {
         var gc = GameController.I;
-        if (gc?.State?.Cities == null || string.IsNullOrEmpty(_anomalyId))
+        if (gc?.State == null || string.IsNullOrEmpty(_anomalyId))
             return;
 
-        var node = gc.State.Cities.Find(n => n != null);
-        if (node == null) return;
+        // instanceId is the only truth for resolving state
+        if (string.IsNullOrEmpty(_canonicalAnomalyKey))
+            return;
 
-        var managed = ResolveManagedAnomaly(node);
-        _managedAnomalyId = managed?.AnomalyInstanceId ?? _managedAnomalyId;
+        // Resolve simulation state ONLY by instanceId
+        var anom = Core.DispatchSystem.FindAnomaly(gc.State, _canonicalAnomalyKey);
 
-        // compute canonical anomaly key for this anomaly (managed -> managed id else def id -> canonical instance id)
-        var preferKey = !string.IsNullOrEmpty(_managedAnomalyId) ? _managedAnomalyId : _anomalyId;
-
-        // Unified anomaly resolution: prefer canonical key (instance id) then fall back to node+def disambiguation
-        AnomalyState anom = null;
-        if (!string.IsNullOrEmpty(_canonicalAnomalyKey))
-        {
-            anom = Core.DispatchSystem.FindAnomaly(gc.State, _canonicalAnomalyKey);
-        }
-
-        if (anom == null)
-        {
-            if (!string.IsNullOrEmpty(_managedAnomalyId))
-            {
-                anom = Core.DispatchSystem.FindAnomaly(gc.State, _managedAnomalyId);
-            }
-            else
-            {
-                // node+def disambiguation: avoid cross-node same def
-                var list = gc.State.Anomalies;
-                if (list != null)
-                {
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        var a = list[i];
-                        if (a == null) continue;
-                        if (!string.IsNullOrEmpty(a.NodeId) &&
-                            !string.IsNullOrEmpty(a.AnomalyDefId) && a.AnomalyDefId == _anomalyId)
-                        {
-                            anom = a;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        _canonicalAnomalyKey = anom != null ? anom.Id : preferKey;
-
-        // register with MapEntityRegistry so other systems can resolve world positions
+        // Always register using canonical (instance) key so other systems can resolve positions
         RegisterToRegistry();
 
         // Determine display name reveal based on phase/progress
@@ -176,25 +110,18 @@ public class Anomaly : MonoBehaviour
         {
             revealName = (anom.Phase != AnomalyPhase.Investigate) || (anom.InvestigateProgress >= 0.2f);
         }
-        else
-        {
-            // fallback: known anomalies reveal name, unknown hide
-            revealName = (node.KnownAnomalyDefIds != null && node.KnownAnomalyDefIds.Contains(_anomalyId));
-        }
 
-        // set display name text if provided
+        // Display name
         if (displayNameText)
-        {
             displayNameText.text = revealName ? ResolveAnomalyName(_anomalyId) : "□□□□";
-        }
 
-        // sprite: use revealName as 'known' flag for sprite resolution
+        // Sprite
         var spriteLibrary = AnomalySpriteLibrary.I;
         var sprite = spriteLibrary != null ? spriteLibrary.ResolveAnomalySprite(_anomalyId, revealName) : null;
         if (icon)
             icon.sprite = sprite;
 
-        // Progress handling driven by phase
+        // Progress handling driven by phase (NO fallback scanning)
         float progress01 = 0f;
         string progressPrefix = string.Empty;
         string overrideText = null;
@@ -209,55 +136,45 @@ public class Anomaly : MonoBehaviour
                     alwaysVisible = true;
                     progress01 = Mathf.Clamp01(anom.InvestigateProgress);
                     if (progress01 <= 0f)
-                    {
                         overrideText = "待调查";
-                    }
-                    else
-                    {
-                        // show percent; prefix optional
-                        progressPrefix = string.Empty;
-                    }
                     break;
 
                 case AnomalyPhase.Contain:
                     alwaysVisible = true;
                     progress01 = Mathf.Clamp01(anom.ContainProgress);
                     if (progress01 <= 0f)
-                    {
                         overrideText = "未收容";
-                    }
                     break;
 
                 case AnomalyPhase.Operate:
                     // arrived count -> binary progress
-                    var arrived = CollectArrivedAgentIds(node).Count;
+                    var arrived = CollectArrivedAgentIds(null).Count;
                     progress01 = arrived > 0 ? 1f : 0f;
-                    // no percent, use fixed labels
                     overrideText = arrived > 0 ? "管理中" : "待管理";
                     showPercent = false;
                     alwaysVisible = true;
                     break;
 
                 default:
-                    // fallback to previous behavior: if not found, attempt legacy lookups
+                    Debug.LogWarning("No Phase");
+                    alwaysVisible = false;
                     progress01 = 0f;
+                    overrideText = "未知";
+                    showPercent = false;
                     break;
             }
         }
         else
         {
-            // fallback legacy behavior when no AnomalyState is found in the simulation
-            // Prefer AnomalyState normalized 0..1 progress; fallback to legacy task/baseDays if missing
-            progress01 = GetInvestigateProgress01_FromAnomalyState(gc.State);
-            if (progress01 <= 0f)
-                progress01 = GetInvestigateProgress01(gc.State, node, _anomalyId); // legacy fallback only
-            if (progress01 > 0f)
-                progressPrefix = "调查中：";
+            // No state found for this instanceId: do NOT guess by defId.
+            Debug.LogWarning("No state found for this instanceId");
+            alwaysVisible = false;
+            progress01 = 0f;
+            overrideText = "未知";
+            showPercent = false;
         }
 
         UpdateProgressBar(progress01, progressPrefix, alwaysVisible, overrideText, showPercent);
-
-
 
         UpdateRangeIndicator(_anomalyId);
         RefreshAgentAvatars();
@@ -281,7 +198,7 @@ public class Anomaly : MonoBehaviour
             }
         }
 
-        Debug.Log($"[AnomUI] key={_canonicalAnomalyKey} phase={(anom!=null?anom.Phase.ToString():"null")} inv={(anom!=null?anom.InvestigateProgress:-1f):0.###} con={(anom!=null?anom.ContainProgress:-1f):0.###} revealName={revealName} opArr={opArrivedCount}");
+        Debug.Log($"[AnomUI] key={_canonicalAnomalyKey} def={_anomalyId} phase={(anom != null ? anom.Phase.ToString() : "null")} inv={(anom != null ? anom.InvestigateProgress : -1f):0.###} con={(anom != null ? anom.ContainProgress : -1f):0.###} revealName={revealName} opArr={opArrivedCount}");
     }
 
     private void UpdateProgressBar(float progress01, string progressPrefix, bool alwaysVisible = false, string overrideText = null, bool showPercent = true)
@@ -399,43 +316,50 @@ public class Anomaly : MonoBehaviour
         return _rangeSprite;
     }
 
-    private ManagedAnomalyState ResolveManagedAnomaly(CityState node)
-    {
-        if (node?.ManagedAnomalies == null || node.ManagedAnomalies.Count == 0) return null;
-        if (!string.IsNullOrEmpty(_managedAnomalyId))
-            return node.ManagedAnomalies.Find(m => m != null && m.AnomalyInstanceId == _managedAnomalyId);
-        return node.ManagedAnomalies.Find(m => m != null && string.Equals(m.AnomalyDefId, _anomalyId, System.StringComparison.OrdinalIgnoreCase));
-    }
 
-    private void HandleClick()
+    void HandleClick()
     {
         if (DispatchAnimationSystem.I != null && DispatchAnimationSystem.I.IsInteractionLocked)
             return;
+
         var root = UIPanelRoot.I;
+        if (root == null) return;
+
         var gc = GameController.I;
+        var state = gc?.State;
+        if (state == null) return;
 
-        // 关键：优先拿到 anomalyState（真源：phase）
-        var anomalyState = FindAnomalyState(gc?.State, _anomalyId);
-
-        // 若能拿到 anomalyState，则完全按 phase 分流（不再看 _isKnown / managed）
-        if (anomalyState != null)
+        // 唯一真源：实例ID（instanceId）
+        if (string.IsNullOrEmpty(_canonicalAnomalyKey))
         {
-            switch (anomalyState.Phase)
-            {
+            Debug.LogError($"[AnomUI] HandleClick missing instanceId. defId={_anomalyId ?? "null"}");
+            return;
+        }
 
-                case AnomalyPhase.Contain:
-                    root.OpenContainAssignPanelForAnomaly( anomalyState.Id);
-                    return;
+        var anomalyState = Core.DispatchSystem.FindAnomaly(state, _canonicalAnomalyKey);
+        if (anomalyState == null)
+        {
+            Debug.LogWarning($"[AnomUI] HandleClick instance not found. defId={_anomalyId ?? "null"} instanceId={_canonicalAnomalyKey}");
+            return;
+        }
 
-                case AnomalyPhase.Operate:
-                    root.OpenOperateAssignPanelForAnomaly( anomalyState.Id);
-                    return;
+        switch (anomalyState.Phase)
+        {
+            case AnomalyPhase.Investigate:
+                root.OpenInvestigateAssignPanelForAnomaly(anomalyState.Id);
+                return;
 
-                // Investigate/Investigating/Discovered/Unknown 统一走调查
-                default:
-                    root.OpenInvestigateAssignPanelForAnomaly(anomalyState.Id);
-                    return;
-            }
+            case AnomalyPhase.Contain:
+                root.OpenContainAssignPanelForAnomaly(anomalyState.Id);
+                return;
+
+            case AnomalyPhase.Operate:
+                root.OpenOperateAssignPanelForAnomaly(anomalyState.Id);
+                return;
+
+            default:
+                Debug.LogWarning("AnomalyPhase error");
+                return;
         }
     }
 

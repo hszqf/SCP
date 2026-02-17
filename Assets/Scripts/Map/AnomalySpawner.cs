@@ -133,29 +133,66 @@ public class AnomalySpawner : MonoBehaviour
         if (!anomalyLayer || !anomalyPrefab) return;
         if (GameController.I == null || GameController.I.State?.Cities == null) return;
 
+        var gc = GameController.I;
+        var state = gc.State;
+
         var toKeep = new HashSet<string>();
         var offsetKeysToKeep = new HashSet<string>();
 
-        foreach (var node in GameController.I.State.Cities)
+        // Helper: resolve active defId -> instanceId from state.Anomalies
+        static string ResolveInstanceIdForCityDef(GameState s, string nodeId, string defId)
+        {
+            var list = s?.Anomalies;
+            if (list == null || string.IsNullOrEmpty(nodeId) || string.IsNullOrEmpty(defId)) return null;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var a = list[i];
+                if (a == null) continue;
+
+                // NOTE: 这里仍使用 NodeId 作为当前版本“生成锚点城市”的过滤条件
+                if (!string.Equals(a.NodeId, nodeId, System.StringComparison.Ordinal)) continue;
+                if (!string.Equals(a.AnomalyDefId, defId, System.StringComparison.OrdinalIgnoreCase)) continue;
+
+                return a.Id;
+            }
+
+            return null;
+        }
+
+        foreach (var node in state.Cities)
         {
             if (node == null || !node.Unlocked) continue;
 
-            var entries = new List<(string anomalyId, string managedId)>();
+            // entries: (defId, instanceId)
+            var entries = new List<(string defId, string instanceId)>();
 
+            // Active anomalies (defId list) -> resolve to instanceId
             if (node.ActiveAnomalyIds != null)
             {
-                foreach (var anomalyId in node.ActiveAnomalyIds)
+                foreach (var defId in node.ActiveAnomalyIds)
                 {
-                    if (string.IsNullOrEmpty(anomalyId)) continue;
-                    entries.Add((anomalyId, null));
+                    if (string.IsNullOrEmpty(defId)) continue;
+
+                    var instanceId = ResolveInstanceIdForCityDef(state, node.Id, defId);
+                    if (string.IsNullOrEmpty(instanceId))
+                    {
+                        Debug.LogWarning($"[AnomalySpawner] Active defId={defId} has no instance in state.Anomalies (node={node.Id})");
+                        continue;
+                    }
+
+                    entries.Add((defId, instanceId));
                 }
             }
 
+            // Managed anomalies already carry instanceId
             if (node.ManagedAnomalies != null)
             {
                 foreach (var managed in node.ManagedAnomalies)
                 {
-                    if (managed == null || string.IsNullOrEmpty(managed.AnomalyDefId)) continue;
+                    if (managed == null) continue;
+                    if (string.IsNullOrEmpty(managed.AnomalyDefId) || string.IsNullOrEmpty(managed.AnomalyInstanceId)) continue;
+
                     entries.Add((managed.AnomalyDefId, managed.AnomalyInstanceId));
                 }
             }
@@ -163,13 +200,17 @@ public class AnomalySpawner : MonoBehaviour
             if (entries.Count == 0) continue;
 
             Vector2 fallbackPos = ResolveNodeAnchoredPosition(node);
+
             foreach (var entry in entries)
             {
-                string key = BuildAnomalyKey(node.Id, entry.anomalyId, entry.managedId);
-                var offsetKey = BuildAnomalyOffsetKey(node.Id, entry.anomalyId);
+                // Key now always includes instanceId as suffix to avoid collisions
+                string key = BuildAnomalyKey(node.Id, entry.defId, entry.instanceId);
+
+                // OffsetKey stays node+defId so all same-def markers share a stable anchor/cluster around the city
+                var offsetKey = BuildAnomalyOffsetKey(node.Id, entry.defId);
+
                 toKeep.Add(key);
                 offsetKeysToKeep.Add(offsetKey);
-
 
                 if (!_anomalies.TryGetValue(key, out var anomaly) || anomaly == null)
                 {
@@ -177,7 +218,6 @@ public class AnomalySpawner : MonoBehaviour
                     anomaly = go.GetComponent<Anomaly>();
                     if (anomaly == null) anomaly = go.AddComponent<Anomaly>();
                     _anomalies[key] = anomaly;
-
                 }
 
                 var rt = anomaly.transform as RectTransform;
@@ -185,16 +225,18 @@ public class AnomalySpawner : MonoBehaviour
                 {
                     var anchorPos = GetOrCreateAnomalyAnchorPosition(offsetKey, fallbackPos);
                     rt.anchoredPosition = anchorPos + GetOrCreateAnomalyOffset(offsetKey);
-                    LogAnomalyPlacement(node.Id, entry.anomalyId, offsetKey, anchorPos, rt.anchoredPosition);
+                    LogAnomalyPlacement(node.Id, entry.defId, offsetKey, anchorPos, rt.anchoredPosition);
                 }
 
-                anomaly.Bind( entry.anomalyId, entry.managedId);
+                // IMPORTANT: bind must carry instanceId (active also has one now)
+                anomaly.Bind(entry.defId, entry.instanceId);
 
                 if (rt != null)
-                    DispatchAnimationSystem.I?.RegisterAnomaly(node.Id, entry.anomalyId, rt);
+                    DispatchAnimationSystem.I?.RegisterAnomaly(node.Id, entry.defId, rt);
             }
         }
 
+        // Remove stale anomaly objects
         var toRemove = new List<string>();
         foreach (var kvp in _anomalies)
         {
@@ -211,6 +253,7 @@ public class AnomalySpawner : MonoBehaviour
             _anomalies.Remove(key);
         }
 
+        // Remove stale offsets
         var offsetsToRemove = new List<string>();
         foreach (var kvp in _anomalyOffsets)
         {
@@ -223,6 +266,7 @@ public class AnomalySpawner : MonoBehaviour
             _anomalyOffsets.Remove(key);
         }
 
+        // Remove stale anchors
         var anchorsToRemove = new List<string>();
         foreach (var kvp in _anomalyAnchorPositions)
         {
