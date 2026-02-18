@@ -81,13 +81,17 @@ namespace Core
                 a.NodeId = node.Id;
         }
 
+        // ===== BEGIN M4: Deterministic anomaly instance id (GetOrCreateAnomalyState FULL) =====
         private static AnomalyState GetOrCreateAnomalyState(GameState state, CityState node, string anomalyDefId)
         {
+            if (state == null || string.IsNullOrEmpty(anomalyDefId)) return null;
+
             state.Anomalies ??= new List<AnomalyState>();
 
-            // 唯一：同一 def 只存在一个 active 实例（与你现有去重口径一致）
+            // Uniqueness: one active instance per anomalyDefId (current design constraint)
             var existing = state.Anomalies.FirstOrDefault(a =>
                 a != null && string.Equals(a.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase));
+
             if (existing != null)
             {
                 if (node != null && string.IsNullOrEmpty(existing.NodeId))
@@ -95,21 +99,42 @@ namespace Core
                 return existing;
             }
 
+            // Deterministic spawn sequence key
+            int seq = state.NextAnomalySpawnSeq++;
+            string instanceId = BuildDeterministicAnomalyInstanceId(state.Day, anomalyDefId, seq);
+
             var created = new AnomalyState
             {
-                Id = "AN_STATE_" + Guid.NewGuid().ToString("N")[..8],
+                Id = instanceId,
                 AnomalyDefId = anomalyDefId,
                 NodeId = node?.Id,
                 SpawnDay = state.Day,
+                SpawnSeq = seq,
                 Phase = AnomalyPhase.Investigate,
                 RevealLevel = 0,
             };
 
-            // deterministic spawn order key
-            created.SpawnSeq = state.NextAnomalySpawnSeq++;
             state.Anomalies.Add(created);
             return created;
         }
+
+        private static string BuildDeterministicAnomalyInstanceId(int day, string anomalyDefId, int spawnSeq)
+        {
+            // Example: AN_001_0003_SCP_173
+            return $"AN_{day:D3}_{spawnSeq:D4}_{SanitizeKey(anomalyDefId)}";
+        }
+
+        private static string SanitizeKey(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "NULL";
+            // Keep [A-Za-z0-9_] only (stable across platforms)
+            var chars = s.Select(ch =>
+                (ch >= 'a' && ch <= 'z') ||
+                (ch >= 'A' && ch <= 'Z') ||
+                (ch >= '0' && ch <= '9') ? ch : '_').ToArray();
+            return new string(chars);
+        }
+        // ===== END M4: Deterministic anomaly instance id (GetOrCreateAnomalyState FULL) =====
 
         private static string PickRandomAnomalyId(DataRegistry registry, System.Random rng)
         {

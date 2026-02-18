@@ -366,11 +366,29 @@ public class GameController : MonoBehaviour
         public string Name => "EndDay.AdvanceDay";
         public void Execute(GameController gc, GameState state, DayEndResult result)
         {
-            Sim.AdvanceDay_Only(state);
+            AdvanceDayOnly(state);
             result?.Log($"[Day] advanced to day={state.Day}");
         }
     }
-    
+
+
+    // ===== BEGIN DayFlow: AdvanceDayOnly (in GameController) =====
+    private static void AdvanceDayOnly(Core.GameState s)
+    {
+        if (s == null) return;
+
+        s.Day += 1;
+
+        if (s.RecruitPool != null)
+        {
+            s.RecruitPool.day = -1;
+            s.RecruitPool.refreshUsedToday = 0;
+            s.RecruitPool.candidates?.Clear();
+        }
+    }
+    // ===== END DayFlow: AdvanceDayOnly (in GameController) =====
+
+
     // Check whether user can proceed to end the day. Returns false with reason if blocked.
     public bool CanEndDay(out string reason)
     {

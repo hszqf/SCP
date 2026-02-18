@@ -108,17 +108,12 @@ namespace Core
         public int Type = 1;
         // ===== BEGIN M2 MapPos (CityState fields) =====
 
-        // M2: unified settlement coordinate (MapRoot-local; same space as map nodes)
-        // Simulation/Settlement MUST only use MapPos for distance.
+        // M2: unified settlement coordinate (anomalyLayer-local).
+        // Written by AnomalySpawner.Build()->SyncCityMapPosToState().
         public Vector2 MapPos;
 
-        // Legacy (DO NOT use for new logic; kept for migration/compat/debug)
-        public float[] Location;
-        public Vector2 Position;
-        public float X;
-        public float Y;
-
         // ===== END M2 MapPos (CityState fields) =====
+
 
         // Legacy: node-scoped status during migration.
         public NodeStatus Status = NodeStatus.Calm;
@@ -149,17 +144,15 @@ namespace Core
         public bool IsContained;
         public bool IsManaged;
         public ManagedAnomalyState ManagedState;
+
         // ===== BEGIN M2 MapPos (AnomalyState fields) =====
 
-        // M2: unified map coordinate (MapRoot-local). Written once when the view is placed/spawned.
-        // Future settlement distance (if needed) should use MapPos.
+        // M2: unified settlement coordinate (anomalyLayer-local).
+        // Written by AnomalySpawner.RefreshAnomalies() when marker is placed.
         public Vector2 MapPos;
 
-        // Legacy coords (DO NOT use for new logic; kept during migration)
-        public float X;
-        public float Y;
-
         // ===== END M2 MapPos (AnomalyState fields) =====
+
 
         public int SpawnDay;
 
