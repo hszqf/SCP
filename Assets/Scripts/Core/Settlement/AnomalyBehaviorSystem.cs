@@ -85,26 +85,17 @@ namespace Settlement
 
             var targetPos = ResolveCityPos(target);
 
-            // 若任一坐标缺失：宁可不误伤范围外城市
-            if (originPos == Vector2.zero || targetPos == Vector2.zero)
-                return false;
-
             return Vector2.Distance(originPos, targetPos) <= range;
         }
 
+        // ===== BEGIN M2 MapPos (ResolveCityPos) =====
         private static Vector2 ResolveCityPos(CityState c)
         {
             if (c == null) return Vector2.zero;
-
-            // ✅ 优先 world Position（你在 InitGame 里写了 rt.position）
-            if (c.Position != Vector2.zero) return c.Position;
-
-            // 兼容：若 Position 没写入，退回 anchored X/Y
-            if (Mathf.Abs(c.X) > 0.001f || Mathf.Abs(c.Y) > 0.001f)
-                return new Vector2(c.X, c.Y);
-
-            return Vector2.zero;
+            // M2: Settlement distance uses ONLY MapPos (MapRoot-local).
+            return c.MapPos;
         }
+        // ===== END M2 MapPos (ResolveCityPos) =====
 
         private static float GetAnomalyRange(Core.AnomalyState a)
         {

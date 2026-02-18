@@ -183,6 +183,11 @@ public class AnomalySpawner : MonoBehaviour
                     var anchorPos = GetOrCreateAnomalyAnchorPosition(offsetKey, fallbackPos);
                     rt.anchoredPosition = anchorPos + GetOrCreateAnomalyOffset(offsetKey);
                     LogAnomalyPlacement(nodeId, defId, offsetKey, anchorPos, rt.anchoredPosition);
+                    // ===== BEGIN M2 MapPos (write anomaly MapPos) =====
+                    // M2: write canonical MapPos (NodeLayer-local) once, for simulation/settlement if needed later.
+                    // Convert from anomalyLayer local -> nodeLayer local.
+                    anom.MapPos = ConvertAnchoredPosition(anomalyLayer, nodeLayer, rt.anchoredPosition);
+                    // ===== END M2 MapPos (write anomaly MapPos) =====
                 }
 
                 // ✅ 永远携带 instanceId
@@ -232,11 +237,13 @@ public class AnomalySpawner : MonoBehaviour
         }
     }
 
+    // ===== BEGIN M2 MapPos (ResolveNodeAnchoredPosition FULL) =====
     private Vector2 ResolveNodeAnchoredPosition(CityState node)
     {
-        if (node == null || nodeLayer == null) return Vector2.zero;
+        if (node == null || nodeLayer == null || anomalyLayer == null) return Vector2.zero;
 
-        if (_cityRects.TryGetValue(node.Id, out var cityRt) && cityRt != null && anomalyLayer != null)
+        // 主路径：有视图时，以视图位置为准（更稳，避免层级/缩放差异）
+        if (_cityRects.TryGetValue(node.Id, out var cityRt) && cityRt != null)
         {
             var world = cityRt.position;
             var cam = _anomalyCanvas != null ? _anomalyCanvas.worldCamera : null;
@@ -247,12 +254,11 @@ public class AnomalySpawner : MonoBehaviour
             return anomalyLayer.InverseTransformPoint(world);
         }
 
-        var size = nodeLayer.rect.size;
-        var location = ResolveNodeLocation(node);
-        var anchored = new Vector2((location.x - 0.5f) * size.x, (location.y - 0.5f) * size.y);
-
-        return ConvertAnchoredPosition(nodeLayer, anomalyLayer, anchored);
+        // 兜底路径（fallback）：M2 统一用 State.MapPos（NodeLayer-local）
+        return ConvertAnchoredPosition(nodeLayer, anomalyLayer, node.MapPos);
     }
+    // ===== END M2 MapPos (ResolveNodeAnchoredPosition FULL) =====
+
 
     private static Vector2 ConvertAnchoredPosition(RectTransform from, RectTransform to, Vector2 anchoredPosition)
     {
@@ -271,17 +277,6 @@ public class AnomalySpawner : MonoBehaviour
     private static string BuildAnomalyOffsetKey(string nodeId, string anomalyId)
     {
         return $"{nodeId}:{anomalyId}";
-    }
-
-    private static Vector2 ResolveNodeLocation(CityState node)
-    {
-        if (node?.Location != null && node.Location.Length >= 2)
-            return new Vector2(node.Location[0], node.Location[1]);
-
-        if (node != null && node.Type == 0 && Mathf.Abs(node.X) < 0.0001f && Mathf.Abs(node.Y) < 0.0001f)
-            return new Vector2(0.5f, 0.5f);
-
-        return node != null ? new Vector2(node.X, node.Y) : new Vector2(0.5f, 0.5f);
     }
 
     private Vector2 GetOrCreateAnomalyOffset(string key)

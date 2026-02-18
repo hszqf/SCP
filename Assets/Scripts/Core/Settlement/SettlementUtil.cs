@@ -70,43 +70,6 @@ namespace Settlement
             );
         }
 
-        /// <summary>
-        /// Apply a Money delta to GameState with optional logging.
-        /// (No clamp; can be negative if you decide so later.)
-        /// </summary>
-        public static void ApplyMoney(GameState s, int delta, string reason, DayEndResult r = null)
-        {
-            if (s == null) return;
-            int before = s.Money;
-            s.Money += delta;
-            r?.Log($"[SettlementUtil][Money] day={s.Day} {before}->{s.Money} delta={delta:+0;-#;0} reason={reason}");
-        }
-
-        /// <summary>
-        /// Apply a NegEntropy delta to GameState (clamped to >=0) with optional logging.
-        /// </summary>
-        public static void ApplyNegEntropy(GameState s, int delta, string reason, DayEndResult r = null)
-        {
-            if (s == null) return;
-            int before = s.NegEntropy;
-            int after = before + delta;
-            if (after < 0) after = 0;
-            s.NegEntropy = after;
-            r?.Log($"[SettlementUtil][NegEntropy] day={s.Day} {before}->{s.NegEntropy} delta={delta:+0;-#;0} reason={reason}");
-        }
-
-        /// <summary>
-        /// Apply a population delta to a city (clamped to >=0) with optional logging.
-        /// </summary>
-        public static void ApplyCityPopulation(CityState city, int delta, int day, string reason, DayEndResult r = null)
-        {
-            if (city == null) return;
-            int before = city.Population;
-            int after = before + delta;
-            if (after < 0) after = 0;
-            city.Population = after;
-            r?.Log($"[SettlementUtil][CityPop] day={day} city={city.Id} {before}->{city.Population} delta={delta:+0;-#;0} reason={reason}");
-        }
 
 
         // Calculate how many population to deduct for a given anomaly instance and target city
@@ -118,40 +81,12 @@ namespace Settlement
             var registry = DataRegistry.Instance;
             if (registry == null) return 0;
 
-            // 只返回该异常的“每日人口减少值”，范围判定由 AnomalyBehaviorSystem 统一处理（worldPos）。
+            // 只返回该异常的“每日人口减少值”，范围判定由 AnomalyBehaviorSystem 统一处理（MapPos）。
             int kill = registry.GetAnomalyIntWithWarn(anom.AnomalyDefId, "actPeopleKill", 0);
             return Math.Max(0, kill);
         }
 
-        private static bool IsNodeWithinRange(CityState origin, CityState target, float range)
-        {
-            if (origin == null || target == null) return false;
 
-            // range<=0：只影响自身城市
-            if (range <= 0f)
-                return string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase);
-
-            var originPos = ResolveNodeWorldPos(origin);
-            var targetPos = ResolveNodeWorldPos(target);
-
-            // 如果位置缺失，直接判定不在范围（不做“猜测/兜底扫描”）
-            if (originPos.sqrMagnitude < 0.0001f || targetPos.sqrMagnitude < 0.0001f)
-                return false;
-
-            return Vector2.Distance(originPos, targetPos) <= range;
-        }
-
-        private static Vector2 ResolveNodeWorldPos(CityState node)
-        {
-            if (node == null) return Vector2.zero;
-
-            // ✅ 优先使用 Position（world）
-            if (node.Position.sqrMagnitude >= 0.0001f)
-                return node.Position;
-
-            // 兼容：如果没初始化 Position，才退回 X/Y（历史上它可能是 anchoredPosition）
-            return new Vector2(node.X, node.Y);
-        }
 
 
 

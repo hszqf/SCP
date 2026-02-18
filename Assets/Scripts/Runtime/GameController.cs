@@ -175,17 +175,21 @@ public class GameController : MonoBehaviour
                 Population = Math.Max(0, city.Population),
             };
 
+            // ===== BEGIN M2 MapPos (InitGame city write) =====
             var rt = city.transform as RectTransform;
             if (rt != null)
             {
-                cityState.X = rt.anchoredPosition.x;
-                cityState.Y = rt.anchoredPosition.y;
-                cityState.Position = rt.position; // ✅ world pos
+                // M2: MapPos is the ONLY settlement coordinate.
+                // Use anchoredPosition in the map root space (NodeLayer-local).
+                cityState.MapPos = rt.anchoredPosition;
             }
             else
             {
-                cityState.Position = city.transform.position; // 兜底（正常 UI 城市一般不会走到这）
+                // Fallback: should not happen for UI nodes. Keep deterministic default.
+                cityState.MapPos = Vector2.zero;
+                Debug.LogWarning($"[Boot] City has no RectTransform, MapPos defaulted to (0,0). cityId={city.CityId}");
             }
+            // ===== END M2 MapPos (InitGame city write) =====
 
 
             State.Cities.Add(cityState);
