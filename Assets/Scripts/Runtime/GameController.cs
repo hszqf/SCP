@@ -275,9 +275,13 @@ public class GameController : MonoBehaviour
                 return;
             }
 
-            // ✅ DayStart: generate scheduled anomalies for current day
-            int spawned = Sim.GenerateScheduledAnomalies(state, gc._rng, registry, state.Day);
-            result?.Log($"[DayStart] day={state.Day} anomaliesSpawned={spawned}");
+            // ✅ DayStart: generate scheduled anomalies for current day (Sim-free)
+            var rep = Core.AnomalySpawnSystem.GenerateScheduled(state, gc._rng, registry, state.Day);
+            if (!string.IsNullOrEmpty(rep.Warning))
+                result?.Log(rep.Warning);
+
+            result?.Log($"[DayStart] day={state.Day} requested={rep.Requested} spawned={rep.Spawned} attempts={rep.Attempts}");
+
         }
     }
 

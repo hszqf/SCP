@@ -34,10 +34,8 @@ namespace Settlement
                             float d01 = SettlementUtil.CalcInvestigateDelta01_FromRoster(state, anom, invArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} invArr={invArrived.Count} addInv01={d01:0.###} cur={anom.InvestigateProgress:0.###}");
 
-                            if (state.UseSettlement_AnomalyWork)
-                            {
-                                anom.InvestigateProgress = Mathf.Clamp01(anom.InvestigateProgress + d01);
-                            }
+                            anom.InvestigateProgress = Mathf.Clamp01(anom.InvestigateProgress + d01);
+
                         }
                         break;
                     case AnomalyPhase.Contain:
@@ -45,10 +43,7 @@ namespace Settlement
                             float d01 = SettlementUtil.CalcContainDelta01_FromRoster(state, anom, conArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} conArr={conArrived.Count} addCon01={d01:0.###} cur={anom.ContainProgress:0.###}");
 
-                            if (state.UseSettlement_AnomalyWork)
-                            {
                                 anom.ContainProgress = Mathf.Clamp01(anom.ContainProgress + d01);
-                            }
                         }
                         break;
                     case AnomalyPhase.Operate:
@@ -56,11 +51,9 @@ namespace Settlement
                             int dNE = SettlementUtil.CalcNegEntropyDelta_FromRoster(state, anom, opArrived, DataRegistry.Instance);
                             r?.Log($"[Settle][AnomWork] anom={anom.Id} phase={anom.Phase} opArr={opArrived.Count} addNegEntropy={dNE}");
 
-                            if (state.UseSettlement_AnomalyWork)
-                            {
-                                if (dNE > 0)
-                                    state.NegEntropy += dNE;
-                            }
+
+                            if (dNE > 0) state.NegEntropy += dNE;
+
                         }
                         break;
                 }
