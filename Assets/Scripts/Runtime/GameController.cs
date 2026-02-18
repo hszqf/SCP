@@ -209,10 +209,9 @@ public class GameController : MonoBehaviour
             State.Cities.Add(cityState);
         }
 
-        // ---- 初始异常生成（AnomaliesGen day=1）----
-        Sim.GenerateScheduledAnomalies(State, _rng, registry, State.Day);
+        // ---- DayStart: day=1 anomalies are generated here ----
+        StartDay();
 
-        Notify();
         OnInitialized?.Invoke();
         Debug.Log("[Boot] GameController initialized and OnInitialized event fired");
     }
@@ -243,6 +242,73 @@ public class GameController : MonoBehaviour
     }
 
 
+    // ===== BEGIN DayFlow: StartDay =====
+    public void StartDay()
+    {
+        if (IsGameOver) return;
+        if (State == null) return;
+
+        var stages = new List<IDayStage>
+    {
+        new Stage_StartDay_Core(),
+        new Stage_StartDay_RefreshNotify(),
+    };
+
+        var pipeline = new DaySettlementPipeline(stages);
+        var result = pipeline.Run(this);
+
+        if (result?.Logs != null)
+        {
+            for (int i = 0; i < result.Logs.Count; i++)
+                Debug.Log(result.Logs[i]);
+        }
+    }
+
+    private sealed class Stage_StartDay_Core : IDayStage
+    {
+        public string Name => "StartDay.Core";
+
+        public void Execute(GameController gc, GameState state, DayEndResult result)
+        {
+            if (gc == null || state == null) return;
+
+            // Guard: ensure DayStart runs only once per day
+            if (state.LastDayStarted == state.Day)
+            {
+                result?.Log($"[DayStart] skip (already started) day={state.Day}");
+                return;
+            }
+
+            state.LastDayStarted = state.Day;
+
+            var registry = DataRegistry.Instance;
+            if (registry == null)
+            {
+                result?.Log($"[DayStart] day={state.Day} registry=NULL");
+                return;
+            }
+
+            // ✅ DayStart: generate scheduled anomalies for current day
+            int spawned = Sim.GenerateScheduledAnomalies(state, gc._rng, registry, state.Day);
+            result?.Log($"[DayStart] day={state.Day} anomaliesSpawned={spawned}");
+        }
+    }
+
+    private sealed class Stage_StartDay_RefreshNotify : IDayStage
+    {
+        public string Name => "StartDay.RefreshNotify";
+        public void Execute(GameController gc, GameState state, DayEndResult result)
+        {
+            gc.Notify();
+            gc.RefreshMapNodes();
+            result?.Log("[DayStart] RefreshNotify executed");
+        }
+    }
+    // ===== END DayFlow: StartDay =====
+
+
+
+
     public void EndDay()
     {
         if (IsGameOver)
@@ -257,16 +323,17 @@ public class GameController : MonoBehaviour
             Debug.LogWarning($"[Day] Blocked: {canReason}");
             return;
         }
-        
-        // Run end-of-day pipeline (stages contain the original EndDay logic, moved verbatim)
-        var stages = new List<IDaySettlementStage>
-        {
-            new Stage_EndDay_Core(),
-            new Stage_EndDay_RefreshNotify(),
-        };
+
+        var stages = new List<IDayStage>
+{
+    new Stage_EndDay_Core(),
+    new Stage_EndDay_AdvanceDay(),
+};
+
 
         var pipeline = new DaySettlementPipeline(stages);
         var result = pipeline.Run(this);
+
 
         // Emit any pipeline logs to Unity console for visibility (no behavior change)
         // after pipeline.Run(this)
@@ -275,6 +342,9 @@ public class GameController : MonoBehaviour
             for (int i = 0; i < result.Logs.Count; i++)
                 Debug.Log(result.Logs[i]);
         }
+
+        // ✅ EndDay -> AdvanceDay -> StartDay
+        StartDay();
     }
     
     // --- EndDay stages (private, minimal; contain original EndDay logic) ---
@@ -284,10 +354,6 @@ public class GameController : MonoBehaviour
         public void Execute(GameController gc, GameState state, DayEndResult result)
         {
             if (state == null) return;
-
-            // Pipeline path: do NOT call Sim.StepDay
-            // Use Sim.AdvanceDay_Only to centralize day increment and light initialization
-            Sim.AdvanceDay_Only(state);
 
             // 1..5 严格顺序
             Settlement.AnomalyWorkSystem.Apply(gc, state, result);
@@ -299,10 +365,18 @@ public class GameController : MonoBehaviour
             // 完成判定与自动召回（你现在放哪都行，但至少不要在 Sim.StepDay 之前）
             Core.PhaseCompletionRecallSystem.Apply(gc);
 
-            // 仅 pipeline 下：结算完成后再生成当日计划异常（避免同日被处理）
-            Core.Sim.GenerateScheduledAnomalies_Public(state, gc._rng);
 
             result?.Log("Stage_EndDay_Core pipeline executed");
+        }
+    }
+
+    private sealed class Stage_EndDay_AdvanceDay : IDayStage
+    {
+        public string Name => "EndDay.AdvanceDay";
+        public void Execute(GameController gc, GameState state, DayEndResult result)
+        {
+            Sim.AdvanceDay_Only(state);
+            result?.Log($"[Day] advanced to day={state.Day}");
         }
     }
 

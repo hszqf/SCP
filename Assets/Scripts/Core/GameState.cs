@@ -198,6 +198,11 @@ namespace Core
     public class GameState
     {
         public int Day = 1;
+        // ===== BEGIN DayFlow (DayStart guard) =====
+        // Prevent running DayStart multiple times for the same day (UI refresh, rebuild, etc.)
+        public int LastDayStarted = 0;
+        // ===== END DayFlow (DayStart guard) =====
+
         public int Money = 0;
         public float WorldPanic = 0f;
 

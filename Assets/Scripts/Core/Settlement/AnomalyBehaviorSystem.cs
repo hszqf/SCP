@@ -8,6 +8,7 @@ namespace Settlement
 {
     public static class AnomalyBehaviorSystem
     {
+        // ===== BEGIN FIX M2: Anomaly-centric range (Apply FULL) =====
         public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
         {
             if (state == null) return;
@@ -21,17 +22,27 @@ namespace Settlement
             {
                 if (a == null) continue;
 
-                float range = GetAnomalyRange(a); // >=0；0 表示仅影响锚点城市
+                float range = GetAnomalyRange(a); // >=0；0 表示仅影响“离异常最近的城市”
 
-                // 以 NodeId 作为“异常锚点城市”（当前版本的生成逻辑就是这么写的）
-                var origin = ResolveAnchorCity(state, a);
-                if (origin == null)
+                // ✅ anomaly-centric：以异常 MapPos 为中心
+                var originPos = ResolveAnomalyPos(state, a, out var originHint);
+                if (!IsValidMapPos(originPos))
                 {
-                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} anchorCity=NULL nodeId={a.NodeId} skipped");
+                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} originPos=INVALID hint={originHint} skipped");
                     continue;
                 }
 
-                var originPos = ResolveCityPos(origin);
+                CityState range0City = null;
+                if (range <= 0f)
+                {
+                    // range<=0：只影响离异常最近的城市（异常才是锚点）
+                    range0City = FindNearestCity(cities, originPos);
+                    if (range0City == null)
+                    {
+                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range=0 nearestCity=NULL skipped");
+                        continue;
+                    }
+                }
 
                 int hitCount = 0;
 
@@ -39,8 +50,17 @@ namespace Settlement
                 {
                     if (city == null) continue;
 
-                    if (!IsCityInRange(origin, originPos, city, range))
-                        continue;
+                    var cityPos = ResolveCityPos(city);
+                    if (!IsValidMapPos(cityPos)) continue;
+
+                    float dist = Vector2.Distance(originPos, cityPos);
+
+                    bool hit =
+                        (range <= 0f)
+                            ? string.Equals(city.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
+                            : (dist <= range);
+
+                    if (!hit) continue;
 
                     int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
                     if (deltaPop <= 0) continue;
@@ -53,40 +73,72 @@ namespace Settlement
 
                     var cityName = string.IsNullOrEmpty(city.Name) ? city.Id : city.Name;
 
-                    // 额外打印 dist/range，方便你肉眼确认“为什么命中”
-                    float dist = (city.Id == origin.Id) ? 0f : Vector2.Distance(originPos, ResolveCityPos(city));
-                    r?.Log($"[Settle][AnomPopLoss] day={state.Day} city={cityName} dist={dist:0.##} range={range:0.##} loss={deltaPop} before={beforePop} after={afterPop} anom={a.Id} def={a.AnomalyDefId}");
+                    r?.Log(
+                        $"[Settle][AnomPopLoss] day={state.Day} city={cityName} dist={dist:0.##} range={range:0.##} " +
+                        $"loss={deltaPop} before={beforePop} after={afterPop} anom={a.Id} def={a.AnomalyDefId} " +
+                        $"origin=({originPos.x:0.##},{originPos.y:0.##})");
                 }
 
-                r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount={hitCount} anchorCity={origin.Id}");
+                string range0CityId = range0City != null ? range0City.Id : "<n/a>";
+                r?.Log(
+                    $"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount={hitCount} " +
+                    $"range0City={range0CityId} nodeId={a.NodeId} origin=({originPos.x:0.##},{originPos.y:0.##}) hint={originHint}");
             }
         }
+        // ===== END FIX M2: Anomaly-centric range (Apply FULL) =====
 
-        private static CityState ResolveAnchorCity(Core.GameState state, Core.AnomalyState a)
+        // ===== BEGIN FIX M2: Anomaly-centric helpers =====
+        private static bool IsValidMapPos(Vector2 p)
         {
-            if (state == null || a == null) return null;
-            if (string.IsNullOrEmpty(a.NodeId)) return null;
-
-            state.EnsureIndex();
-            return state.Index.GetCity(a.NodeId);
+            return !(float.IsNaN(p.x) || float.IsNaN(p.y));
         }
 
-        private static bool IsCityInRange(CityState origin, Vector2 originPos, CityState target, float range)
+        private static Vector2 ResolveAnomalyPos(Core.GameState state, Core.AnomalyState a, out string hint)
         {
-            if (origin == null || target == null) return false;
+            hint = "anom.MapPos";
+            if (a != null && IsValidMapPos(a.MapPos))
+                return a.MapPos;
 
-            // range<=0：只影响锚点城市自身
-            if (range <= 0f)
-                return string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase);
+            // fallback：如果异常还没写 MapPos，就用 NodeId 城市的 MapPos（不作为“锚点城市”，只是兜底给异常定位）
+            hint = "fallback:city.MapPos";
+            if (state != null && a != null && !string.IsNullOrEmpty(a.NodeId))
+            {
+                state.EnsureIndex();
+                var c = state.Index.GetCity(a.NodeId);
+                if (c != null && IsValidMapPos(c.MapPos))
+                {
+                    a.MapPos = c.MapPos; // 写回，避免下次仍然缺失
+                    return a.MapPos;
+                }
+            }
 
-            // 锚点城市永远命中（避免坐标缺失时“锚点也不扣”）
-            if (string.Equals(origin.Id, target.Id, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            var targetPos = ResolveCityPos(target);
-
-            return Vector2.Distance(originPos, targetPos) <= range;
+            hint = "INVALID";
+            return new Vector2(float.NaN, float.NaN);
         }
+
+        private static CityState FindNearestCity(System.Collections.Generic.List<CityState> cities, Vector2 pos)
+        {
+            CityState best = null;
+            float bestSqr = float.PositiveInfinity;
+
+            foreach (var c in cities)
+            {
+                if (c == null) continue;
+                var p = ResolveCityPos(c);
+                if (!IsValidMapPos(p)) continue;
+
+                float sqr = (p - pos).sqrMagnitude;
+                if (sqr < bestSqr)
+                {
+                    bestSqr = sqr;
+                    best = c;
+                }
+            }
+
+            return best;
+        }
+        // ===== END FIX M2: Anomaly-centric helpers =====
+
 
         // ===== BEGIN M2 MapPos (ResolveCityPos) =====
         private static Vector2 ResolveCityPos(CityState c)

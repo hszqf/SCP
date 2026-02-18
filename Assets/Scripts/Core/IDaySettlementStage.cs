@@ -1,7 +1,6 @@
 using Core;
 
-public interface IDaySettlementStage
+public interface IDaySettlementStage : IDayStage
 {
-    string Name { get; }
-    void Execute(GameController gc, GameState state, DayEndResult result);
 }
+

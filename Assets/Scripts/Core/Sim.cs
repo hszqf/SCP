@@ -111,6 +111,7 @@ namespace Core
             return all[idx];
         }
 
+        // ===== BEGIN M2: GenerateScheduledAnomalies (Type==1 only) FULL =====
         public static int GenerateScheduledAnomalies(GameState s, System.Random rng, DataRegistry registry, int day)
         {
             if (s == null || rng == null || registry == null) return 0;
@@ -118,13 +119,20 @@ namespace Core
             int genNum = registry.GetAnomaliesGenNumForDay(day);
             if (genNum <= 0) return 0;
 
-            var nodes = s.Cities?.Where(n => n != null).ToList();
-            if (nodes == null || nodes.Count == 0) return 0;
-            nodes = nodes.Where(n => n != null && n.Type != 0 && n.Unlocked).ToList();
-            if (nodes.Count == 0) return 0;
+            // --- 城市候选：只从 Type==1 且 Unlocked 中选（严格：没有就不生成） ---
+            var nodes = s.Cities?
+                .Where(n => n != null && n.Unlocked && n.Type == 1)
+                .OrderBy(n => n.Id, StringComparer.OrdinalIgnoreCase) // 稳定排序，保证同 seed 可复现
+                .ToList();
+
+            if (nodes == null || nodes.Count == 0)
+            {
+                Debug.LogWarning($"[AnomalyGen] day={day} no unlocked cities with Type==1; spawn skipped.");
+                return 0;
+            }
 
             int spawned = 0;
-            int maxAttempts = Math.Max(10, genNum * 4);
+            int maxAttempts = Math.Max(10, genNum * 6); // 增加一点尝试次数，避免去重后刷不满
             int attempts = 0;
 
             while (spawned < genNum && attempts < maxAttempts)
@@ -134,50 +142,47 @@ namespace Core
                 var anomalyDefId = PickRandomAnomalyId(registry, rng);
                 if (string.IsNullOrEmpty(anomalyDefId)) break;
 
-                // ✅ 新重复规则：以 state.Anomalies 为真相（实例已存在就不再生成）
-                bool alreadySpawned =
-                    (s.Anomalies != null && s.Anomalies.Any(a =>
-                        a != null && string.Equals(a.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
-                    || (s.Cities != null && s.Cities.Any(n =>
-                        n != null &&
-                        ((n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m => m != null &&
-                            string.Equals(m.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
-                         || (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Contains(anomalyDefId)))));
-
-                if (alreadySpawned)
+                // 去重：已在场/已管理/已知晓 的异常不重复生成
+                if (IsAnomalyAlreadyPresent(s, anomalyDefId))
                     continue;
 
                 var node = nodes[rng.Next(nodes.Count)];
                 if (node == null) continue;
 
-                // ✅ 不再读/写 node.ActiveAnomalyIds
+                // ✅ 唯一真相：state.Anomalies（EnsureActiveAnomaly 内部会写 NodeId/SpawnSeq 等）
                 EnsureActiveAnomaly(s, node, anomalyDefId, registry);
-                GetOrCreateAnomalyState(s, node, anomalyDefId);
 
                 spawned++;
-
-                // Emit fact for anomaly spawn (保留你原来的占位行为)
-                var anomalyDef = registry.AnomaliesById.GetValueOrDefault(anomalyDefId);
             }
-
 
             if (spawned < genNum)
-            {
                 Debug.LogWarning($"[AnomalyGen] day={day} requested={genNum} spawned={spawned} attempts={attempts}");
-            }
             else
-            {
                 Debug.Log($"[AnomalyGen] day={day} spawned={spawned}");
-            }
 
             return spawned;
         }
 
+        private static bool IsAnomalyAlreadyPresent(GameState s, string anomalyDefId)
+        {
+            if (s == null || string.IsNullOrEmpty(anomalyDefId)) return false;
 
-     
-   
+            // Active anomalies
+            if (s.Anomalies != null && s.Anomalies.Any(a =>
+                    a != null && string.Equals(a.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
+                return true;
 
-      
+            // Cities: managed / known
+            if (s.Cities != null && s.Cities.Any(n => n != null &&
+                    ((n.ManagedAnomalies != null && n.ManagedAnomalies.Any(m =>
+                          m != null && string.Equals(m.AnomalyDefId, anomalyDefId, StringComparison.OrdinalIgnoreCase)))
+                     || (n.KnownAnomalyDefIds != null && n.KnownAnomalyDefIds.Any(id =>
+                          string.Equals(id, anomalyDefId, StringComparison.OrdinalIgnoreCase))))))
+                return true;
+
+            return false;
+        }
+        // ===== END M2: GenerateScheduledAnomalies (Type==1 only) FULL =====
 
     }
 }

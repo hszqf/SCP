@@ -291,13 +291,6 @@ public class AnomalySpawner : MonoBehaviour
     // ===== END M2 MapPos (ResolveNodeAnchoredPosition FULL) =====
 
 
-    private static Vector2 ConvertAnchoredPosition(RectTransform from, RectTransform to, Vector2 anchoredPosition)
-    {
-        if (from == null || to == null || from == to) return anchoredPosition;
-
-        var world = from.TransformPoint(anchoredPosition);
-        return to.InverseTransformPoint(world);
-    }
 
     private static string BuildAnomalyKey(string nodeId, string anomalyId, string managedId)
     {
