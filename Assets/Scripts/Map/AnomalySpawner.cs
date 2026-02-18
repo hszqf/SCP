@@ -7,7 +7,6 @@ public class AnomalySpawner : MonoBehaviour
     public static AnomalySpawner I { get; private set; }
 
     [SerializeField] private RectTransform nodeLayer;    // NodeLayer
-    public RectTransform NodeLayer => nodeLayer;
 
     [Header("Anomalies")]
     [SerializeField] private RectTransform anomalyLayer;
@@ -279,7 +278,7 @@ public class AnomalySpawner : MonoBehaviour
     // ===== BEGIN M2 MapPos (ResolveNodeAnchoredPosition FULL) =====
     private Vector2 ResolveNodeAnchoredPosition(CityState node)
     {
-        if (node == null || nodeLayer == null || anomalyLayer == null) return Vector2.zero;
+        if (node == null || anomalyLayer == null) return Vector2.zero;
 
         // 主路径：有视图时，以视图位置为准（更稳，避免层级/缩放差异）
         if (_cityRects.TryGetValue(node.Id, out var cityRt) && cityRt != null)
@@ -293,7 +292,7 @@ public class AnomalySpawner : MonoBehaviour
             return anomalyLayer.InverseTransformPoint(world);
         }
 
-        //M2 统一用 State.MapPos（NodeLayer-local）
+        // M2: fallback uses State.MapPos (anomalyLayer-local)
         return node.MapPos;
     }
     // ===== END M2 MapPos (ResolveNodeAnchoredPosition FULL) =====

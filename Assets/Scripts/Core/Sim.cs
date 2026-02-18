@@ -14,19 +14,6 @@ namespace Core
 {
     public static class Sim
     {
-   
-        /// <summary>
-        /// Public wrapper to generate scheduled anomalies for the current day using the provided RNG.
-        /// This exists so callers outside Sim.StepDay can control when anomaly generation happens
-        /// (e.g. after settlement pipeline completes).
-        /// </summary>
-        public static void GenerateScheduledAnomalies_Public(GameState s, System.Random rng)
-        {
-            var registry = Data.DataRegistry.Instance;
-            if (s == null || registry == null || rng == null) return;
-            GenerateScheduledAnomalies(s, rng, registry, s.Day);
-        }
-
         // Advance day only: increment day counter and perform lightweight per-day initializations
         // (used by pipeline path where full Sim.StepDay is executed via settlement systems)
         public static void AdvanceDay_Only(GameState s)
@@ -105,10 +92,15 @@ namespace Core
         /// </summary>
         private static string PickRandomAnomalyId(DataRegistry registry, System.Random rng)
         {
-            var all = registry.AnomaliesById.Keys.ToList();
+            if (registry == null || rng == null) return null;
+
+            // Stable ordering => deterministic with same seed
+            var all = registry.AnomaliesById.Keys
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             if (all.Count == 0) return null;
-            int idx = rng.Next(all.Count);
-            return all[idx];
+            return all[rng.Next(all.Count)];
         }
 
         // ===== BEGIN M2: GenerateScheduledAnomalies (Type==1 only) FULL =====

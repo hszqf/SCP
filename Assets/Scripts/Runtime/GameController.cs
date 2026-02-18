@@ -177,32 +177,19 @@ public class GameController : MonoBehaviour
 
             // ===== BEGIN M2 MapPos (InitGame city write) =====
             var rt = city.transform as RectTransform;
-            if (rt != null)
-            {
-                // M2: MapPos is the ONLY settlement coordinate.
-                // Store it in NodeLayer local space to avoid parent-hierarchy drift.
-                var nodeLayerRt = AnomalySpawner.I != null ? AnomalySpawner.I.NodeLayer : null;
-
-                if (nodeLayerRt != null)
-                {
-                    var local = nodeLayerRt.InverseTransformPoint(rt.position);
-                    //cityState.MapPos = new Vector2(local.x, local.y);
-                    cityState.MapPos = new Vector2(float.NaN, float.NaN); // waiting for AnomalySpawner.Build sync
-
-                }
-                else
-                {
-                    // Fallback: assumes all city nodes share the same local space (usually ok if cities are direct children of nodeLayer).
-                    cityState.MapPos = rt.anchoredPosition;
-                    Debug.LogWarning($"[Boot] NodeLayer not found; MapPos uses rt.anchoredPosition. cityId={city.CityId}");
-                }
-            }
-            else
+            if (rt == null)
             {
                 cityState.MapPos = Vector2.zero;
                 Debug.LogWarning($"[Boot] City has no RectTransform, MapPos defaulted to (0,0). cityId={city.CityId}");
             }
+            else
+            {
+                // Canonical MapPos is anomalyLayer-local and will be synced by:
+                // AnomalySpawner.Build() -> SyncCityMapPosToState()
+                cityState.MapPos = new Vector2(float.NaN, float.NaN);
+            }
             // ===== END M2 MapPos (InitGame city write) =====
+
 
 
 
@@ -377,17 +364,6 @@ public class GameController : MonoBehaviour
         {
             Sim.AdvanceDay_Only(state);
             result?.Log($"[Day] advanced to day={state.Day}");
-        }
-    }
-
-    private sealed class Stage_EndDay_RefreshNotify : IDaySettlementStage
-    {
-        public string Name => "EndDay.RefreshNotify";
-        public void Execute(GameController gc, GameState state, DayEndResult result)
-        {
-            gc.Notify();
-            gc.RefreshMapNodes();
-            result?.Log("Stage_EndDay_RefreshNotify executed");
         }
     }
     
@@ -627,9 +603,6 @@ public static class GameControllerTaskExt
 
     public static bool AreAgentsBusy(GameController gc, List<string> agentIds, string _unusedCurrentNodeId = null)
     {
-        if (gc != null && gc.State != null && gc.State.UseSettlement_Pipeline)
-            return false;
-
 
         if (gc == null || gc.State?.Cities == null) return false;
         if (agentIds == null || agentIds.Count == 0) return false;
