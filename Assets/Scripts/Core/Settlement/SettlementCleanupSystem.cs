@@ -7,7 +7,7 @@ namespace Settlement
 {
     public static class SettlementCleanupSystem
     {
-        public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
+        public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
             // TODO
             Debug.Log("[Settlement] SettlementCleanupSystem.Apply called");

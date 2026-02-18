@@ -9,7 +9,7 @@ namespace Settlement
 {
     public static class AnomalyWorkSystem
     {
-        public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
+        public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
             Debug.Log("[Settlement] AnomalyWorkSystem.Apply called");
             if (state == null || state.Anomalies == null) return;

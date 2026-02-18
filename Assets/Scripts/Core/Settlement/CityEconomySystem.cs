@@ -7,7 +7,7 @@ namespace Settlement
 {
     public static class CityEconomySystem
     {
-        public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
+        public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
             Debug.Log("[Settlement] CityEconomySystem.Apply called");
 

@@ -2,18 +2,18 @@ using System.Collections.Generic;
 using System.Linq;
 using Core;
 
-public sealed class DaySettlementPipeline
+public sealed class DayPipeline
 {
     private readonly List<IDayStage> _stages;
 
-    public DaySettlementPipeline(IEnumerable<IDayStage> stages)
+    public DayPipeline(IEnumerable<IDayStage> stages)
     {
         _stages = stages?.ToList() ?? new List<IDayStage>();
     }
 
-    public DayEndResult Run(GameController gc)
+    public DayPipelineResult Run(GameController gc)
     {
-        var result = new DayEndResult();
+        var result = new DayPipelineResult();
         var state = gc.State;
         for (int i = 0; i < _stages.Count; i++)
             _stages[i].Execute(gc, state, result);

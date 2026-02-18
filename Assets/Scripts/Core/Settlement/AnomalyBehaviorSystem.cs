@@ -9,7 +9,7 @@ namespace Settlement
     public static class AnomalyBehaviorSystem
     {
         // ===== BEGIN FIX M2: Anomaly-centric range (Apply FULL) =====
-        public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
+        public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
             if (state == null) return;
 

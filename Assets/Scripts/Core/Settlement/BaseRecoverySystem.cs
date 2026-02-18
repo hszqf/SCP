@@ -7,7 +7,7 @@ namespace Settlement
 {
     public static class BaseRecoverySystem
     {
-        public static void Apply(GameController gc, Core.GameState state, DayEndResult r)
+        public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
             Debug.Log("[Settlement] BaseRecoverySystem.Apply called");
             if (state?.Agents == null) return;

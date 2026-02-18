@@ -241,7 +241,7 @@ public class GameController : MonoBehaviour
         new Stage_StartDay_RefreshNotify(),
     };
 
-        var pipeline = new DaySettlementPipeline(stages);
+        var pipeline = new DayPipeline(stages);
         var result = pipeline.Run(this);
 
         if (result?.Logs != null)
@@ -255,7 +255,7 @@ public class GameController : MonoBehaviour
     {
         public string Name => "StartDay.Core";
 
-        public void Execute(GameController gc, GameState state, DayEndResult result)
+        public void Execute(GameController gc, GameState state, DayPipelineResult result)
         {
             if (gc == null || state == null) return;
 
@@ -288,7 +288,7 @@ public class GameController : MonoBehaviour
     private sealed class Stage_StartDay_RefreshNotify : IDayStage
     {
         public string Name => "StartDay.RefreshNotify";
-        public void Execute(GameController gc, GameState state, DayEndResult result)
+        public void Execute(GameController gc, GameState state, DayPipelineResult result)
         {
             gc.Notify();
             gc.RefreshMapNodes();
@@ -322,7 +322,7 @@ public class GameController : MonoBehaviour
 };
 
 
-        var pipeline = new DaySettlementPipeline(stages);
+        var pipeline = new DayPipeline(stages);
         var result = pipeline.Run(this);
 
 
@@ -339,10 +339,10 @@ public class GameController : MonoBehaviour
     }
     
     // --- EndDay stages (private, minimal; contain original EndDay logic) ---
-    private sealed class Stage_EndDay_Core : IDaySettlementStage
+    private sealed class Stage_EndDay_Core : IDayStage
     {
         public string Name => "EndDay.Core";
-        public void Execute(GameController gc, GameState state, DayEndResult result)
+        public void Execute(GameController gc, GameState state, DayPipelineResult result)
         {
             if (state == null) return;
 
@@ -364,7 +364,7 @@ public class GameController : MonoBehaviour
     private sealed class Stage_EndDay_AdvanceDay : IDayStage
     {
         public string Name => "EndDay.AdvanceDay";
-        public void Execute(GameController gc, GameState state, DayEndResult result)
+        public void Execute(GameController gc, GameState state, DayPipelineResult result)
         {
             AdvanceDayOnly(state);
             result?.Log($"[Day] advanced to day={state.Day}");
