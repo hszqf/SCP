@@ -180,16 +180,30 @@ public class GameController : MonoBehaviour
             if (rt != null)
             {
                 // M2: MapPos is the ONLY settlement coordinate.
-                // Use anchoredPosition in the map root space (NodeLayer-local).
-                cityState.MapPos = rt.anchoredPosition;
+                // Store it in NodeLayer local space to avoid parent-hierarchy drift.
+                var nodeLayerRt = AnomalySpawner.I != null ? AnomalySpawner.I.NodeLayer : null;
+
+                if (nodeLayerRt != null)
+                {
+                    var local = nodeLayerRt.InverseTransformPoint(rt.position);
+                    //cityState.MapPos = new Vector2(local.x, local.y);
+                    cityState.MapPos = new Vector2(float.NaN, float.NaN); // waiting for AnomalySpawner.Build sync
+
+                }
+                else
+                {
+                    // Fallback: assumes all city nodes share the same local space (usually ok if cities are direct children of nodeLayer).
+                    cityState.MapPos = rt.anchoredPosition;
+                    Debug.LogWarning($"[Boot] NodeLayer not found; MapPos uses rt.anchoredPosition. cityId={city.CityId}");
+                }
             }
             else
             {
-                // Fallback: should not happen for UI nodes. Keep deterministic default.
                 cityState.MapPos = Vector2.zero;
                 Debug.LogWarning($"[Boot] City has no RectTransform, MapPos defaulted to (0,0). cityId={city.CityId}");
             }
             // ===== END M2 MapPos (InitGame city write) =====
+
 
 
             State.Cities.Add(cityState);

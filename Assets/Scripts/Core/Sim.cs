@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Data;
 using UnityEngine;
-using Random = System.Random;
+//using Random = System.Random;
 
 namespace Core
 {
@@ -103,7 +103,7 @@ namespace Core
         /// <summary>
         /// Picks a random anomaly ID from the registry that is not currently active or managed in the game state.
         /// </summary>
-        private static string PickRandomAnomalyId(DataRegistry registry, Random rng)
+        private static string PickRandomAnomalyId(DataRegistry registry, System.Random rng)
         {
             var all = registry.AnomaliesById.Keys.ToList();
             if (all.Count == 0) return null;
@@ -111,7 +111,7 @@ namespace Core
             return all[idx];
         }
 
-        public static int GenerateScheduledAnomalies(GameState s, Random rng, DataRegistry registry, int day)
+        public static int GenerateScheduledAnomalies(GameState s, System.Random rng, DataRegistry registry, int day)
         {
             if (s == null || rng == null || registry == null) return 0;
 

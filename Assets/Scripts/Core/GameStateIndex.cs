@@ -69,7 +69,11 @@ namespace Core
 
         public void EnsureUpToDate(GameState s)
         {
-            if (_anomCount < 0 || _cityCount < 0) Rebuild(s);
+            var an = s?.Anomalies?.Count ?? 0;
+            var cn = s?.Cities?.Count ?? 0;
+
+            if (_anomCount != an || _cityCount != cn)
+                Rebuild(s);
         }
 
         public AnomalyState GetAnomaly(string anomalyInstanceId)

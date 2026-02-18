@@ -7,6 +7,7 @@ public class AnomalySpawner : MonoBehaviour
     public static AnomalySpawner I { get; private set; }
 
     [SerializeField] private RectTransform nodeLayer;    // NodeLayer
+    public RectTransform NodeLayer => nodeLayer;
 
     [Header("Anomalies")]
     [SerializeField] private RectTransform anomalyLayer;
@@ -16,7 +17,10 @@ public class AnomalySpawner : MonoBehaviour
 
     private Canvas _anomalyCanvas;
 
-    private readonly Dictionary<string, RectTransform> _cityRects = new();
+    //private readonly Dictionary<string, RectTransform> _cityRects = new();
+    private readonly Dictionary<string, RectTransform> _cityRects =
+    new Dictionary<string, RectTransform>(System.StringComparer.OrdinalIgnoreCase);
+
     private readonly Dictionary<string, Anomaly> _anomalies = new();
     private readonly Dictionary<string, Vector2> _anomalyOffsets = new();
     private readonly Dictionary<string, Vector2> _anomalyAnchorPositions = new();
@@ -120,8 +124,34 @@ public class AnomalySpawner : MonoBehaviour
                 _cityRects[city.CityId] = cityRt;
         }
 
+
+        SyncCityMapPosToState();
+
         RefreshAnomalies();
     }
+    // ===== BEGIN Hotfix MapPos (SyncCityMapPosToState) =====
+    private void SyncCityMapPosToState()
+    {
+        var state = GameController.I != null ? GameController.I.State : null;
+        if (state == null || anomalyLayer == null) return;
+
+        var cam = _anomalyCanvas != null ? _anomalyCanvas.worldCamera : null;
+
+        foreach (var city in state.Cities)
+        {
+            if (city == null) continue;
+
+            if (_cityRects.TryGetValue(city.Id, out var cityRt) && cityRt != null)
+            {
+                var screen = RectTransformUtility.WorldToScreenPoint(cam, cityRt.position);
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(anomalyLayer, screen, cam, out var local))
+                    city.MapPos = local;
+                else
+                    city.MapPos = anomalyLayer.InverseTransformPoint(cityRt.position);
+            }
+        }
+    }
+    // ===== END Hotfix MapPos (SyncCityMapPosToState) =====
 
     public void RefreshMapNodes()
     {
@@ -183,11 +213,12 @@ public class AnomalySpawner : MonoBehaviour
                     var anchorPos = GetOrCreateAnomalyAnchorPosition(offsetKey, fallbackPos);
                     rt.anchoredPosition = anchorPos + GetOrCreateAnomalyOffset(offsetKey);
                     LogAnomalyPlacement(nodeId, defId, offsetKey, anchorPos, rt.anchoredPosition);
-                    // ===== BEGIN M2 MapPos (write anomaly MapPos) =====
-                    // M2: write canonical MapPos (NodeLayer-local) once, for simulation/settlement if needed later.
-                    // Convert from anomalyLayer local -> nodeLayer local.
-                    anom.MapPos = ConvertAnchoredPosition(anomalyLayer, nodeLayer, rt.anchoredPosition);
-                    // ===== END M2 MapPos (write anomaly MapPos) =====
+                    // ===== BEGIN Hotfix MapPos (write anomaly MapPos) =====
+                    // MapPos now uses anomalyLayer-local (same as marker anchoredPosition)
+                    anom.MapPos = rt.anchoredPosition;
+                    // ===== END Hotfix MapPos (write anomaly MapPos) =====
+
+
                 }
 
                 // ✅ 永远携带 instanceId
@@ -254,8 +285,8 @@ public class AnomalySpawner : MonoBehaviour
             return anomalyLayer.InverseTransformPoint(world);
         }
 
-        // 兜底路径（fallback）：M2 统一用 State.MapPos（NodeLayer-local）
-        return ConvertAnchoredPosition(nodeLayer, anomalyLayer, node.MapPos);
+        //M2 统一用 State.MapPos（NodeLayer-local）
+        return node.MapPos;
     }
     // ===== END M2 MapPos (ResolveNodeAnchoredPosition FULL) =====
 

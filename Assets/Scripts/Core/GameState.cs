@@ -168,8 +168,7 @@ namespace Core
         public float ContainProgress;
 
         // new-arch: identity & spatial
-        //public string AnomalyId;        // 实例唯一ID（将来替代/区分与配置ID）
-        public Vector2 Position;        // 世界坐标/生成位置（用于影响范围计算）
+        public Vector2 Position;        // Legacy world position for UI/debug ONLY. Settlement/range uses CityState.MapPos.
 
         // new-arch: lifecycle & reveal
         public AnomalyPhase Phase;      // 生命周期阶段
