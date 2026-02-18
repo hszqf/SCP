@@ -82,6 +82,15 @@ public sealed class MapEntityRegistry : MonoBehaviour
         Debug.Log($"[MapEntityRegistry] UnregisterAnomaly: key={k} totalAnomalies={_anomByKey.Count}");
     }
 
+
+    public bool TryGetAnomalyView(string key, out Anomaly view)
+    {
+        view = null;
+        var k = NormalizeKey(key);
+        if (string.IsNullOrEmpty(k)) return false;
+        return _anomByKey.TryGetValue(k, out view) && view != null;
+    }
+
     public bool TryGetAnomalyWorldPos(string key, out Vector3 pos)
     {
         pos = default;

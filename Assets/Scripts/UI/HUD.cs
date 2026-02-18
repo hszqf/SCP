@@ -104,9 +104,15 @@ public class HUD : MonoBehaviour
         }
     }
 
+    // ===== BEGIN M5: EndDay click => Play or Skip =====
     void OnEndDayClicked()
     {
         if (GameController.I == null) return;
+
+        // 播放中：不允许 Skip，不允许任何点击触发逻辑
+        if (DayPlaybackDirector.I != null && DayPlaybackDirector.I.IsPlaying)
+            return;
+
         if (!GameController.I.CanEndDay(out var reason))
         {
             Debug.LogWarning($"[Day] Blocked: {reason}");
@@ -114,14 +120,9 @@ public class HUD : MonoBehaviour
         }
 
         GameController.I.EndDay();
-        StartCoroutine(PlayDispatchNextFrame());
     }
+    // ===== END M5: EndDay click => Play or Skip =====
 
-    private IEnumerator PlayDispatchNextFrame()
-    {
-        yield return null;
-        DispatchAnimationSystem.I?.PlayPending();
-    }
 
     void OnRecruitClicked()
     {

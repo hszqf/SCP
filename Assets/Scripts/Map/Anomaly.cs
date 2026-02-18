@@ -572,4 +572,89 @@ public class Anomaly : MonoBehaviour
 
         _regKeyCanonical = newKey;
     }
+
+    public void PlaybackSetProgress(AnomalyPhase phase, float inv01, float con01, int operateArrivedCount)
+    {
+        EnsureRefs();
+
+        // name reveal follows phase/inv progress rule
+        bool revealName = (phase != AnomalyPhase.Investigate) || (inv01 >= 0.2f);
+
+        if (displayNameText)
+            displayNameText.text = revealName ? ResolveAnomalyName(_anomalyId) : "□□□□";
+
+        var spriteLibrary = AnomalySpriteLibrary.I;
+        var sprite = spriteLibrary != null ? spriteLibrary.ResolveAnomalySprite(_anomalyId, revealName) : null;
+        if (icon) icon.sprite = sprite;
+
+        float progress01 = 0f;
+        string overrideText = null;
+        bool showPercent = true;
+
+        switch (phase)
+        {
+            case AnomalyPhase.Investigate:
+                progress01 = Mathf.Clamp01(inv01);
+                if (progress01 <= 0f) overrideText = "待调查";
+                break;
+
+            case AnomalyPhase.Contain:
+                progress01 = Mathf.Clamp01(con01);
+                if (progress01 <= 0f) overrideText = "未收容";
+                break;
+
+            case AnomalyPhase.Operate:
+                progress01 = operateArrivedCount > 0 ? 1f : 0f;
+                overrideText = operateArrivedCount > 0 ? "管理中" : "待管理";
+                showPercent = false;
+                break;
+
+            default:
+                progress01 = 0f;
+                overrideText = "未知";
+                showPercent = false;
+                break;
+        }
+
+        UpdateProgressBar(progress01, string.Empty, alwaysVisible: true, overrideText: overrideText, showPercent: showPercent);
+    }
+
+    public void PlaybackSetArrivedAgents(IReadOnlyList<string> agentIds)
+    {
+        if (!agentGridRoot) return;
+
+        foreach (Transform child in agentGridRoot)
+            if (child) Destroy(child.gameObject);
+
+        if (agentIds == null || agentIds.Count == 0)
+        {
+            agentGridRoot.gameObject.SetActive(false);
+            return;
+        }
+
+        var gc = GameController.I;
+        if (gc?.State?.Agents == null)
+        {
+            agentGridRoot.gameObject.SetActive(false);
+            return;
+        }
+
+        agentGridRoot.gameObject.SetActive(true);
+
+        for (int i = 0; i < agentIds.Count; i++)
+        {
+            var agentId = agentIds[i];
+            if (string.IsNullOrEmpty(agentId)) continue;
+
+            var agent = gc.State.Agents.Find(a => a != null && a.Id == agentId);
+            var sprite = ResolveAvatarSprite(agent, agentId, agent?.Name ?? string.Empty);
+            if (sprite == null) continue;
+
+            var image = CreateAvatarImage(agentGridRoot);
+            image.name = $"Avatar_{agentId}";
+            image.sprite = sprite;
+            image.raycastTarget = false;
+        }
+    }
+
 }

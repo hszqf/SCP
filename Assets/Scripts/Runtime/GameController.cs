@@ -300,11 +300,19 @@ public class GameController : MonoBehaviour
 
 
 
+    // ===== BEGIN M5: EndDay via Plan/Playback/Commit =====
     public void EndDay()
     {
         if (IsGameOver)
         {
             Debug.LogWarning("[GameOver] EndDay ignored because the game is already over.");
+            return;
+        }
+
+        // Guard: prevent double-trigger while playback is running
+        if (DayPlaybackDirector.I != null && DayPlaybackDirector.I.IsPlaying)
+        {
+            Debug.LogWarning("[Day] EndDay ignored (playback already running)");
             return;
         }
 
@@ -315,29 +323,39 @@ public class GameController : MonoBehaviour
             return;
         }
 
-        var stages = new List<IDayStage>
-{
-    new Stage_EndDay_Core(),
-    new Stage_EndDay_AdvanceDay(),
-};
-
-
-        var pipeline = new DayPipeline(stages);
-        var result = pipeline.Run(this);
-
-
-        // Emit any pipeline logs to Unity console for visibility (no behavior change)
-        // after pipeline.Run(this)
-        if (result != null && result.Logs != null)
+        var registry = DataRegistry.Instance;
+        var plan = Core.DayEndPlanBuilder.Build(State, _rng, registry);
+        if (plan == null || plan.Patch == null)
         {
-            for (int i = 0; i < result.Logs.Count; i++)
-                Debug.Log(result.Logs[i]);
+            Debug.LogError("[M5] Build DayResolutionPlan failed (plan or patch is null)");
+            return;
         }
 
-        // ✅ EndDay -> AdvanceDay -> StartDay
-        StartDay();
+        var director = EnsureDayPlaybackDirector();
+        director.Play(plan, () =>
+        {
+            // Commit end-of-day results
+            plan.Patch.ApplyTo(State);
+
+            // Advance day + start day
+            AdvanceDayOnly(State);
+            StartDay();
+        });
     }
-    
+    // ===== END M5: EndDay via Plan/Playback/Commit =====
+
+    // ===== BEGIN M5: Ensure DayPlaybackDirector =====
+    private DayPlaybackDirector EnsureDayPlaybackDirector()
+    {
+        if (DayPlaybackDirector.I != null) return DayPlaybackDirector.I;
+
+        var go = new GameObject("DayPlaybackDirector");
+        go.AddComponent<DayPlaybackDirector>();
+        return DayPlaybackDirector.I;
+    }
+    // ===== END M5: Ensure DayPlaybackDirector =====
+
+
     // --- EndDay stages (private, minimal; contain original EndDay logic) ---
     private sealed class Stage_EndDay_Core : IDayStage
     {

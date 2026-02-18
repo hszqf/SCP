@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using Core;
 using UnityEngine;
+using UnityEngine.UI;
+
 
 public class DispatchAnimationSystem : MonoBehaviour
 {
@@ -15,9 +17,9 @@ public class DispatchAnimationSystem : MonoBehaviour
     [SerializeField] private float baseSpawnRadius = 5f;
     [SerializeField] private float fallbackTravelSeconds = 0.45f; // token travel duration
 
-    // ¡°Node¡± ÔÚÕâÀïµÈÍ¬ ¡°City anchor¡±£¨µØÍ¼ÉÏµÄ³ÇÊÐµã£©
+    // ï¿½ï¿½Nodeï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ ï¿½ï¿½City anchorï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ÏµÄ³ï¿½ï¿½Ðµã£©
     private readonly Dictionary<string, RectTransform> _cities = new();
-    // marker key ÈÔÎª cityId:defId£¨ÓëÄãµ±Ç° AnomalySpawner.RegisterAnomaly(nodeId, defId, rt) Ò»ÖÂ£©
+    // marker key ï¿½ï¿½Îª cityId:defIdï¿½ï¿½ï¿½ï¿½ï¿½ãµ±Ç° AnomalySpawner.RegisterAnomaly(nodeId, defId, rt) Ò»ï¿½Â£ï¿½
     private readonly Dictionary<string, RectTransform> _anomalyMarkers = new();
 
     private readonly HashSet<string> _offBaseAgents = new();
@@ -28,11 +30,37 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     private bool _hudLocked;
 
+    private bool _gcHooked;
+
+    private void HookGameController()
+    {
+        if (_gcHooked) return;
+        var gc = GameController.I;
+        if (gc == null) return;
+        gc.OnStateChanged += OnGameStateChanged;
+        _gcHooked = true;
+    }
+
+    private void UnhookGameController()
+    {
+        if (!_gcHooked) return;
+        var gc = GameController.I;
+        if (gc == null) return;
+        gc.OnStateChanged -= OnGameStateChanged;
+        _gcHooked = false;
+    }
+
+    private void OnGameStateChanged()
+    {
+        SyncOffBaseAgents();
+    }
+
     // Token-based interaction lock
     private Coroutine _tokenCo;
     private Core.MovementToken _playingToken;
 
-    public bool IsInteractionLocked => _tokenCo != null;
+    private bool _externalLocked;
+    public bool IsInteractionLocked => _tokenCo != null || _externalLocked;
 
     public int GetVisualAvailableAgentCount()
     {
@@ -64,18 +92,22 @@ public class DispatchAnimationSystem : MonoBehaviour
     {
         SyncOffBaseAgents();
         EnsureCityRegistry();
+        HookGameController();
         Debug.Log("[MapUI] DispatchAnimationSystem OnEnable");
     }
 
     private void OnDisable()
     {
+        UnhookGameController();
         SetHudLocked(false);
         Debug.Log("[MapUI] DispatchAnimationSystem OnDisable");
     }
 
     private void Update()
     {
-        if (_tokenCo != null) return;
+        
+        HookGameController();
+if (_tokenCo != null) return;
 
         var gc = GameController.I;
         if (gc == null || gc.State == null) return;
@@ -86,7 +118,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         _tokenCo = StartCoroutine(ConsumeTokenCoroutine(gc, token));
     }
 
-    // HUD ÔÚ EndDay ºó»áµ÷ÓÃËü¡£ÏÖÔÚÎÞ task ¶ÓÁÐ£¬¸ÄÎª£º³¢ÊÔÁ¢¿Ì²¥·ÅÒ»¸ö pending token¡£
+    // HUD ï¿½ï¿½ EndDay ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ task ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì²ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ pending tokenï¿½ï¿½
     public void PlayPending()
     {
         if (_tokenCo != null) return;
@@ -100,7 +132,79 @@ public class DispatchAnimationSystem : MonoBehaviour
         _tokenCo = StartCoroutine(ConsumeTokenCoroutine(gc, token));
     }
 
-    // ¼æÈÝ¾Éµ÷ÓÃ£ºCity.cs ÈÔÔÚµ÷ÓÃ RegisterNode(cityId, rt)
+
+    public void SetExternalInteractionLocked(bool locked)
+    {
+        _externalLocked = locked;
+        // ×¢ï¿½â£ºtoken ï¿½ï¿½ï¿½ï¿½Ê±Ò²ï¿½ï¿½ï¿½ï¿½ HUDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª OR Ò»ï¿½ï¿½
+        SetHudLocked(locked || _tokenCo != null);
+    }
+
+    /// <summary>
+    /// v0ï¿½ï¿½ï¿½ï¿½ï¿½Ó¾ï¿½ Recallï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tokenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ GameStateï¿½ï¿½
+    /// ï¿½ï¿½ anomaly marker / city anchor ï¿½É»ï¿½ base city anchorï¿½ï¿½ï¿½ï¿½ count ï¿½ï¿½Ð¡ï¿½ï¿½
+    /// </summary>
+    public IEnumerator PlayVisualRecallCoroutine(string anomalyInstanceId, int count, float durationOverride = -1f)
+    {
+        var gc = GameController.I;
+        if (gc == null || gc.State == null)
+        {
+            yield return new WaitForSeconds(fallbackTravelSeconds);
+            yield break;
+        }
+
+        var anom = Core.DispatchSystem.FindAnomaly(gc.State, anomalyInstanceId);
+        var cityId = anom?.NodeId;
+        var anomalyDefIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyDefId;
+
+        var baseCityId = ResolveBaseCityId();
+
+        Vector2 baseLocal = Vector2.zero;
+        bool haveBase = !string.IsNullOrEmpty(baseCityId) && TryGetCityLocalPoint(baseCityId, out baseLocal);
+
+        Vector2 anomLocal = Vector2.zero;
+        bool haveAnom = false;
+
+        if (!string.IsNullOrEmpty(cityId) && !string.IsNullOrEmpty(anomalyDefIdForMarker))
+        {
+            var key = BuildMarkerKey(cityId, anomalyDefIdForMarker);
+            if (_anomalyMarkers.TryGetValue(key, out var markerRT) && markerRT != null)
+                haveAnom = TryGetLocalPoint(markerRT, out anomLocal);
+        }
+        if (!haveAnom && !string.IsNullOrEmpty(cityId))
+            haveAnom = TryGetCityLocalPoint(cityId, out anomLocal);
+
+        if (!haveBase || !haveAnom)
+        {
+            yield return new WaitForSeconds(fallbackTravelSeconds);
+            yield break;
+        }
+
+        float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+        int n = Mathf.Max(1, count);
+
+        // deterministic offsetsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Random Ó°ï¿½ï¿½É¸ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½Ó¾ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½È£ï¿½
+        for (int i = 0; i < n; i++)
+        {
+            float angle = (n == 1) ? 0f : (i * (Mathf.PI * 2f / n));
+            float r = Mathf.Min(8f, 2f + n * 0.6f);
+            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
+
+            StartCoroutine(AnimateAgent(
+                debugId: $"plan_recall:{anomalyInstanceId}:{i}",
+                index: i + 1,
+                total: n,
+                startPos: anomLocal + offset,
+                toLocal: baseLocal,
+                duration: Mathf.Max(0.01f, duration),
+                onComplete: null
+            ));
+        }
+
+        yield return new WaitForSeconds(duration);
+    }
+
+    // ï¿½ï¿½ï¿½Ý¾Éµï¿½ï¿½Ã£ï¿½City.cs ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ RegisterNode(cityId, rt)
     public void RegisterNode(string nodeId, RectTransform nodeRT) => RegisterCity(nodeId, nodeRT);
 
     public void RegisterCity(string cityId, RectTransform cityRT)
@@ -231,7 +335,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         if (!string.IsNullOrEmpty(_cachedBaseCityId))
             return _cachedBaseCityId;
 
-        // ÓÅÏÈ´Ó³¡¾°ÀïÕÒ base ³ÇÊÐµã£¨CityType == 0£©
+        // ï¿½ï¿½ï¿½È´Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ base ï¿½ï¿½ï¿½Ðµã£¨CityType == 0ï¿½ï¿½
         var mapBase = FindBaseCityOnMap();
         if (!string.IsNullOrEmpty(mapBase))
         {
@@ -239,7 +343,7 @@ public class DispatchAnimationSystem : MonoBehaviour
             return _cachedBaseCityId;
         }
 
-        // ÔÙ´Ó state ÕÒ£¨CityState.Type == 0£©
+        // ï¿½Ù´ï¿½ state ï¿½Ò£ï¿½CityState.Type == 0ï¿½ï¿½
         var gc = GameController.I;
         var baseCity = gc?.State?.Cities?.Find(c => c != null && c.Type == 0);
         if (baseCity == null)
@@ -321,66 +425,94 @@ public class DispatchAnimationSystem : MonoBehaviour
         _tokenCo = null;
     }
 
-    private IEnumerator PlayTokenAnimationOrFallback(GameController gc, Core.MovementToken token)
+    
+
+private bool TryResolveTravelAnchors(Core.GameState state, string anomalyInstanceId, out Vector2 baseLocal, out Vector2 anomLocal)
+{
+    baseLocal = Vector2.zero;
+    anomLocal = Vector2.zero;
+
+    if (state == null) return false;
+
+    var baseCityId = ResolveBaseCityId();
+    if (string.IsNullOrEmpty(baseCityId) || !TryGetCityLocalPoint(baseCityId, out baseLocal))
+        return false;
+
+    var anom = Core.DispatchSystem.FindAnomaly(state, anomalyInstanceId);
+    var cityId = anom?.NodeId; // current NodeId == CityId anchor
+    var anomalyDefIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyDefId;
+
+    bool haveAnom = false;
+
+    // prefer anomaly marker; fallback to city anchor
+    if (!string.IsNullOrEmpty(cityId) && !string.IsNullOrEmpty(anomalyDefIdForMarker))
     {
-        if (gc == null || token == null)
-        {
-            yield return new WaitForSeconds(fallbackTravelSeconds);
-            yield break;
-        }
+        var key = BuildMarkerKey(cityId, anomalyDefIdForMarker);
+        if (_anomalyMarkers.TryGetValue(key, out var markerRT) && markerRT != null)
+            haveAnom = TryGetLocalPoint(markerRT, out anomLocal);
+    }
+    if (!haveAnom && !string.IsNullOrEmpty(cityId))
+        haveAnom = TryGetCityLocalPoint(cityId, out anomLocal);
 
-        var anom = Core.DispatchSystem.FindAnomaly(gc.State, token.AnomalyInstanceId);
-        var cityId = anom?.NodeId; // ÕâÀïµÄ NodeId µ±Ç°¾ÍÊÇ¡°Ãªµã³ÇÊÐ Id¡±£¨M2 »á×ø±êÍ³Ò»£©
-        var anomalyDefIdForMarker = anom?.AnomalyDefId ?? anom?.ManagedState?.AnomalyDefId;
+    return haveAnom;
+}
 
-        var baseCityId = ResolveBaseCityId();
+/// <summary>
+/// Unified travel visual for both dispatch (Base->Anomaly) and recall (Anomaly->Base).
+/// Pure visual: does NOT create tokens and does NOT change GameState.
+/// </summary>
+public IEnumerator PlayVisualTravelOne(string anomalyInstanceId, string agentId, bool toAnomaly, float durationOverride = -1f)
+{
+    var gc = GameController.I;
+    var state = gc?.State;
 
-        Vector2 baseLocal = Vector2.zero;
-        bool haveBase = !string.IsNullOrEmpty(baseCityId) && TryGetCityLocalPoint(baseCityId, out baseLocal);
-
-        Vector2 anomLocal = Vector2.zero;
-        bool haveAnom = false;
-
-        // ÓÅÏÈÕÒ anomaly marker£¨cityId:defId£©£¬ÕÒ²»µ½¾ÍÍË»Ø city anchor µã
-        if (!string.IsNullOrEmpty(cityId) && !string.IsNullOrEmpty(anomalyDefIdForMarker))
-        {
-            var key = BuildMarkerKey(cityId, anomalyDefIdForMarker);
-            if (_anomalyMarkers.TryGetValue(key, out var markerRT) && markerRT != null)
-                haveAnom = TryGetLocalPoint(markerRT, out anomLocal);
-        }
-
-        if (!haveAnom && !string.IsNullOrEmpty(cityId))
-            haveAnom = TryGetCityLocalPoint(cityId, out anomLocal);
-
-        if (!haveBase || !haveAnom)
-        {
-            yield return new WaitForSeconds(fallbackTravelSeconds);
-            yield break;
-        }
-
-        Vector2 fromLocal, toLocal;
-        if (token.Type == Core.MovementTokenType.Dispatch)
-        {
-            fromLocal = ApplyBaseSpawnOffset(baseCityId, baseLocal);
-            toLocal = anomLocal;
-        }
-        else
-        {
-            fromLocal = anomLocal;
-            toLocal = baseLocal;
-        }
-
-        yield return AnimateAgent(
-            "token:" + token.TokenId,
-            1, 1,
-            fromLocal,
-            toLocal,
-            Mathf.Max(0.01f, fallbackTravelSeconds),
-            null
-        );
+    if (state == null)
+    {
+        yield return new WaitForSeconds(fallbackTravelSeconds);
+        yield break;
     }
 
-    private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
+    if (!TryResolveTravelAnchors(state, anomalyInstanceId, out var baseLocal, out var anomLocal))
+    {
+        yield return new WaitForSeconds(fallbackTravelSeconds);
+        yield break;
+    }
+
+    var sprite = ResolveAgentAvatarSprite(state, agentId);
+    float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+
+    // stable offsets (avoid overlap & keep dispatch/recall consistent)
+    Vector2 baseOffset = StableOffset(agentId, Mathf.Max(0f, baseSpawnRadius));
+    Vector2 anomOffset = StableOffset(agentId, 6f);
+
+    Vector2 startPos = toAnomaly ? (baseLocal + baseOffset) : (anomLocal + anomOffset);
+    Vector2 endPos   = toAnomaly ? (anomLocal + anomOffset) : (baseLocal + baseOffset);
+
+    yield return AnimateAgent(
+        debugId: $"travel:{(toAnomaly ? "toA" : "toB")}:{anomalyInstanceId}:{agentId}",
+        index: 1,
+        total: 1,
+        startPos: startPos,
+        toLocal: endPos,
+        duration: Mathf.Max(0.01f, duration),
+        onComplete: null,
+        avatarSprite: sprite
+    );
+}
+
+private IEnumerator PlayTokenAnimationOrFallback(GameController gc, Core.MovementToken token)
+{
+    if (gc == null || token == null)
+    {
+        yield return new WaitForSeconds(fallbackTravelSeconds);
+        yield break;
+    }
+
+    bool toAnomaly = token.Type == Core.MovementTokenType.Dispatch;
+    yield return PlayVisualTravelOne(token.AnomalyInstanceId, token.AgentId, toAnomaly, fallbackTravelSeconds);
+}
+
+private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
     {
         var s = gc?.State;
         if (s == null || s.Agents == null) return;
@@ -415,7 +547,7 @@ public class DispatchAnimationSystem : MonoBehaviour
         }
     }
 
-    private IEnumerator AnimateAgent(string debugId, int index, int total, Vector2 startPos, Vector2 toLocal, float duration, System.Action onComplete)
+    private IEnumerator AnimateAgent(string debugId, int index, int total, Vector2 startPos, Vector2 toLocal, float duration, System.Action onComplete, Sprite avatarSprite = null)
     {
         if (!tokenLayer || !agentPrefab)
         {
@@ -428,6 +560,10 @@ public class DispatchAnimationSystem : MonoBehaviour
         var rt = go.GetComponent<RectTransform>();
         if (rt == null) rt = go.AddComponent<RectTransform>();
         rt.anchoredPosition = startPos;
+        var img = go.GetComponentInChildren<Image>(true) ?? go.GetComponent<Image>();
+        if (img != null && avatarSprite != null)
+            img.sprite = avatarSprite;
+
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -445,10 +581,82 @@ public class DispatchAnimationSystem : MonoBehaviour
         onComplete?.Invoke();
     }
 
+
+    
+public IEnumerator PlayVisualRecallOne(string anomalyInstanceId, string agentId, float durationOverride = -1f)
+{
+    yield return PlayVisualTravelOne(anomalyInstanceId, agentId, toAnomaly: false, durationOverride: durationOverride);
+}
+
+public IEnumerator PlayVisualDispatchOne(string anomalyInstanceId, string agentId, float durationOverride = -1f)
+{
+    yield return PlayVisualTravelOne(anomalyInstanceId, agentId, toAnomaly: true, durationOverride: durationOverride);
+}
+
+private static Vector2 StableOffset(string s, float radius)
+    {
+        int h = 23;
+        unchecked
+        {
+            if (!string.IsNullOrEmpty(s))
+                for (int i = 0; i < s.Length; i++) h = h * 31 + s[i];
+        }
+        // 0..1
+        float u = Mathf.Abs(h % 1000) / 1000f;
+        float ang = u * Mathf.PI * 2f;
+        return new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * Mathf.Max(0f, radius);
+    }
+
+    private static Sprite[] _avatarPool;
+    
+    private static Sprite ResolveAgentAvatarSprite(Core.GameState state, string agentId)
+        {
+            const string AvatarResourcePath = "Avatar";
+            const string AvatarSpriteSheetName = "Avatar";
+
+            if (state?.Agents == null || string.IsNullOrEmpty(agentId)) return null;
+
+            var ag = state.Agents.Find(a => a != null && a.Id == agentId);
+            if (ag == null) return null;
+
+            // try direct sprite by id/name first (to match Anomaly UI)
+            Sprite sprite = null;
+            if (!string.IsNullOrEmpty(agentId))
+                sprite = Resources.Load<Sprite>($"{AvatarResourcePath}/{agentId}");
+            if (sprite == null && !string.IsNullOrEmpty(ag.Name))
+                sprite = Resources.Load<Sprite>($"{AvatarResourcePath}/{ag.Name}");
+            if (sprite != null) return sprite;
+
+            if (_avatarPool == null)
+            {
+                _avatarPool = Resources.LoadAll<Sprite>(AvatarResourcePath) ?? System.Array.Empty<Sprite>();
+                if (_avatarPool.Length == 0)
+                    _avatarPool = Resources.LoadAll<Sprite>($"{AvatarResourcePath}/{AvatarSpriteSheetName}") ?? System.Array.Empty<Sprite>();
+                if (_avatarPool.Length == 0)
+                    _avatarPool = System.Array.Empty<Sprite>();
+            }
+            if (_avatarPool.Length == 0) return null;
+
+            int seed = ag.AvatarSeed;
+            if (seed < 0)
+            {
+                var key = !string.IsNullOrEmpty(agentId) ? agentId : ag.Name;
+                seed = string.IsNullOrEmpty(key) ? 0 : key.GetHashCode();
+                ag.AvatarSeed = seed;
+            }
+
+            int idx = Mathf.Abs(seed) % _avatarPool.Length;
+            return _avatarPool[idx];
+        }
+
+
     private void SetHudLocked(bool locked)
     {
         if (_hudLocked == locked) return;
         _hudLocked = locked;
         HUD.I?.SetControlsInteractable(!locked);
     }
+
+
 }
+
