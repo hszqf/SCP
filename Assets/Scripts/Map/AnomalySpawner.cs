@@ -208,18 +208,26 @@ public class AnomalySpawner : MonoBehaviour
                 }
 
                 var rt = anomaly.transform as RectTransform;
+                // ===== BEGIN M2: anchor follows NodeId city (no random anchor) =====
                 if (rt != null)
                 {
-                    var anchorPos = GetOrCreateAnomalyAnchorPosition(offsetKey, fallbackPos);
+                    // anchor = NodeId 对应城市位置（anomalyLayer-local）
+                    var anchorPos = fallbackPos;
+
+                    // 记录 anchor，方便日志/排错
+                    _anomalyAnchorPositions[offsetKey] = anchorPos;
+                    _anomalyAnchorNodeIds[offsetKey] = nodeId;
+
+                    // offset 必须稳定（见下方 GetOrCreateAnomalyOffset 的替换）
                     rt.anchoredPosition = anchorPos + GetOrCreateAnomalyOffset(offsetKey);
+
                     LogAnomalyPlacement(nodeId, defId, offsetKey, anchorPos, rt.anchoredPosition);
-                    // ===== BEGIN Hotfix MapPos (write anomaly MapPos) =====
-                    // MapPos now uses anomalyLayer-local (same as marker anchoredPosition)
+
+                    // MapPos 与 marker 坐标同口径（anomalyLayer-local），结算用它当中心
                     anom.MapPos = rt.anchoredPosition;
-                    // ===== END Hotfix MapPos (write anomaly MapPos) =====
-
-
                 }
+                // ===== END M2: anchor follows NodeId city (no random anchor) =====
+
 
                 // ✅ 永远携带 instanceId
                 anomaly.Bind(defId, instanceId);
@@ -303,6 +311,7 @@ public class AnomalySpawner : MonoBehaviour
         return $"{nodeId}:{anomalyId}";
     }
 
+    // ===== BEGIN M2: Stable offset (no UnityEngine.Random) FULL =====
     private Vector2 GetOrCreateAnomalyOffset(string key)
     {
         if (string.IsNullOrEmpty(key)) return Vector2.zero;
@@ -322,13 +331,56 @@ public class AnomalySpawner : MonoBehaviour
                 return offset;
         }
 
-        // 取单位圆向量，长度在[min, max]之间
-        Vector2 dir = Random.insideUnitCircle.normalized;
-        float len = Random.Range(min, max);
-        offset = dir * len;
+        // ✅ 稳定：由 key 计算出方向+半径（半径落在[min,max]）
+        offset = StableOffsetInAnnulus(key, min, max);
         _anomalyOffsets[key] = offset;
         return offset;
     }
+
+    private static Vector2 StableOffsetInAnnulus(string key, float min, float max)
+    {
+        // 两个独立 hash 生成 u/v
+        uint h1 = Fnv1a32(key);
+        uint h2 = Fnv1a32(key + "|2");
+
+        float u = To01(h1);
+        float v = To01(h2);
+
+        // 面积均匀：r = sqrt(lerp(min^2, max^2, u))
+        float min2 = min * min;
+        float max2 = max * max;
+        float r = Mathf.Sqrt(Mathf.Lerp(min2, max2, u));
+
+        float ang = v * Mathf.PI * 2f;
+        return new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * r;
+    }
+
+    private static float To01(uint h)
+    {
+        // 取 24-bit 保证 float 精度稳定，范围 [0,1)
+        return (h & 0x00FFFFFFu) / 16777216f;
+    }
+
+    private static uint Fnv1a32(string s)
+    {
+        unchecked
+        {
+            const uint FNV_OFFSET = 2166136261u;
+            const uint FNV_PRIME = 16777619u;
+
+            uint hash = FNV_OFFSET;
+            if (!string.IsNullOrEmpty(s))
+            {
+                for (int i = 0; i < s.Length; i++)
+                {
+                    hash ^= s[i];
+                    hash *= FNV_PRIME;
+                }
+            }
+            return hash;
+        }
+    }
+    // ===== END M2: Stable offset (no UnityEngine.Random) FULL =====
 
     private void LogAnomalyPlacement(string nodeId, string anomalyId, string offsetKey, Vector2 anchorPos, Vector2 anomalyPos)
     {
@@ -351,44 +403,18 @@ public class AnomalySpawner : MonoBehaviour
         return node?.Name ?? nodeId;
     }
 
-    private Vector2 GetOrCreateAnomalyAnchorPosition(string key, Vector2 fallbackPos)
-    {
-        if (string.IsNullOrEmpty(key)) return fallbackPos;
-
-        if (_anomalyAnchorPositions.TryGetValue(key, out var anchor))
-            return anchor;
-
-        var nodes = GameController.I?.State?.Cities;
-        if (nodes != null)
-        {
-            var candidates = new List<CityState>();
-            foreach (var n in nodes)
-            {
-                if (n == null || !n.Unlocked) continue;
-                if (n.Type != 1) continue;
-                candidates.Add(n);
-            }
-
-            if (candidates.Count > 0)
-            {
-                var pick = candidates[Random.Range(0, candidates.Count)];
-                anchor = ResolveNodeAnchoredPosition(pick);
-                _anomalyAnchorPositions[key] = anchor;
-                _anomalyAnchorNodeIds[key] = pick.Id;
-                return anchor;
-            }
-        }
-
-        _anomalyAnchorPositions[key] = fallbackPos;
-        _anomalyAnchorNodeIds[key] = "<fallback>";
-        return fallbackPos;
-    }
-
+    // ===== BEGIN M2: ResolveCityAnchoredPosition uses anomalyLayer-local =====
     private Vector2 ResolveCityAnchoredPosition(string nodeId)
     {
         if (string.IsNullOrEmpty(nodeId)) return Vector2.zero;
-        if (_cityRects.TryGetValue(nodeId, out var cityRt) && cityRt != null)
-            return cityRt.anchoredPosition;
-        return Vector2.zero;
+        var state = GameController.I?.State;
+        if (state == null) return Vector2.zero;
+
+        state.EnsureIndex();
+        var node = state.Index.GetCity(nodeId);
+        if (node == null) return Vector2.zero;
+
+        return ResolveNodeAnchoredPosition(node); // anomalyLayer-local
     }
+    // ===== END M2: ResolveCityAnchoredPosition uses anomalyLayer-local =====
 }
