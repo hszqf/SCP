@@ -109,10 +109,12 @@ namespace Settlement
             {
                 var ag = arrived[i];
                 if (ag == null) continue;
-                if (ag.IsDead || ag.IsInsane) continue; // dead/insane stays, but doesn't contribute
+                if (ag.IsDead) continue; // dead occupies slot but does not participate
+
+                bool isInsane = ag.IsInsane; // insane occupies slot and keeps taking damage, but never advances progress
 
                 int match = CalcMatchCount(ag, req);
-                float add01 = CalcProgressAdd01(match);
+                float add01 = isInsane ? 0f : CalcProgressAdd01(match);
                 float dmgMul = CalcDamageMultiplier(match);
 
                 // Emit check (roll=matchCount, dc=4) - deterministic explanation
@@ -144,30 +146,40 @@ namespace Settlement
                         sink.Add(Core.DayEvent.ProgressDelta(anom.Id, anom.Phase, before, add01, after, ag.Id));
                 }
 
-                // Damage
-                int hpDmg = CeilToInt(baseHpDmg * dmgMul);
-                int sanDmg = CeilToInt(baseSanDmg * dmgMul);
+                
+// Damage
+int hpDmgBase = CeilToInt(baseHpDmg * dmgMul);
+int sanDmgBase = CeilToInt(baseSanDmg * dmgMul);
 
-                if (hpDmg > 0)
-                    ag.HP = Math.Max(0, ag.HP - hpDmg);
-                if (sanDmg > 0)
-                    ag.SAN = Math.Max(0, ag.SAN - sanDmg);
+// SAN damage is applied first; overflow converts to additional HP damage (ceil already applied).
+int sanApplied = 0;
+if (sanDmgBase > 0)
+{
+    int sanAvail = Math.Max(0, ag.SAN);
+    sanApplied = Math.Min(sanDmgBase, sanAvail);
+    ag.SAN = Math.Max(0, sanAvail - sanApplied);
+}
 
-                if (ag.HP <= 0 && !ag.IsDead)
-                {
-                    ag.IsDead = true;
-                    ag.HP = 0;
-                    RemoveAgentFromAllRosters(anom, ag.Id);
-                    sink?.Add(Core.DayEvent.Killed(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
-                }
-                else if (ag.SAN <= 0 && !ag.IsInsane && !ag.IsDead)
-                {
-                    ag.IsInsane = true;
-                    ag.SAN = 0;
-                    RemoveAgentFromAllRosters(anom, ag.Id);
-                    sink?.Add(Core.DayEvent.Insane(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
-                }
-            }
+int sanOverflowToHp = Math.Max(0, sanDmgBase - sanApplied);
+int hpDmgTotal = Math.Max(0, hpDmgBase + sanOverflowToHp);
+
+if (hpDmgTotal > 0)
+    ag.HP = Math.Max(0, ag.HP - hpDmgTotal);
+
+// State transitions (do NOT remove from roster: dead/insane must occupy slot until rescued)
+if (ag.HP <= 0 && !ag.IsDead)
+{
+    ag.IsDead = true;
+    ag.HP = 0;
+    sink?.Add(Core.DayEvent.Killed(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
+}
+else if (ag.SAN <= 0 && !ag.IsInsane && !ag.IsDead)
+{
+    ag.IsInsane = true;
+    ag.SAN = 0;
+    sink?.Add(Core.DayEvent.Insane(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
+}
+}
         }
 
         private static void RemoveAgentFromAllRosters(Core.AnomalyState anom, string agentId)

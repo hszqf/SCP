@@ -47,10 +47,12 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private readonly List<AgentPickerItemView> _agentItems = new();
 
     private string _selectedTargetId;
+    //public bool selected;
     private string _nodeId; // management context node id (set by UIPanelRoot.ManageNodeId)
     private readonly HashSet<string> _selectedAgentIds = new();
     private int _slotsMin = 1;
     private int _slotsMax = int.MaxValue;
+    private int _slotsMaxEffective;
     private AssignPanelMode _mode = AssignPanelMode.Manage;
     private Action<string, List<string>> _onConfirm;
 
@@ -162,6 +164,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
         _slotsMin = 1;
         _slotsMax = 1;
+        _slotsMaxEffective = 1;
 
         if (headerText) headerText.text = "接回人员";
         if (hintText)
@@ -197,6 +200,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         else _mode = AssignPanelMode.Generic;
         _onConfirm = onConfirm;
         _slotsMax = agentSlotsMax;
+        _slotsMaxEffective = _slotsMax;
 
         // Allow zero-agent selection for all modes (withdraw)
         _slotsMin = 0;
@@ -284,7 +288,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
                 if (ag.LocationKind != AgentLocationKind.Base) continue;
 
                 bool disable = false;
-                bool selected = _selectedAgentIds.Contains(ag.Id);
+            bool selected = _selectedAgentIds.Contains(ag.Id);
 
                 string statusText = "<color=#66FF66>空闲</color>";
 
@@ -345,70 +349,144 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
             canonicalKeyForFilter = anomState.Id;
         }
 
+        // Effective slot max: total per-anomaly cap should be reduced by dead/insane still occupying OTHER rosters.
+        _slotsMaxEffective = _slotsMax;
+        if (anomState != null && gc.State != null && gc.State.Agents != null)
+        {
+            var otherOcc = new HashSet<string>(StringComparer.Ordinal);
+            void AddOcc(List<string> ids)
+            {
+                if (ids == null) return;
+                for (int k = 0; k < ids.Count; k++)
+                {
+                    var id = ids[k];
+                    if (string.IsNullOrEmpty(id)) continue;
+                    otherOcc.Add(id);
+                }
+            }
+
+            if (slot != AssignmentSlot.Investigate) AddOcc(anomState.InvestigatorIds);
+            if (slot != AssignmentSlot.Contain) AddOcc(anomState.ContainmentIds);
+            if (slot != AssignmentSlot.Operate) AddOcc(anomState.OperateIds);
+
+            int deadInsaneOther = 0;
+            foreach (var id in otherOcc)
+            {
+                var agOther = gc.State.Agents.FirstOrDefault(a => a != null && a.Id == id);
+                if (agOther == null) continue;
+                if (!(agOther.IsDead || agOther.IsInsane)) continue;
+                if (agOther.LocationAnomalyInstanceId != canonicalKeyForFilter) continue;
+                if (agOther.LocationKind != AgentLocationKind.AtAnomaly) continue;
+                deadInsaneOther++;
+            }
+
+            _slotsMaxEffective = Mathf.Max(0, _slotsMax - deadInsaneOther);
+        }
+
+
         foreach (var ag in gc.State.Agents)
         {
             if (ag == null) continue;
 
-            if (ag.IsDead || ag.IsInsane) continue;
+            bool selected = _selectedAgentIds.Contains(ag.Id);
 
-            bool show =
-                ag.LocationKind == AgentLocationKind.Base
-                || (ag.LocationAnomalyInstanceId == canonicalKeyForFilter &&
+            // dead/insane should be visible when they are occupying this anomaly slot (selected in roster),
+            // but they must be non-interactive and cannot be removed via this panel.
+            if (ag.IsDead || ag.IsInsane)
+            {
+                bool showDeadInsane =
+                    selected &&
+                    ag.LocationAnomalyInstanceId == canonicalKeyForFilter &&
                     (ag.LocationKind == AgentLocationKind.AtAnomaly ||
                      ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
-                     ag.LocationKind == AgentLocationKind.TravellingToBase));
+                     ag.LocationKind == AgentLocationKind.TravellingToBase);
+
+                if (!showDeadInsane) continue;
+
+                bool disable1 = true;
+                string statusText11 = ag.IsDead
+                    ? "<color=#FF6666>已死亡</color>"
+                    : "<color=#FFCC66>已发疯</color>";
+
+                var go1 = Instantiate(agentPickerItemPrefab, contentRoot);
+                go1.name = "Agent_" + ag.Id;
+
+                var item1 = go1.GetComponent<AgentPickerItemView>();
+                if (item1 == null) item1 = go1.AddComponent<AgentPickerItemView>();
+
+                string displayName1 = string.IsNullOrEmpty(ag.Name) ? ag.Id : ag.Name;
+                item1.Bind(
+                    ag,
+                    displayName1,
+                    BuildAgentAttrLine(ag),
+                    disable1,
+                    true,
+                    OnAgentClicked,
+                    statusText11);
+
+                _agentItems.Add(item1);
+                continue;
+            }
+
+            bool show =
+                        ag.LocationKind == AgentLocationKind.Base
+                        || (ag.LocationAnomalyInstanceId == canonicalKeyForFilter &&
+                            (ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                             ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                             ag.LocationKind == AgentLocationKind.TravellingToBase));
 
             if (!show) continue;
 
-            // Disable rule
-            bool disable = false;
+                    // Disable rule
+                    bool disable = false;
 
-            // if already selected & exceeding max slot count, disable others later in RefreshConfirmState
-            // Here we only disable if busy on another anomaly or traveling to another anomaly.
-            if (ag.LocationKind == AgentLocationKind.AtAnomaly ||
-                ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
-                ag.LocationKind == AgentLocationKind.TravellingToBase)
-            {
-                if (!string.Equals(ag.LocationAnomalyInstanceId, canonicalKeyForFilter, System.StringComparison.Ordinal))
-                    disable = true;
-            }
+                    // if already selected & exceeding max slot count, disable others later in RefreshConfirmState
+                    // Here we only disable if busy on another anomaly or traveling to another anomaly.
+                    if (ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                        ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                        ag.LocationKind == AgentLocationKind.TravellingToBase)
+                    {
+                        if (!string.Equals(ag.LocationAnomalyInstanceId, canonicalKeyForFilter, System.StringComparison.Ordinal))
+                            disable = true;
+                    }
 
-            bool selected = _selectedAgentIds.Contains(ag.Id);
+                    // selected already computed above
+                    selected = _selectedAgentIds.Contains(ag.Id);
 
-            // Status text 目前基地一定是空闲
-            string statusText1 = string.Empty;
-            if (ag.LocationKind == AgentLocationKind.Base)
-                statusText1 = "<color=#66FF66>空闲</color>";
-            else if (ag.LocationKind == AgentLocationKind.AtAnomaly)
-                statusText1 = "已到达";
-            else if (ag.LocationKind == AgentLocationKind.TravellingToAnomaly)
-                statusText1 = "前往中";
-            else if (ag.LocationKind == AgentLocationKind.TravellingToBase)
-                statusText1 = "返程中";
-            else
-                statusText1 = ag.LocationKind.ToString();
+                    // Status text 目前基地一定是空闲
+                    string statusText1 = string.Empty;
+                    if (ag.LocationKind == AgentLocationKind.Base)
+                        statusText1 = "<color=#66FF66>空闲</color>";
+                    else if (ag.LocationKind == AgentLocationKind.AtAnomaly)
+                        statusText1 = "已到达";
+                    else if (ag.LocationKind == AgentLocationKind.TravellingToAnomaly)
+                        statusText1 = "前往中";
+                    else if (ag.LocationKind == AgentLocationKind.TravellingToBase)
+                        statusText1 = "返程中";
+                    else
+                        statusText1 = ag.LocationKind.ToString();
 
-            string statusText = string.IsNullOrEmpty(statusText1) ? "<color=#66FF66>空闲</color>" : statusText1;
+                    string statusText = string.IsNullOrEmpty(statusText1) ? "<color=#66FF66>空闲</color>" : statusText1;
 
-            var go = Instantiate(agentPickerItemPrefab, contentRoot);
-            go.name = "Agent_" + ag.Id;
+                    var go = Instantiate(agentPickerItemPrefab, contentRoot);
+                    go.name = "Agent_" + ag.Id;
 
-            var item = go.GetComponent<AgentPickerItemView>();
-            if (item == null) item = go.AddComponent<AgentPickerItemView>();
+                    var item = go.GetComponent<AgentPickerItemView>();
+                    if (item == null) item = go.AddComponent<AgentPickerItemView>();
 
-            // 先全部不选
-            string displayName = string.IsNullOrEmpty(ag.Name) ? ag.Id : ag.Name;
-            item.Bind(
-                ag,
-                displayName,
-                BuildAgentAttrLine(ag),
-                disable,
-                selected,
-                OnAgentClicked,
-                statusText);
+                    // 先全部不选
+                    string displayName = string.IsNullOrEmpty(ag.Name) ? ag.Id : ag.Name;
+                    item.Bind(
+                        ag,
+                        displayName,
+                        BuildAgentAttrLine(ag),
+                        disable,
+                        selected,
+                        OnAgentClicked,
+                        statusText);
 
-            _agentItems.Add(item);
-        }
+                    _agentItems.Add(item);
+                }
 
         // Update confirm button
         RefreshConfirmState();
@@ -465,9 +543,9 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         }
         else
         {
-            if (_selectedAgentIds.Count >= _slotsMax)
+            if (_selectedAgentIds.Count >= _slotsMaxEffective)
             {
-                Debug.LogWarning($"[TaskDef] manage slot selection exceeds max. slotsMax={_slotsMax}");
+                Debug.LogWarning($"[TaskDef] manage slot selection exceeds max. slotsMax={_slotsMaxEffective}");
                 return;
             }
             _selectedAgentIds.Add(agentId);
@@ -601,7 +679,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         {
             string message = $"需要选择 {_slotsMin}-{_slotsMax} 名干员，目前为 {_selectedAgentIds.Count}。";
             if (hintText) hintText.text = message;
-            Debug.LogWarning($"[TaskDef] manage slot selection invalid. count={_selectedAgentIds.Count} slotsMin={_slotsMin} slotsMax={_slotsMax}");
+            Debug.LogWarning($"[TaskDef] manage slot selection invalid. count={_selectedAgentIds.Count} slotsMin={_slotsMin} slotsMax={_slotsMaxEffective}");
             return;
         }
 
@@ -617,7 +695,7 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     {
         if (!confirmButton) return;
         bool withinMin = _selectedAgentIds.Count >= _slotsMin;
-        bool withinMax = _selectedAgentIds.Count <= _slotsMax;
+        bool withinMax = _selectedAgentIds.Count <= _slotsMaxEffective;
         confirmButton.interactable = withinMin && withinMax;
     }
 

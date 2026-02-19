@@ -85,45 +85,14 @@ namespace Core
         }
 
         private static void ApplyWork_ForOne(DayResolutionPlan plan, GameState s, AnomalyState anom, DataRegistry registry)
-        {
-            var canonicalKey = anom.Id;
+{
+    if (plan == null || s == null || anom == null) return;
 
-            var invArrived = SettlementUtil.CollectArrived(s, canonicalKey, anom.InvestigatorIds);
-            var conArrived = SettlementUtil.CollectArrived(s, canonicalKey, anom.ContainmentIds);
-            var opArrived = SettlementUtil.CollectArrived(s, canonicalKey, anom.OperateIds);
+    // Delegate to the single source-of-truth settlement system so damage/dead/insane/progress are all computed here.
+    var sink = new ListDayEventSink(plan.Events);
+    Settlement.AnomalyWorkSystem.ApplyForAnomaly(s, anom, null, sink, registry);
+}
 
-            switch (anom.Phase)
-            {
-                case AnomalyPhase.Investigate:
-                    {
-                        float before = anom.InvestigateProgress;
-                        float d01 = SettlementUtil.CalcInvestigateDelta01_FromRoster(s, anom, invArrived, registry);
-                        float after = Mathf.Clamp01(before + d01);
-                        anom.InvestigateProgress = after;
-
-                        if (Math.Abs(d01) > 0.0001f)
-                            plan.Events.Add(DayEvent.ProgressDelta(anom.Id, anom.Phase, before, d01, after));
-                        break;
-                    }
-                case AnomalyPhase.Contain:
-                    {
-                        float before = anom.ContainProgress;
-                        float d01 = SettlementUtil.CalcContainDelta01_FromRoster(s, anom, conArrived, registry);
-                        float after = Mathf.Clamp01(before + d01);
-                        anom.ContainProgress = after;
-
-                        if (Math.Abs(d01) > 0.0001f)
-                            plan.Events.Add(DayEvent.ProgressDelta(anom.Id, anom.Phase, before, d01, after));
-                        break;
-                    }
-                case AnomalyPhase.Operate:
-                    {
-                        int dNE = SettlementUtil.CalcNegEntropyDelta_FromRoster(s, anom, opArrived, registry);
-                        if (dNE > 0) s.NegEntropy += dNE;
-                        break;
-                    }
-            }
-        }
 
         private static void ApplyBehavior_ForOne(DayResolutionPlan plan, GameState s, AnomalyState a, DataRegistry registry)
         {

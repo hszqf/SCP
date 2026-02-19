@@ -36,7 +36,7 @@ namespace Core
 
                 // Investigate complete -> recall investigate roster, advance to Contain
                 if (a.Phase == AnomalyPhase.Investigate && a.InvestigateProgress >= 1f &&
-                    a.InvestigatorIds != null && a.InvestigatorIds.Count > 0)
+                    a.InvestigatorIds != null)
                 {
                     var arrived = CollectArrivedIds(s, a.Id, AssignmentSlot.Investigate, a.InvestigatorIds);
                     ImmediateRecallToBase(s, a.Id, AssignmentSlot.Investigate, a.InvestigatorIds);
@@ -52,7 +52,7 @@ namespace Core
 
                 // Contain complete -> recall contain roster, advance to Operate
                 if (a.Phase == AnomalyPhase.Contain && a.ContainProgress >= 1f &&
-                    a.ContainmentIds != null && a.ContainmentIds.Count > 0)
+                    a.ContainmentIds != null)
                 {
                     var arrived = CollectArrivedIds(s, a.Id, AssignmentSlot.Contain, a.ContainmentIds);
                     ImmediateRecallToBase(s, a.Id, AssignmentSlot.Contain, a.ContainmentIds);
@@ -83,7 +83,9 @@ namespace Core
 
                 
                 if (ag.IsDead || ag.IsInsane) continue;
-if (ag.LocationKind == AgentLocationKind.AtAnomaly &&
+if ((ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                    ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                    ag.LocationKind == AgentLocationKind.TravellingToBase) &&
                     string.Equals(ag.LocationAnomalyInstanceId, anomId, StringComparison.OrdinalIgnoreCase) &&
                     ag.LocationSlot == slot)
                 {
@@ -96,29 +98,39 @@ if (ag.LocationKind == AgentLocationKind.AtAnomaly &&
         }
 
         private static void ImmediateRecallToBase(GameState s, string anomId, AssignmentSlot slot, List<string> roster)
+{
+    if (s == null || roster == null) return;
+
+    if (s.Agents == null) return;
+
+    // Remove only recallable agents from the roster:
+    // - dead/insane MUST remain to occupy the slot until rescued
+    // - only agents that are at this anomaly+slot and not dead/insane are recalled
+    for (int i = roster.Count - 1; i >= 0; i--)
+    {
+        var agentId = roster[i];
+        if (string.IsNullOrEmpty(agentId)) continue;
+
+        var ag = s.Agents.Find(x => x != null && x.Id == agentId);
+        if (ag == null) continue;
+
+        if (ag.IsDead || ag.IsInsane) continue;
+
+        if ((ag.LocationKind == AgentLocationKind.AtAnomaly ||
+                    ag.LocationKind == AgentLocationKind.TravellingToAnomaly ||
+                    ag.LocationKind == AgentLocationKind.TravellingToBase) &&
+            string.Equals(ag.LocationAnomalyInstanceId, anomId, StringComparison.OrdinalIgnoreCase) &&
+            ag.LocationSlot == slot)
         {
-            if (s == null) return;
+            // Snap back to base
+            ag.LocationKind = AgentLocationKind.Base;
+            ag.LocationAnomalyInstanceId = null;
 
-            // Clear roster list
-            roster?.Clear();
-
-            if (s.Agents == null) return;
-
-            for (int i = 0; i < s.Agents.Count; i++)
-            {
-                var ag = s.Agents[i];
-                if (ag == null) continue;
-
-                if (!string.Equals(ag.LocationAnomalyInstanceId, anomId, StringComparison.OrdinalIgnoreCase)) continue;
-                if (ag.LocationSlot != slot) continue;
-
-                
-                if (ag.IsDead || ag.IsInsane) continue;
-// For plan mode: snap back to base regardless of travelling/at anomaly.
-                ag.LocationKind = AgentLocationKind.Base;
-                ag.LocationAnomalyInstanceId = null;
-            }
+            roster.RemoveAt(i);
         }
+    }
+}
+
 
 public static void Apply(GameController gc)
         {
@@ -134,10 +146,25 @@ public static void Apply(GameController gc)
 
                 // Investigate complete -> recall investigate roster
                 if (a.Phase == AnomalyPhase.Investigate && a.InvestigateProgress >= 1f &&
-                    a.InvestigatorIds != null && a.InvestigatorIds.Count > 0)
+                    a.InvestigatorIds != null)
                 {
                     string err;
-                    DispatchSystem.TrySetRoster(s, a.Id, AssignmentSlot.Investigate, Empty, out err);
+                    
+// Keep dead/insane in roster to occupy slots; recall only healthy agents.
+var pinned = new List<string>();
+if (a.InvestigatorIds != null && s.Agents != null)
+{
+    for (int k = 0; k < a.InvestigatorIds.Count; k++)
+    {
+        var id = a.InvestigatorIds[k];
+        if (string.IsNullOrEmpty(id)) continue;
+        var ag = s.Agents.Find(x => x != null && x.Id == id);
+        if (ag != null && (ag.IsDead || ag.IsInsane))
+            pinned.Add(id);
+    }
+}
+
+DispatchSystem.TrySetRoster(s, a.Id, AssignmentSlot.Investigate, pinned, out err);
                     if (!string.IsNullOrEmpty(err))
                         Debug.LogError($"[PhaseCompletionRecall] Investigate recall failed anomaly={a.Id} err={err}");
 
@@ -148,10 +175,25 @@ public static void Apply(GameController gc)
 
                 // Contain complete -> recall contain roster
                 if (a.Phase == AnomalyPhase.Contain && a.ContainProgress >= 1f &&
-                    a.ContainmentIds != null && a.ContainmentIds.Count > 0)
+                    a.ContainmentIds != null)
                 {
                     string err;
-                    DispatchSystem.TrySetRoster(s, a.Id, AssignmentSlot.Contain, Empty, out err);
+                    
+// Keep dead/insane in roster to occupy slots; recall only healthy agents.
+var pinned = new List<string>();
+if (a.ContainmentIds != null && s.Agents != null)
+{
+    for (int k = 0; k < a.ContainmentIds.Count; k++)
+    {
+        var id = a.ContainmentIds[k];
+        if (string.IsNullOrEmpty(id)) continue;
+        var ag = s.Agents.Find(x => x != null && x.Id == id);
+        if (ag != null && (ag.IsDead || ag.IsInsane))
+            pinned.Add(id);
+    }
+}
+
+DispatchSystem.TrySetRoster(s, a.Id, AssignmentSlot.Contain, pinned, out err);
                     if (!string.IsNullOrEmpty(err))
                         Debug.LogError($"[PhaseCompletionRecall] Contain recall failed anomaly={a.Id} err={err}");
 
