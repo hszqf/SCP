@@ -1,8 +1,10 @@
 using System;
-
-public enum AssignmentSlot
+namespace Core
 {
-    Investigate,
-    Contain,
-    Operate
+    public enum AssignmentSlot
+    {
+        Investigate,
+        Contain,
+        Operate
+    }
 }

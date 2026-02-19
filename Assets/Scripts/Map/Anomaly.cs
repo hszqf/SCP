@@ -433,7 +433,35 @@ public class Anomaly : MonoBehaviour
             var image = CreateAvatarImage(agentGridRoot);
             image.name = $"Avatar_{agentId}";
             image.sprite = sprite;
-            image.raycastTarget = false;
+
+            bool clickable = agent != null && (agent.IsDead || agent.IsInsane);
+
+            // Status tint
+            if (agent != null)
+            {
+                if (agent.IsDead) image.color = ComputeDeadTint(Mathf.Max(0, agent.DeadDays));
+                else if (agent.IsInsane) image.color = ComputeInsaneTint(Mathf.Max(0, agent.InsaneDays));
+                else image.color = Color.white;
+            }
+
+            if (clickable)
+            {
+                image.raycastTarget = true;
+                var btn = image.gameObject.AddComponent<Button>();
+                btn.transition = Selectable.Transition.None;
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() =>
+                {
+                    // Block if end-day playback or interaction lock is active
+                    if (DayPlaybackDirector.I != null && DayPlaybackDirector.I.IsPlaying) return;
+                    if (DispatchAnimationSystem.I != null && DispatchAnimationSystem.I.IsInteractionLocked) return;
+                    UIPanelRoot.I?.OpenRescuePanelForAnomaly(_canonicalAnomalyKey, agentId);
+                });
+            }
+            else
+            {
+                image.raycastTarget = false;
+            }
         }
     }
 
@@ -450,7 +478,6 @@ public class Anomaly : MonoBehaviour
         {
             var ag = state.Agents[i];
             if (ag == null || string.IsNullOrEmpty(ag.Id)) continue;
-            if (ag.IsDead || ag.IsInsane) continue;
 
             // only show agents whose location is at this anomaly
             if (ag.LocationKind != AgentLocationKind.AtAnomaly) continue;
@@ -470,6 +497,18 @@ public class Anomaly : MonoBehaviour
         var rt = go.GetComponent<RectTransform>();
         rt.SetParent(parent, false);
         return image;
+    }
+
+    private static Color ComputeDeadTint(int deadDays)
+    {
+        float t = Mathf.Clamp01(deadDays / 3f);
+        return new Color(1f, 1f - 0.85f * t, 1f - 0.85f * t, 1f);
+    }
+
+    private static Color ComputeInsaneTint(int insaneDays)
+    {
+        float t = Mathf.Clamp01(insaneDays / 3f);
+        return new Color(1f, 1f, 1f - 0.85f * t, 1f);
     }
 
     private static Sprite ResolveAvatarSprite(AgentState agent, string agentId, string displayName)

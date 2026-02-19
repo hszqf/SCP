@@ -27,7 +27,8 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         Investigate,
         Contain,
         Operate,
-        Generic
+        Generic,
+        Rescue
     }
 
     [Header("Right: Agent list (AgentPickerItemView)")]
@@ -52,6 +53,12 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
     private int _slotsMax = int.MaxValue;
     private AssignPanelMode _mode = AssignPanelMode.Manage;
     private Action<string, List<string>> _onConfirm;
+
+    // Rescue mode: pick one rescuer agent at base to retrieve a dead/insane agent from an anomaly.
+    private string _rescueAnomalyInstanceId;
+    private string _rescueTargetAgentId;
+    private Action<string, string> _onRescueConfirm;
+
     private bool _listenStateChanged;
 
     void Awake()
@@ -137,6 +144,41 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         string modeLabel = "Generic")
     {
         ShowGenericInternal(header, hint, targets, agentSlotsMax, onConfirm, modeLabel);
+    }
+
+    public void ShowRescue(
+        string anomalyInstanceId,
+        string targetAgentId,
+        string targetDisplayName,
+        Action<string, string> onConfirm)
+    {
+        ClearSelectionState();
+        _mode = AssignPanelMode.Rescue;
+        _onConfirm = null;
+        _onRescueConfirm = onConfirm;
+
+        _rescueAnomalyInstanceId = anomalyInstanceId;
+        _rescueTargetAgentId = targetAgentId;
+
+        _slotsMin = 1;
+        _slotsMax = 1;
+
+        if (headerText) headerText.text = "接回人员";
+        if (hintText)
+        {
+            var name = string.IsNullOrEmpty(targetDisplayName) ? targetAgentId : targetDisplayName;
+            hintText.text = $"选择一名干员接回：{name}";
+        }
+
+        // In Rescue mode we select and confirm immediately on click.
+        if (confirmButton && confirmButton.gameObject != null)
+            confirmButton.gameObject.SetActive(false);
+
+        _selectedTargetId = null; // unused in Rescue mode
+        RebuildAgentList();
+        RefreshConfirmState();
+
+        Debug.Log($"[AssignPanel] mode=Rescue anomaly={anomalyInstanceId} targetAgent={targetAgentId}");
     }
 
     private void ShowGenericInternal(
@@ -229,6 +271,46 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
 
         var gc = GameController.I;
         if (gc == null) return;
+
+        // Rescue mode: only show base, usable agents.
+        if (_mode == AssignPanelMode.Rescue)
+        {
+            _selectedAgentIds.Clear();
+
+            foreach (var ag in gc.State.Agents)
+            {
+                if (ag == null) continue;
+                if (ag.IsDead || ag.IsInsane) continue;
+                if (ag.LocationKind != AgentLocationKind.Base) continue;
+
+                bool disable = false;
+                bool selected = _selectedAgentIds.Contains(ag.Id);
+
+                string statusText = "<color=#66FF66>空闲</color>";
+
+                var go = Instantiate(agentPickerItemPrefab, contentRoot);
+                go.name = "Agent_" + ag.Id;
+
+                var item = go.GetComponent<AgentPickerItemView>();
+                if (item == null) item = go.AddComponent<AgentPickerItemView>();
+
+
+                string displayName = string.IsNullOrEmpty(ag.Name) ? ag.Id : ag.Name;
+                item.Bind(
+                    ag,
+                    displayName,
+                    BuildAgentAttrLine(ag),
+                    disable,
+                    selected,
+                    OnAgentClicked,
+                    statusText);
+
+                _agentItems.Add(item);
+            }
+
+            RefreshConfirmState();
+            return;
+        }
 
         string canonicalKeyForFilter = null;
 
@@ -356,6 +438,26 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var agent = gc?.State?.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
         if (agent != null && (agent.IsDead || agent.IsInsane))
             return;
+
+        if (_mode == AssignPanelMode.Rescue)
+        {
+            // Pick-and-confirm immediately
+            if (agent == null) return;
+            if (agent.LocationKind != AgentLocationKind.Base) return;
+
+            _selectedAgentIds.Clear();
+            _selectedAgentIds.Add(agentId);
+
+            foreach (var it in _agentItems)
+            {
+                if (it == null) continue;
+                it.SetSelected(it.AgentId == agentId);
+            }
+
+            _onRescueConfirm?.Invoke(_rescueAnomalyInstanceId, agentId);
+            UIPanelRoot.I?.CloseModal(gameObject, "rescue_confirm");
+            return;
+        }
 
         if (_selectedAgentIds.Contains(agentId))
         {

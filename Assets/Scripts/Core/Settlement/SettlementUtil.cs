@@ -295,6 +295,10 @@ namespace Settlement
             var agent = state.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
             if (agent == null) return string.Empty;
 
+            // Terminal statuses
+            if (agent.IsDead) return "已死亡";
+            if (agent.IsInsane) return "已发疯";
+
             // If at base and not travelling, consider idle
             if (agent.LocationKind == AgentLocationKind.Base && !agent.IsTravelling)
                 return string.Empty;

@@ -8,6 +8,7 @@
 // Notes:
 // - Busy check still uses GameControllerTaskExt.AreAgentsBusy (global task scan).
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Core;
@@ -282,6 +283,139 @@ public class UIPanelRoot : MonoBehaviour
         );
 
         // AnomalyManagePanel.ShowGeneric already auto-selects single target when targets.Count == 1.
+    }
+
+    // ================== RESCUE (retrieve dead/insane agents) ==================
+    public void OpenRescuePanelForAnomaly(string anomalyInstanceId, string targetAgentId)
+    {
+        if (GameController.I == null) return;
+        if (string.IsNullOrEmpty(anomalyInstanceId) || string.IsNullOrEmpty(targetAgentId)) return;
+
+        EnsureManagePanel();
+        if (!_managePanelView) return;
+
+        var gc = GameController.I;
+        var state = gc.State;
+        var target = state?.Agents?.Find(a => a != null && a.Id == targetAgentId);
+        if (target == null)
+        {
+            ShowInfo("接回失败", "目标干员不存在");
+            return;
+        }
+
+        // Only allow rescue for dead/insane agents stuck at this anomaly.
+        if (!(target.IsDead || target.IsInsane) ||
+            target.LocationKind != Core.AgentLocationKind.AtAnomaly ||
+            !string.Equals(target.LocationAnomalyInstanceId, anomalyInstanceId, System.StringComparison.Ordinal))
+        {
+            ShowInfo("接回失败", "目标不在该异常点或状态已变化");
+            return;
+        }
+
+        string targetName = string.IsNullOrEmpty(target.Name) ? target.Id : target.Name;
+
+        if (_managePanel) _managePanel.SetActive(true);
+        _managePanel.transform.SetAsLastSibling();
+        PushModal(_managePanel, "open_rescue");
+        RefreshModalStack("open_rescue", _managePanel);
+
+        _managePanelView.ShowRescue(
+            anomalyInstanceId,
+            targetAgentId,
+            targetName,
+            (anomId, rescuerId) =>
+            {
+                // Start rescue flow
+                StartCoroutine(RescueAgentCoroutine(anomId, rescuerId, targetAgentId));
+            });
+    }
+
+    private static void RemoveAgentFromAnyRoster(Core.GameState state, string anomalyInstanceId, string agentId)
+    {
+        if (state == null || string.IsNullOrEmpty(anomalyInstanceId) || string.IsNullOrEmpty(agentId)) return;
+        var anom = Core.DispatchSystem.FindAnomaly(state, anomalyInstanceId);
+        if (anom == null) return;
+        anom.InvestigatorIds?.RemoveAll(x => x == agentId);
+        anom.ContainmentIds?.RemoveAll(x => x == agentId);
+        anom.OperateIds?.RemoveAll(x => x == agentId);
+    }
+
+    private IEnumerator RescueAgentCoroutine(string anomalyInstanceId, string rescuerAgentId, string targetAgentId)
+    {
+        var gc = GameController.I;
+        var state = gc?.State;
+        if (gc == null || state == null) yield break;
+
+        var rescuer = state.Agents?.Find(a => a != null && a.Id == rescuerAgentId);
+        var target = state.Agents?.Find(a => a != null && a.Id == targetAgentId);
+
+        if (rescuer == null || target == null)
+        {
+            ShowInfo("接回失败", "干员数据缺失");
+            yield break;
+        }
+
+        if (rescuer.IsDead || rescuer.IsInsane || rescuer.LocationKind != Core.AgentLocationKind.Base)
+        {
+            ShowInfo("接回失败", "接回干员不可用");
+            yield break;
+        }
+
+        if (!(target.IsDead || target.IsInsane) ||
+            target.LocationKind != Core.AgentLocationKind.AtAnomaly ||
+            !string.Equals(target.LocationAnomalyInstanceId, anomalyInstanceId, System.StringComparison.Ordinal))
+        {
+            ShowInfo("接回失败", "目标不在该异常点或状态已变化");
+            yield break;
+        }
+
+        var anim = DispatchAnimationSystem.I;
+        anim?.SetExternalInteractionLocked(true);
+
+        // 1) Rescuer travels to anomaly
+        rescuer.LocationKind = Core.AgentLocationKind.TravellingToAnomaly;
+        rescuer.LocationAnomalyInstanceId = anomalyInstanceId;
+        rescuer.LocationSlot = Core.AssignmentSlot.Investigate;
+        gc.Notify();
+        UIEvents.RaiseAgentsChanged();
+
+        if (anim != null) yield return anim.PlayVisualDispatchOne(anomalyInstanceId, rescuerAgentId);
+        else yield return new WaitForSeconds(0.45f);
+
+        rescuer.LocationKind = Core.AgentLocationKind.AtAnomaly;
+        gc.Notify();
+        UIEvents.RaiseAgentsChanged();
+
+        // 2) Pickup target and return
+        RemoveAgentFromAnyRoster(state, anomalyInstanceId, targetAgentId);
+
+        target.LocationKind = Core.AgentLocationKind.TravellingToBase;
+        target.LocationAnomalyInstanceId = anomalyInstanceId;
+
+        rescuer.LocationKind = Core.AgentLocationKind.TravellingToBase;
+        rescuer.LocationAnomalyInstanceId = anomalyInstanceId;
+
+        gc.Notify();
+        UIEvents.RaiseAgentsChanged();
+
+        // Return token(s): target first, then rescuer
+        if (anim != null) yield return anim.PlayVisualRecallOne(anomalyInstanceId, targetAgentId);
+        else yield return new WaitForSeconds(0.45f);
+
+        if (anim != null) yield return anim.PlayVisualRecallOne(anomalyInstanceId, rescuerAgentId);
+        else yield return new WaitForSeconds(0.45f);
+
+        // 3) Arrive at base (target remains dead/insane and cannot be dispatched)
+        target.LocationKind = Core.AgentLocationKind.Base;
+        target.LocationAnomalyInstanceId = null;
+
+        rescuer.LocationKind = Core.AgentLocationKind.Base;
+        rescuer.LocationAnomalyInstanceId = null;
+
+        gc.Notify();
+        UIEvents.RaiseAgentsChanged();
+
+        anim?.SetExternalInteractionLocked(false);
     }
 
     // 新增：针对指定 anomalyKey 打开的 Operate/Manage 指派面板（targets 只有 1 个并自动选中）

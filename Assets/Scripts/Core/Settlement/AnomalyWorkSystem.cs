@@ -109,7 +109,7 @@ namespace Settlement
             {
                 var ag = arrived[i];
                 if (ag == null) continue;
-                if (ag.IsDead) continue; // dead stays, but doesn't contribute
+                if (ag.IsDead || ag.IsInsane) continue; // dead/insane stays, but doesn't contribute
 
                 int match = CalcMatchCount(ag, req);
                 float add01 = CalcProgressAdd01(match);
@@ -157,15 +157,25 @@ namespace Settlement
                 {
                     ag.IsDead = true;
                     ag.HP = 0;
+                    RemoveAgentFromAllRosters(anom, ag.Id);
                     sink?.Add(Core.DayEvent.Killed(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
                 }
                 else if (ag.SAN <= 0 && !ag.IsInsane && !ag.IsDead)
                 {
                     ag.IsInsane = true;
                     ag.SAN = 0;
+                    RemoveAgentFromAllRosters(anom, ag.Id);
                     sink?.Add(Core.DayEvent.Insane(anom.Id, ag.Id, $"dmg_{slot.ToString().ToLowerInvariant()}"));
                 }
             }
+        }
+
+        private static void RemoveAgentFromAllRosters(Core.AnomalyState anom, string agentId)
+        {
+            if (anom == null || string.IsNullOrEmpty(agentId)) return;
+            anom.InvestigatorIds?.RemoveAll(x => x == agentId);
+            anom.ContainmentIds?.RemoveAll(x => x == agentId);
+            anom.OperateIds?.RemoveAll(x => x == agentId);
         }
 
         private static int CalcMatchCount(Core.AgentState ag, int[] req)
