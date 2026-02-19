@@ -59,6 +59,19 @@ public class DayPlaybackDirector : MonoBehaviour
 
                 switch (e.Type)
                 {
+                    case Core.DayEventType.AgentCheck:
+                        yield return PlayAgentCheck(e);
+                        break;
+
+
+                    case Core.DayEventType.AgentKilled:
+                        yield return PlayAgentStatusChanged(e);
+                        break;
+
+                    case Core.DayEventType.AgentInsane:
+                        yield return PlayAgentStatusChanged(e);
+                        break;
+
                     case Core.DayEventType.AnomalyProgressDelta:
                         // 进度 tween（含 near-1 显示 100%）
                         yield return PlayProgressDelta(e);
@@ -112,6 +125,10 @@ public class DayPlaybackDirector : MonoBehaviour
             case DayEventType.FocusAnomaly:
                 return $"FocusAnomaly anom={e.AnomalyId} pos=({e.MapPos.x:0.##},{e.MapPos.y:0.##}) zoom={e.Zoom:0.##} dur={e.Duration:0.##}";
 
+            case DayEventType.AgentCheck:
+                return $"AgentCheck anom={e.AnomalyId} agent={e.AgentId} slot={e.Slot} roll={e.Roll} dc={e.Dc} {(e.Success ? "OK" : "FAIL")} reason={e.ReasonKey}";
+
+
             case DayEventType.AnomalyProgressDelta:
                 return $"Progress anom={e.AnomalyId} phase={e.Phase} {e.Before01:0.###}->{e.After01:0.###} (d={e.Delta01:0.###})";
 
@@ -141,7 +158,22 @@ public class DayPlaybackDirector : MonoBehaviour
         }
     }
 
-    // ---------------- Playback overlay ----------------
+    private IEnumerator PlayAgentCheck(Core.DayEvent e, float seconds = 0.08f)
+{
+    // v0: just a small beat for readability (later: floating text / sfx)
+    if (seconds > 0f) yield return new WaitForSeconds(seconds);
+    else yield return null;
+}
+
+    private IEnumerator PlayAgentStatusChanged(Core.DayEvent e, float seconds = 0.08f)
+    {
+        // v0: placeholder beat (later: avatar tinting / status text / sfx)
+        if (seconds > 0f) yield return new WaitForSeconds(seconds);
+        else yield return null;
+    }
+
+
+// ---------------- Playback overlay ----------------
 
     private sealed class PBAnom
     {

@@ -10,6 +10,7 @@ namespace Core
         AgentCheck,
         AnomalyProgressDelta,
         AgentKilled,
+        AgentInsane,
         AnomalyRangeAttack,
 
         CityPopLoss,
@@ -67,6 +68,40 @@ namespace Core
         // --- Convenience factories ---
         public static DayEvent Focus(string anomalyId, Vector2 mapPos, float zoom, float duration)
             => new DayEvent { Type = DayEventType.FocusAnomaly, AnomalyId = anomalyId, MapPos = mapPos, Zoom = zoom, Duration = duration };
+
+        public static DayEvent Check(string anomalyId, string agentId, AssignmentSlot slot, int roll, int dc, bool success, string reasonKey)
+            => new DayEvent
+            {
+                Type = DayEventType.AgentCheck,
+                AnomalyId = anomalyId,
+                AgentId = agentId,
+                Slot = slot,
+                Roll = roll,
+                Dc = dc,
+                Success = success,
+                ReasonKey = reasonKey
+            };
+
+
+
+
+        public static DayEvent Insane(string anomalyId, string agentId, string reasonKey)
+            => new DayEvent
+            {
+                Type = DayEventType.AgentInsane,
+                AnomalyId = anomalyId,
+                AgentId = agentId,
+                ReasonKey = reasonKey
+            };
+
+        public static DayEvent Killed(string anomalyId, string agentId, string reasonKey)
+            => new DayEvent
+            {
+                Type = DayEventType.AgentKilled,
+                AnomalyId = anomalyId,
+                AgentId = agentId,
+                ReasonKey = reasonKey
+            };
 
         public static DayEvent ProgressDelta(string anomalyId, AnomalyPhase phase, float before01, float delta01, float after01, string agentId = null)
             => new DayEvent

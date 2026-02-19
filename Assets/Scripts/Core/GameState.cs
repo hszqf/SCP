@@ -42,6 +42,9 @@ namespace Core
         public bool IsDead = false;
         public bool IsInsane = false;
 
+        public int DeadDays = 0;
+        public int InsaneDays = 0;
+
         // new-arch: agent location (single source of truth for “arrived / travelling / base”)
         public AgentLocationKind LocationKind = AgentLocationKind.Base;
 
