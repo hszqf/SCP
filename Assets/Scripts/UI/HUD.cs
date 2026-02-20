@@ -10,6 +10,7 @@ public class HUD : MonoBehaviour
     [SerializeField] private TMP_Text dayText;
     [SerializeField] private TMP_Text moneyText;
     [SerializeField] private TMP_Text panicText;
+    [SerializeField] private TMP_Text negEntropyText;
 
     [Header("Optional Debug Text")]
     [SerializeField] private TMP_Text debugText;
@@ -21,8 +22,9 @@ public class HUD : MonoBehaviour
     private void Awake()
     {
         I = this;
-        AutoWireBindingsIfMissing();
+        AutoWireButtonsIfMissing();
         BindButtonsInCode();
+        RequireBindings();
     }
 
     private void OnDestroy()
@@ -50,10 +52,9 @@ public class HUD : MonoBehaviour
             GameController.I.OnStateChanged -= Refresh;
     }
 
-    void AutoWireBindingsIfMissing()
+    void AutoWireButtonsIfMissing()
     {
-        // HUD 结构：HUD/Panel/End Day, HUD/Panel/NewsBT, 以及 3 个 TMP 文本（day/money/world panic）
-        // 如果你已经手动拖好了，这里不会覆盖。
+        // Buttons only. Texts/anchors are strong bindings (no fallback).
         var panel = transform.Find("Panel");
 
         if (!endDayButton && panel)
@@ -68,21 +69,14 @@ public class HUD : MonoBehaviour
             if (t) recruitButton = t.GetComponent<Button>();
         }
 
-        if (!recruitButton && panel)
-        {
-            recruitButton = CreateRecruitButton(panel);
-        }
+    }
 
-        // 文本：如果你不想手动拖，按顺序自动找 HUD/Panel 下的 3 个 TMP_Text
-        if ((!dayText || !moneyText || !panicText) && panel)
-        {
-            var tmps = panel.GetComponentsInChildren<TextMeshProUGUI>(true);
-            // 层级里显示为 Text (TMP), Text (TMP) (1), Text (TMP) (2) :contentReference[oaicite:1]{index=1}
-            // 我们按出现顺序填充：Day/Money/WorldPanic
-            if (!dayText && tmps.Length > 0) dayText = tmps[0];
-            if (!moneyText && tmps.Length > 1) moneyText = tmps[1];
-            if (!panicText && tmps.Length > 2) panicText = tmps[2];
-        }
+    void RequireBindings()
+    {
+        if (!dayText) Debug.LogError("[HUD] Missing binding: dayText", this);
+        if (!moneyText) Debug.LogError("[HUD] Missing binding: moneyText", this);
+        if (!panicText) Debug.LogError("[HUD] Missing binding: panicText", this);
+        if (!negEntropyText) Debug.LogError("[HUD] Missing binding: negEntropyText", this);
     }
 
     void BindButtonsInCode()
@@ -138,6 +132,7 @@ public class HUD : MonoBehaviour
         if (dayText) dayText.text = $"Day {s.Day}";
         if (moneyText) moneyText.text = $"$ {s.Money}";
         if (panicText) panicText.text = $"WorldPanic {s.WorldPanic:0.##}";
+        if (negEntropyText) negEntropyText.text = $"NE {s.NegEntropy}";
 
         if (debugText)
         {
@@ -148,34 +143,4 @@ public class HUD : MonoBehaviour
         // 弹事件交给 UIPanelRoot 监听 OnStateChanged 的统一入口，避免重复弹/抢焦点。
     }
 
-    private Button CreateRecruitButton(Transform panel)
-    {
-        var go = new GameObject("RecruitBT", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        go.transform.SetParent(panel, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(0f, 0f);
-        rt.pivot = new Vector2(0f, 0f);
-        rt.sizeDelta = new Vector2(160f, 50f);
-        rt.anchoredPosition = new Vector2(20f, 20f);
-
-        var img = go.GetComponent<Image>();
-        img.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
-
-        var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-        labelGo.transform.SetParent(go.transform, false);
-        var labelRt = labelGo.GetComponent<RectTransform>();
-        labelRt.anchorMin = Vector2.zero;
-        labelRt.anchorMax = Vector2.one;
-        labelRt.offsetMin = Vector2.zero;
-        labelRt.offsetMax = Vector2.zero;
-
-        var label = labelGo.GetComponent<TextMeshProUGUI>();
-        label.text = "Recruit";
-        label.fontSize = 24;
-        label.alignment = TextAlignmentOptions.Center;
-
-        return go.GetComponent<Button>();
-    }
 }

@@ -60,7 +60,7 @@ namespace Core
 
             // Keep original order semantics:
             // CityEconomy -> BaseRecovery -> Cleanup -> PhaseCompletionRecall
-            Settlement.CityEconomySystem.Apply(null, shadow, null);
+            Settlement.CityEconomySystem.Apply(null, shadow, null, new ListDayEventSink(plan.Events));
             Settlement.BaseRecoverySystem.Apply(null, shadow, null);
             Settlement.SettlementCleanupSystem.Apply(null, shadow, null);
 

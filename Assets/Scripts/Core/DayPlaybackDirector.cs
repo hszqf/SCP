@@ -12,6 +12,16 @@ public class DayPlaybackDirector : MonoBehaviour
     [Header("v0 Debug Playback")]
     [SerializeField] private float eventStepSeconds = 0.05f;
 
+    [Header("M6 Focus")]
+    [SerializeField] private float defaultFocusSeconds = 0.6f;
+
+    [Header("M6 Range Impact")]
+    [SerializeField] private float cityPopLossStartDelaySeconds = 0.10f;
+    [SerializeField] private float cityPopLossAnimSeconds = 0.35f;
+
+    [Header("M6 City Money")]
+    [SerializeField] private float perCityStartDelaySeconds = 0.10f;
+
     public bool IsPlaying => _co != null;
 
     private Coroutine _co;
@@ -45,6 +55,15 @@ public class DayPlaybackDirector : MonoBehaviour
         DispatchAnimationSystem.I?.SetExternalInteractionLocked(true);
         HUD.I?.SetControlsInteractable(false);
 
+        // M6: init camera + HUD resource snapshot (visual-only, no GameState mutation)
+        var camDir = DayPlaybackCameraDirector.I;
+        camDir?.ResetFocusState();
+        camDir?.CaptureBaseIfNeeded();
+
+        var hudRes = HUDResourceAnimator.I;
+        var s0 = GameController.I?.State;
+        if (s0 != null) hudRes?.BeginPlaybackSnapshot(s0.Money, s0.NegEntropy);
+
         // 播放期：用 overlay 驱动 anomaly 进度与头像（不写 GameState）
         BuildOverlayFromState();
         ApplyOverlayToViews();
@@ -55,19 +74,22 @@ public class DayPlaybackDirector : MonoBehaviour
             for (int i = 0; i < events.Count; i++)
             {
                 var e = events[i];
-                Debug.Log($"[M5][Play] {Describe(e)}");
+                Debug.Log($"[M6][Play] {Describe(e)}");
 
                 switch (e.Type)
                 {
+                    case Core.DayEventType.FocusAnomaly:
+                        if (camDir != null)
+                            yield return camDir.EnterFocus(e.AnomalyId, e.Duration > 0f ? e.Duration : defaultFocusSeconds);
+                        else
+                            yield return (eventStepSeconds > 0f ? new WaitForSeconds(eventStepSeconds) : null);
+                        break;
+
                     case Core.DayEventType.AgentCheck:
                         yield return PlayAgentCheck(e);
                         break;
 
-
                     case Core.DayEventType.AgentKilled:
-                        yield return PlayAgentStatusChanged(e);
-                        break;
-
                     case Core.DayEventType.AgentInsane:
                         yield return PlayAgentStatusChanged(e);
                         break;
@@ -88,6 +110,28 @@ public class DayPlaybackDirector : MonoBehaviour
                         else yield return null;
                         break;
 
+                    case Core.DayEventType.AnomalyNegEntropyBurst:
+                        PlayNegEntropyBurst(e, camDir, hudRes);
+                        if (eventStepSeconds > 0f) yield return new WaitForSeconds(eventStepSeconds);
+                        else yield return null;
+                        break;
+
+                    case Core.DayEventType.AnomalyRangeAttack:
+                        {
+                            int end = FindRangeImpactEnd(events, i);
+                            yield return PlayRangeImpactSequence(events, i, end, camDir);
+                            i = end - 1; // skip consumed CityPopLoss*
+                        }
+                        break;
+
+                    case Core.DayEventType.CityMoneyBurst:
+                        {
+                            int end = FindCityMoneyEnd(events, i);
+                            yield return PlayCityMoneySequence(events, i, end, camDir, hudRes);
+                            i = end - 1;
+                        }
+                        break;
+
                     default:
                         if (eventStepSeconds > 0f) yield return new WaitForSeconds(eventStepSeconds);
                         else yield return null;
@@ -96,11 +140,106 @@ public class DayPlaybackDirector : MonoBehaviour
             }
         }
 
+        // M6: end camera + HUD snapshot
+        if (camDir != null)
+            yield return camDir.ReturnToBase();
+        hudRes?.EndPlaybackSnapshot();
+
         HUD.I?.SetControlsInteractable(true);
         DispatchAnimationSystem.I?.SetExternalInteractionLocked(false);
 
         _co = null;
         onFinished?.Invoke();
+    }
+
+    private void PlayNegEntropyBurst(Core.DayEvent e, DayPlaybackCameraDirector camDir, HUDResourceAnimator hudRes)
+    {
+        if (hudRes == null) return;
+
+        var worldCam = camDir != null ? camDir.MapCamera : Camera.main;
+        Vector3 src = new Vector3(e.MapPos.x, e.MapPos.y, 0f);
+        if (MapEntityRegistry.I != null && MapEntityRegistry.I.TryGetAnomalyWorldPos(e.AnomalyId, out var anomPos))
+            src = anomPos;
+
+        hudRes.PlayNegEntropyBurst(src, e.NegEntropyDelta, worldCam);
+    }
+
+    private static int FindRangeImpactEnd(List<DayEvent> events, int rangeAttackIndex)
+    {
+        int j = rangeAttackIndex + 1;
+        string anomId = events[rangeAttackIndex].AnomalyId;
+        while (j < events.Count && events[j].Type == DayEventType.CityPopLoss &&
+               string.Equals(events[j].AnomalyId, anomId, StringComparison.Ordinal))
+            j++;
+        return j;
+    }
+
+    private static int FindCityMoneyEnd(List<DayEvent> events, int startIndex)
+    {
+        int j = startIndex;
+        while (j < events.Count && events[j].Type == DayEventType.CityMoneyBurst)
+            j++;
+        return j;
+    }
+
+    private IEnumerator PlayRangeImpactSequence(List<DayEvent> events, int rangeAttackIndex, int endIndexExclusive, DayPlaybackCameraDirector camDir)
+    {
+        var rangeEv = events[rangeAttackIndex];
+        string anomId = rangeEv.AnomalyId;
+
+        // Collect affected cities.
+        var cityIds = new List<string>(8);
+        for (int j = rangeAttackIndex + 1; j < endIndexExclusive; j++)
+        {
+            var ce = events[j];
+            if (ce.Type != DayEventType.CityPopLoss) break;
+            if (!string.IsNullOrEmpty(ce.CityId) && !cityIds.Contains(ce.CityId))
+                cityIds.Add(ce.CityId);
+        }
+
+        // Camera: frame anomaly + all affected cities.
+        if (camDir != null && cityIds.Count > 0)
+            yield return camDir.FrameRange(anomId, cityIds.ToArray());
+
+        // City FX: stagger start.
+        for (int j = rangeAttackIndex + 1; j < endIndexExclusive; j++)
+        {
+            var ce = events[j];
+            if (ce.Type != DayEventType.CityPopLoss) break;
+
+            if (MapEntityRegistry.I != null && MapEntityRegistry.I.TryGetCityView(ce.CityId, out var cityView) && cityView != null)
+                cityView.PlayPopLossFX(ce.Loss, ce.AfterPop, cityPopLossAnimSeconds);
+
+            yield return new WaitForSeconds(Mathf.Max(0f, cityPopLossStartDelaySeconds));
+        }
+
+        if (endIndexExclusive > rangeAttackIndex + 1)
+            yield return new WaitForSeconds(Mathf.Max(0.01f, cityPopLossAnimSeconds));
+
+        if (camDir != null)
+            yield return camDir.ReturnToFocus(anomId);
+    }
+
+    private IEnumerator PlayCityMoneySequence(List<DayEvent> events, int startIndex, int endIndexExclusive, DayPlaybackCameraDirector camDir, HUDResourceAnimator hudRes)
+    {
+        if (camDir != null)
+            yield return camDir.ReturnToBase();
+
+        var worldCam = camDir != null ? camDir.MapCamera : Camera.main;
+
+        for (int j = startIndex; j < endIndexExclusive; j++)
+        {
+            var ev = events[j];
+            if (ev.Type != DayEventType.CityMoneyBurst) break;
+
+            if (hudRes != null && MapEntityRegistry.I != null && MapEntityRegistry.I.TryGetCityWorldPos(ev.CityId, out var pos))
+                hudRes.PlayMoneyBurst(pos, ev.MoneyDelta, worldCam);
+
+            yield return new WaitForSeconds(Mathf.Max(0f, perCityStartDelaySeconds));
+        }
+
+        if (hudRes != null)
+            yield return new WaitForSeconds(Mathf.Max(0.01f, hudRes.CoinFlySeconds));
     }
 
     private void ApplyPhaseAdvancedToOverlayAndView(Core.DayEvent e)
@@ -135,8 +274,14 @@ public class DayPlaybackDirector : MonoBehaviour
             case DayEventType.AnomalyRangeAttack:
                 return $"RangeAttack anom={e.AnomalyId} origin=({e.OriginPos.x:0.##},{e.OriginPos.y:0.##}) range={e.Range:0.##}";
 
+            case DayEventType.AnomalyNegEntropyBurst:
+                return $"NEBurst anom={e.AnomalyId} +{e.NegEntropyDelta}";
+
             case DayEventType.CityPopLoss:
                 return $"CityPopLoss anom={e.AnomalyId} city={e.CityId} {e.BeforePop}->{e.AfterPop} (loss={e.Loss}) dist={e.Dist:0.##} range={e.Range:0.##}";
+
+            case DayEventType.CityMoneyBurst:
+                return $"CityMoneyBurst city={e.CityId} +{e.MoneyDelta}";
 
             case DayEventType.RosterRecalled:
                 return $"RosterRecalled anom={e.AnomalyId} slot={e.Slot} count={(e.AgentIds != null ? e.AgentIds.Length : 0)}";

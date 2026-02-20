@@ -13,7 +13,11 @@ namespace Core
         AgentInsane,
         AnomalyRangeAttack,
 
+        // M6: per-source bursts (visual-only; do NOT infer from ResourceDelta)
+        AnomalyNegEntropyBurst,
+
         CityPopLoss,
+        CityMoneyBurst,
         ResourceDelta,
         PhaseAdvanced,
         RosterRecalled,
@@ -117,6 +121,26 @@ namespace Core
 
         public static DayEvent RangeAttack(string anomalyId, Vector2 originPos, float range)
             => new DayEvent { Type = DayEventType.AnomalyRangeAttack, AnomalyId = anomalyId, OriginPos = originPos, Range = range };
+
+        public static DayEvent NegEntropyBurst(string anomalyId, Vector2 mapPos, int negEntropyDelta, float duration = 0f)
+            => new DayEvent
+            {
+                Type = DayEventType.AnomalyNegEntropyBurst,
+                AnomalyId = anomalyId,
+                MapPos = mapPos,
+                NegEntropyDelta = negEntropyDelta,
+                Duration = duration
+            };
+
+        public static DayEvent MoneyBurst(string cityId, Vector2 mapPos, int moneyDelta, float duration = 0f)
+            => new DayEvent
+            {
+                Type = DayEventType.CityMoneyBurst,
+                CityId = cityId,
+                MapPos = mapPos,
+                MoneyDelta = moneyDelta,
+                Duration = duration
+            };
 
         public static DayEvent Resource(int moneyDelta, float panicDelta, int negEntropyDelta)
             => new DayEvent { Type = DayEventType.ResourceDelta, MoneyDelta = moneyDelta, PanicDelta = panicDelta, NegEntropyDelta = negEntropyDelta };

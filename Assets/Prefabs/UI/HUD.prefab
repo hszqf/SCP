@@ -36,7 +36,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 98.96, y: -40}
-  m_SizeDelta: {x: 97.92, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1086950799412364369
 CanvasRenderer:
@@ -498,7 +498,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 1010.745, y: -40}
-  m_SizeDelta: {x: 109.44, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5190815905672258133
 CanvasRenderer:
@@ -803,7 +803,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 551.97253, y: -40}
-  m_SizeDelta: {x: 109.44, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &279022099686040791
 CanvasRenderer:
@@ -930,6 +930,7 @@ GameObject:
   - component: {fileID: 510197678252902861}
   - component: {fileID: 4259171659804489257}
   - component: {fileID: 6884090147384211870}
+  - component: {fileID: 3261331079405331699}
   m_Layer: 0
   m_Name: HUD
   m_TagString: Untagged
@@ -983,9 +984,34 @@ MonoBehaviour:
   dayText: {fileID: 8859252836214148483}
   moneyText: {fileID: 6667375915443029515}
   panicText: {fileID: 1634375958347031390}
+  negEntropyText: {fileID: 0}
   debugText: {fileID: 1329140030878947302}
   endDayButton: {fileID: 780750136854631078}
   recruitButton: {fileID: 7995241649854128429}
+--- !u!114 &3261331079405331699
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4258772121586447801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071172c42455cf4cb66eb7c96abdd25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HUDResourceAnimator
+  moneyText: {fileID: 6667375915443029515}
+  negEntropyText: {fileID: 2839788252342334915}
+  moneyIconAnchor: {fileID: 6283479849954399406}
+  negEntropyIconAnchor: {fileID: 943599490060993017}
+  flyIconLayer: {fileID: 298167436519723623}
+  flyIconPrefab: {fileID: 1747081681803380325, guid: feb36a30bccfe134c9d1196ce4752ce4, type: 3}
+  iconLibrary: {fileID: 11400000, guid: 467d268ea47ddbd4e8ad0e7d904a906e, type: 2}
+  numberRollSeconds: 0.45
+  coinFlySeconds: 0.65
+  coinBurstCount: 6
+  neFlySeconds: 0.65
+  neBurstCount: 6
 --- !u!1 &4316429007806604704
 GameObject:
   m_ObjectHideFlags: 0
@@ -1485,7 +1511,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 1497.7327, y: -40}
-  m_SizeDelta: {x: 165.87, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6662518884492884109
 CanvasRenderer:
