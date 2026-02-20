@@ -100,7 +100,8 @@ public class AgentPickerItemView : MonoBehaviour
         if (button)
         {
             button.onClick.RemoveAllListeners();
-            button.interactable = !_isBusy;
+            bool allowBusyClick = _isBusy && agent != null && (agent.IsDead || agent.IsInsane);
+            button.interactable = (!_isBusy) || allowBusyClick;
             button.onClick.AddListener(() => onClick?.Invoke(AgentId));
         }
 

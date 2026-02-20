@@ -515,7 +515,12 @@ public class AnomalyManagePanel : MonoBehaviour, IModalClosable
         var gc = GameController.I;
         var agent = gc?.State?.Agents?.FirstOrDefault(a => a != null && a.Id == agentId);
         if (agent != null && (agent.IsDead || agent.IsInsane))
+        {
+            // In manage/investigate/contain/operate panels: clicking dead/insane opens Rescue picker.
+            if (_mode != AssignPanelMode.Rescue)
+                UIPanelRoot.I?.OpenRescuePanelForAnomaly(_selectedTargetId, agentId);
             return;
+        }
 
         if (_mode == AssignPanelMode.Rescue)
         {

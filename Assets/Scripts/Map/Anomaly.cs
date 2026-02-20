@@ -501,14 +501,14 @@ public class Anomaly : MonoBehaviour
 
     private static Color ComputeDeadTint(int deadDays)
     {
-        float t = Mathf.Clamp01(deadDays / 3f);
-        return new Color(1f, 1f - 0.85f * t, 1f - 0.85f * t, 1f);
+        // Immediate, obvious tint (no day-based ramp yet)
+        return new Color(1f, 0.25f, 0.25f, 1f);
     }
 
     private static Color ComputeInsaneTint(int insaneDays)
     {
-        float t = Mathf.Clamp01(insaneDays / 3f);
-        return new Color(1f, 1f, 1f - 0.85f * t, 1f);
+        // Immediate, obvious tint (no day-based ramp yet)
+        return new Color(1f, 1f, 0.25f, 1f);
     }
 
     private static Sprite ResolveAvatarSprite(AgentState agent, string agentId, string displayName)
@@ -692,6 +692,14 @@ public class Anomaly : MonoBehaviour
             var image = CreateAvatarImage(agentGridRoot);
             image.name = $"Avatar_{agentId}";
             image.sprite = sprite;
+            // Status tint during playback (dead/insane should still be obvious)
+            if (agent != null)
+            {
+                if (agent.IsDead) image.color = ComputeDeadTint(Mathf.Max(0, agent.DeadDays));
+                else if (agent.IsInsane) image.color = ComputeInsaneTint(Mathf.Max(0, agent.InsaneDays));
+                else image.color = Color.white;
+            }
+            else image.color = Color.white;
             image.raycastTarget = false;
         }
     }

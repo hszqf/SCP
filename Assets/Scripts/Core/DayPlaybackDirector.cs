@@ -211,7 +211,6 @@ public class DayPlaybackDirector : MonoBehaviour
             foreach (var ag in s.Agents)
             {
                 if (ag == null || string.IsNullOrEmpty(ag.Id)) continue;
-                if (ag.IsDead || ag.IsInsane) continue;
                 if (ag.LocationKind != Core.AgentLocationKind.AtAnomaly) continue;
                 if (string.IsNullOrEmpty(ag.LocationAnomalyInstanceId)) continue;
 

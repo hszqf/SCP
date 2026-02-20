@@ -479,7 +479,19 @@ public IEnumerator PlayVisualTravelOne(string anomalyInstanceId, string agentId,
     }
 
     var sprite = ResolveAgentAvatarSprite(state, agentId);
-    float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+        // immediate strong tint for dead/insane (no day-based ramp)
+        Color? tint = null;
+        if (state.Agents != null)
+        {
+            var ag = state.Agents.Find(a => a != null && a.Id == agentId);
+            if (ag != null)
+            {
+                if (ag.IsDead) tint = new Color(1f, 0.25f, 0.25f, 1f);      // strong red
+                else if (ag.IsInsane) tint = new Color(1f, 1f, 0.25f, 1f);  // strong yellow
+            }
+        }
+        
+        float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
 
     // stable offsets (avoid overlap & keep dispatch/recall consistent)
     Vector2 baseOffset = StableOffset(agentId, Mathf.Max(0f, baseSpawnRadius));
@@ -496,8 +508,9 @@ public IEnumerator PlayVisualTravelOne(string anomalyInstanceId, string agentId,
         toLocal: endPos,
         duration: Mathf.Max(0.01f, duration),
         onComplete: null,
-        avatarSprite: sprite
-    );
+        avatarSprite: sprite,
+        tint: tint
+        );
 }
 
 private IEnumerator PlayTokenAnimationOrFallback(GameController gc, Core.MovementToken token)
@@ -547,7 +560,7 @@ private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
         }
     }
 
-    private IEnumerator AnimateAgent(string debugId, int index, int total, Vector2 startPos, Vector2 toLocal, float duration, System.Action onComplete, Sprite avatarSprite = null)
+    private IEnumerator AnimateAgent(string debugId, int index, int total, Vector2 startPos, Vector2 toLocal, float duration, System.Action onComplete, Sprite avatarSprite = null, Color? tint = null)
     {
         if (!tokenLayer || !agentPrefab)
         {
@@ -563,6 +576,8 @@ private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
         var img = go.GetComponentInChildren<Image>(true) ?? go.GetComponent<Image>();
         if (img != null && avatarSprite != null)
             img.sprite = avatarSprite;
+        if (img != null && tint.HasValue)
+            img.color = tint.Value;
 
 
         float elapsed = 0f;
@@ -607,9 +622,41 @@ private static Vector2 StableOffset(string s, float radius)
         return new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * Mathf.Max(0f, radius);
     }
 
+public IEnumerator PlayVisualRecallTwo(string anomalyInstanceId, string agentAId, string agentBId, float durationOverride = -1f)
+    {
+        // Start two recall animations concurrently and wait for the shared duration.
+        var gc = GameController.I;
+        var state = gc?.State;
+        if (state == null)
+        {
+            yield return new WaitForSeconds(fallbackTravelSeconds);
+            yield break;
+        }
+
+        float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+
+        // Kick off both animations (non-blocking), then wait once.
+        if (!string.IsNullOrEmpty(agentAId))
+            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentAId, duration));
+        if (!string.IsNullOrEmpty(agentBId))
+            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentBId, duration));
+
+        yield return new WaitForSeconds(duration);
+    }
+
     private static Sprite[] _avatarPool;
     
-    private static Sprite ResolveAgentAvatarSprite(Core.GameState state, string agentId)
+    private static Color? GetAgentTint(Core.GameState state, string agentId)
+    {
+        if (state?.Agents == null || string.IsNullOrEmpty(agentId)) return null;
+        var ag = state.Agents.Find(a => a != null && a.Id == agentId);
+        if (ag == null) return null;
+        if (ag.IsDead) return new Color(1f, 0.25f, 0.25f, 1f);
+        if (ag.IsInsane) return new Color(1f, 1f, 0.25f, 1f);
+        return null;
+    }
+
+private static Sprite ResolveAgentAvatarSprite(Core.GameState state, string agentId)
         {
             const string AvatarResourcePath = "Avatar";
             const string AvatarSpriteSheetName = "Avatar";

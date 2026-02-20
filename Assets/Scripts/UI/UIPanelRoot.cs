@@ -398,11 +398,8 @@ public class UIPanelRoot : MonoBehaviour
         gc.Notify();
         UIEvents.RaiseAgentsChanged();
 
-        // Return token(s): target first, then rescuer
-        if (anim != null) yield return anim.PlayVisualRecallOne(anomalyInstanceId, targetAgentId);
-        else yield return new WaitForSeconds(0.45f);
-
-        if (anim != null) yield return anim.PlayVisualRecallOne(anomalyInstanceId, rescuerAgentId);
+        // Return tokens: target + rescuer simultaneously
+        if (anim != null) yield return anim.PlayVisualRecallTwo(anomalyInstanceId, targetAgentId, rescuerAgentId);
         else yield return new WaitForSeconds(0.45f);
 
         // 3) Arrive at base (target remains dead/insane and cannot be dispatched)
