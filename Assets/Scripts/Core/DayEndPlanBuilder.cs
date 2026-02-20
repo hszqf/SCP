@@ -64,7 +64,7 @@ namespace Core
             Settlement.BaseRecoverySystem.Apply(null, shadow, null);
             Settlement.SettlementCleanupSystem.Apply(null, shadow, null);
 
-            ApplyPhaseCompletionRecall_Plan(plan, shadow);
+            PhaseCompletionRecallSystem.ApplyPlan(shadow, new ListDayEventSink(plan.Events));
 
             int moneyAfter = shadow.Money;
             float panicAfter = shadow.WorldPanic;
@@ -96,81 +96,11 @@ namespace Core
 
         private static void ApplyBehavior_ForOne(DayResolutionPlan plan, GameState s, AnomalyState a, DataRegistry registry)
         {
-            if (s.Cities == null || s.Cities.Count == 0) return;
-            if (a == null) return;
+            if (plan == null || s == null || a == null) return;
 
-            float range = GetAnomalyRange(a, registry);
-            var originPos = ResolveAnomalyPos_Settlement(s, a);
-            if (!IsValidMapPos(originPos)) return;
-
-            CityState range0City = null;
-            if (range <= 0f)
-            {
-                range0City = FindNearestCity(s.Cities, originPos);
-                if (range0City == null) return;
-            }
-
-            bool anyHit = false;
-            for (int i = 0; i < s.Cities.Count; i++)
-            {
-                var c = s.Cities[i];
-                if (c == null) continue;
-
-                var cityPos = c.MapPos;
-                if (!IsValidMapPos(cityPos)) continue;
-
-                float dist = Vector2.Distance(originPos, cityPos);
-                bool hit = (range <= 0f)
-                    ? string.Equals(c.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
-                    : (dist <= range);
-
-                if (!hit) continue;
-
-                int loss = SettlementUtil.CalcAnomalyCityPopDelta(s, a, c);
-                if (loss <= 0) continue;
-
-                anyHit = true;
-                break;
-            }
-
-            if (!anyHit) return;
-
-            plan.Events.Add(DayEvent.RangeAttack(a.Id, originPos, range));
-
-            for (int i = 0; i < s.Cities.Count; i++)
-            {
-                var c = s.Cities[i];
-                if (c == null) continue;
-
-                var cityPos = c.MapPos;
-                if (!IsValidMapPos(cityPos)) continue;
-
-                float dist = Vector2.Distance(originPos, cityPos);
-                bool hit = (range <= 0f)
-                    ? string.Equals(c.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
-                    : (dist <= range);
-
-                if (!hit) continue;
-
-                int loss = SettlementUtil.CalcAnomalyCityPopDelta(s, a, c);
-                if (loss <= 0) continue;
-
-                int before = c.Population;
-                int after = Math.Max(0, before - loss);
-                c.Population = after;
-
-                plan.Events.Add(new DayEvent
-                {
-                    Type = DayEventType.CityPopLoss,
-                    AnomalyId = a.Id,
-                    CityId = c.Id,
-                    BeforePop = before,
-                    Loss = loss,
-                    AfterPop = after,
-                    Dist = dist,
-                    Range = range
-                });
-            }
+            // Delegate to the single source-of-truth behavior system so RangeAttack/CityPopLoss ordering matches runtime.
+            var sink = new ListDayEventSink(plan.Events);
+            Settlement.AnomalyBehaviorSystem.ApplyForAnomaly(s, a, null, sink, registry);
         }
 
         private static void ApplyPhaseCompletionRecall_Plan(DayResolutionPlan plan, GameState s)

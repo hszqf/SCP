@@ -8,84 +8,146 @@ namespace Settlement
 {
     public static class AnomalyBehaviorSystem
     {
-        // ===== BEGIN FIX M2: Anomaly-centric range (Apply FULL) =====
+        /// <summary>
+        /// Legacy entry: applies behavior for all anomalies. Order: SpawnSeq ascending.
+        /// </summary>
         public static void Apply(GameController gc, Core.GameState state, DayPipelineResult r)
         {
-            if (state == null) return;
+            if (state == null || state.Anomalies == null || state.Anomalies.Count == 0) return;
 
-            var anomalies = state.Anomalies;
-            var cities = state.Cities;
-            if (anomalies == null || anomalies.Count == 0 || cities == null || cities.Count == 0)
-                return;
+            var registry = DataRegistry.Instance;
 
-            foreach (var a in anomalies.OrderBy(x => x.SpawnSeq))
+            foreach (var a in state.Anomalies.Where(x => x != null).OrderBy(x => x.SpawnSeq))
             {
-                if (a == null) continue;
-
-                float range = GetAnomalyRange(a); // >=0；0 表示仅影响“离异常最近的城市”
-
-                // ✅ anomaly-centric：以异常 MapPos 为中心
-                var originPos = ResolveAnomalyPos(state, a, out var originHint);
-                if (!IsValidMapPos(originPos))
-                {
-                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} originPos=INVALID hint={originHint} skipped");
-                    continue;
-                }
-
-                CityState range0City = null;
-                if (range <= 0f)
-                {
-                    // range<=0：只影响离异常最近的城市（异常才是锚点）
-                    range0City = FindNearestCity(cities, originPos);
-                    if (range0City == null)
-                    {
-                        r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range=0 nearestCity=NULL skipped");
-                        continue;
-                    }
-                }
-
-                int hitCount = 0;
-
-                foreach (var city in cities)
-                {
-                    if (city == null) continue;
-
-                    var cityPos = ResolveCityPos(city);
-                    if (!IsValidMapPos(cityPos)) continue;
-
-                    float dist = Vector2.Distance(originPos, cityPos);
-
-                    bool hit =
-                        (range <= 0f)
-                            ? string.Equals(city.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
-                            : (dist <= range);
-
-                    if (!hit) continue;
-
-                    int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
-                    if (deltaPop <= 0) continue;
-
-                    hitCount++;
-
-                    int beforePop = city.Population;
-                    int afterPop = Math.Max(0, beforePop - deltaPop);
-                    city.Population = afterPop;
-
-                    var cityName = string.IsNullOrEmpty(city.Name) ? city.Id : city.Name;
-
-                    r?.Log(
-                        $"[Settle][AnomPopLoss] day={state.Day} city={cityName} dist={dist:0.##} range={range:0.##} " +
-                        $"loss={deltaPop} before={beforePop} after={afterPop} anom={a.Id} def={a.AnomalyDefId} " +
-                        $"origin=({originPos.x:0.##},{originPos.y:0.##})");
-                }
-
-                string range0CityId = range0City != null ? range0City.Id : "<n/a>";
-                r?.Log(
-                    $"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount={hitCount} " +
-                    $"range0City={range0CityId} nodeId={a.NodeId} origin=({originPos.x:0.##},{originPos.y:0.##}) hint={originHint}");
+                ApplyForAnomaly(state, a, r, null, registry);
             }
         }
-        // ===== END FIX M2: Anomaly-centric range (Apply FULL) =====
+
+        /// <summary>
+        /// Per-anomaly behavior pass.
+        /// - Computes anomaly range impact on cities (CityPopLoss).
+        /// - Emits AnomalyRangeAttack + CityPopLoss events when sink != null.
+        /// - Mutates the provided state (shadow or live) directly.
+        /// </summary>
+        public static void ApplyForAnomaly(Core.GameState state, Core.AnomalyState a, DayPipelineResult r, Core.IDayEventSink sink, DataRegistry registry)
+        {
+            if (state == null || a == null) return;
+
+            var cities = state.Cities;
+            if (cities == null || cities.Count == 0) return;
+
+            if (registry == null) registry = DataRegistry.Instance;
+
+            float range = GetAnomalyRange(a, registry); // >=0; 0 => only nearest city
+
+            var originPos = ResolveAnomalyPos(state, a, out var originHint);
+            if (!IsValidMapPos(originPos))
+            {
+                r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} originPos=INVALID hint={originHint} skipped");
+                return;
+            }
+
+            CityState range0City = null;
+            if (range <= 0f)
+            {
+                range0City = FindNearestCity(cities, originPos);
+                if (range0City == null)
+                {
+                    r?.Log($"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range=0 nearestCity=NULL skipped");
+                    return;
+                }
+            }
+
+            // First pass: detect any effective hit (loss > 0). If none, don't emit RangeAttack.
+            bool anyHit = false;
+            for (int i = 0; i < cities.Count; i++)
+            {
+                var city = cities[i];
+                if (city == null) continue;
+
+                var cityPos = ResolveCityPos(city);
+                if (!IsValidMapPos(cityPos)) continue;
+
+                float dist = Vector2.Distance(originPos, cityPos);
+
+                bool hit =
+                    (range <= 0f)
+                        ? string.Equals(city.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
+                        : (dist <= range);
+
+                if (!hit) continue;
+
+                int loss = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
+                if (loss <= 0) continue;
+
+                anyHit = true;
+                break;
+            }
+
+            if (!anyHit)
+            {
+                string range0CityId0 = range0City != null ? range0City.Id : "<n/a>";
+                r?.Log(
+                    $"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount=0 " +
+                    $"range0City={range0CityId0} nodeId={a.NodeId} origin=({originPos.x:0.##},{originPos.y:0.##}) hint={originHint}");
+                return;
+            }
+
+            // Emit range attack once per anomaly (before CityPopLoss) for UI camera framing / VFX.
+            sink?.Add(DayEvent.RangeAttack(a.Id, originPos, range));
+
+            int hitCount = 0;
+
+            for (int i = 0; i < cities.Count; i++)
+            {
+                var city = cities[i];
+                if (city == null) continue;
+
+                var cityPos = ResolveCityPos(city);
+                if (!IsValidMapPos(cityPos)) continue;
+
+                float dist = Vector2.Distance(originPos, cityPos);
+
+                bool hit =
+                    (range <= 0f)
+                        ? string.Equals(city.Id, range0City.Id, StringComparison.OrdinalIgnoreCase)
+                        : (dist <= range);
+
+                if (!hit) continue;
+
+                int deltaPop = SettlementUtil.CalcAnomalyCityPopDelta(state, a, city);
+                if (deltaPop <= 0) continue;
+
+                hitCount++;
+
+                int beforePop = city.Population;
+                int afterPop = Math.Max(0, beforePop - deltaPop);
+                city.Population = afterPop;
+
+                sink?.Add(new DayEvent
+                {
+                    Type = DayEventType.CityPopLoss,
+                    AnomalyId = a.Id,
+                    CityId = city.Id,
+                    BeforePop = beforePop,
+                    Loss = deltaPop,
+                    AfterPop = afterPop,
+                    Dist = dist,
+                    Range = range
+                });
+
+                var cityName = string.IsNullOrEmpty(city.Name) ? city.Id : city.Name;
+                r?.Log(
+                    $"[Settle][AnomPopLoss] day={state.Day} city={cityName} dist={dist:0.##} range={range:0.##} " +
+                    $"loss={deltaPop} before={beforePop} after={afterPop} anom={a.Id} def={a.AnomalyDefId} " +
+                    $"origin=({originPos.x:0.##},{originPos.y:0.##})");
+            }
+
+            string range0CityId = range0City != null ? range0City.Id : "<n/a>";
+            r?.Log(
+                $"[Settle][AnomBehavior] anom={a.Id} def={a.AnomalyDefId} range={range:0.##} hitCount={hitCount} " +
+                $"range0City={range0CityId} nodeId={a.NodeId} origin=({originPos.x:0.##},{originPos.y:0.##}) hint={originHint}");
+        }
 
         // ===== BEGIN FIX M2: Anomaly-centric helpers =====
         private static bool IsValidMapPos(Vector2 p)
@@ -99,7 +161,7 @@ namespace Settlement
             if (a != null && IsValidMapPos(a.MapPos))
                 return a.MapPos;
 
-            // fallback：如果异常还没写 MapPos，就用 NodeId 城市的 MapPos（不作为“锚点城市”，只是兜底给异常定位）
+            // fallback: if anomaly has no MapPos, use its NodeId city's MapPos to place the anomaly.
             hint = "fallback:city.MapPos";
             if (state != null && a != null && !string.IsNullOrEmpty(a.NodeId))
             {
@@ -107,7 +169,7 @@ namespace Settlement
                 var c = state.Index.GetCity(a.NodeId);
                 if (c != null && IsValidMapPos(c.MapPos))
                 {
-                    a.MapPos = c.MapPos; // 写回，避免下次仍然缺失
+                    a.MapPos = c.MapPos; // write back
                     return a.MapPos;
                 }
             }
@@ -139,24 +201,18 @@ namespace Settlement
         }
         // ===== END FIX M2: Anomaly-centric helpers =====
 
-
-        // ===== BEGIN M2 MapPos (ResolveCityPos) =====
         private static Vector2 ResolveCityPos(CityState c)
         {
             if (c == null) return Vector2.zero;
-            // M2: Settlement distance uses ONLY MapPos (MapRoot-local).
             return c.MapPos;
         }
-        // ===== END M2 MapPos (ResolveCityPos) =====
 
-        private static float GetAnomalyRange(Core.AnomalyState a)
+        private static float GetAnomalyRange(Core.AnomalyState a, DataRegistry registry)
         {
             if (a == null) return 0f;
-
-            var registry = DataRegistry.Instance;
             if (registry == null || string.IsNullOrEmpty(a.AnomalyDefId)) return 0f;
 
-            // 统一口径：只认表字段 range
+            // Unified: only read table field "range"
             float val = registry.GetAnomalyFloatWithWarn(a.AnomalyDefId, "range", 0f);
             return Mathf.Max(0f, val);
         }

@@ -364,9 +364,17 @@ public class GameController : MonoBehaviour
         {
             if (state == null) return;
 
-            // 1..5 严格顺序
-            Settlement.AnomalyWorkSystem.Apply(gc, state, result);
-            Settlement.AnomalyBehaviorSystem.Apply(gc, state, result);
+            // 1..5 严格顺序（按异常串行：Work -> Behavior）
+            var registry = DataRegistry.Instance;
+            var anomalies = state.Anomalies?.Where(a => a != null).OrderBy(a => a.SpawnSeq);
+            if (anomalies != null)
+            {
+                foreach (var anom in anomalies)
+                {
+                    Settlement.AnomalyWorkSystem.ApplyForAnomaly(state, anom, result, null, registry);
+                    Settlement.AnomalyBehaviorSystem.ApplyForAnomaly(state, anom, result, null, registry);
+                }
+            }
             Settlement.CityEconomySystem.Apply(gc, state, result);
             Settlement.BaseRecoverySystem.Apply(gc, state, result);
             Settlement.SettlementCleanupSystem.Apply(gc, state, result);
