@@ -15,7 +15,13 @@ public class DispatchAnimationSystem : MonoBehaviour
 
     [Header("Config")]
     [SerializeField] private float baseSpawnRadius = 5f;
-    [SerializeField] private float fallbackTravelSeconds = 0.45f; // token travel duration
+    [SerializeField] private float fallbackTravelSeconds = 0.7f; // token travel duration
+
+    [Header("Rescue Visual")]
+    [SerializeField] private float rescueReturnSeconds = 1f;
+    [SerializeField] private float rescueCarryBackOffsetY = 58f;
+    [SerializeField] private float rescueCarryBackScale = 0.95f;
+
 
     // ��Node�� �������ͬ ��City anchor������ͼ�ϵĳ��е㣩
     private readonly Dictionary<string, RectTransform> _cities = new();
@@ -576,9 +582,11 @@ private void ApplyTokenLanding(GameController gc, Core.MovementToken token)
         var img = go.GetComponentInChildren<Image>(true) ?? go.GetComponent<Image>();
         if (img != null && avatarSprite != null)
             img.sprite = avatarSprite;
-        if (img != null && tint.HasValue)
-            img.color = tint.Value;
-
+        if (img != null)
+        {
+            if (tint.HasValue) img.color = tint.Value;
+            else img.color = Color.white;
+        }
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -624,7 +632,6 @@ private static Vector2 StableOffset(string s, float radius)
 
 public IEnumerator PlayVisualRecallTwo(string anomalyInstanceId, string agentAId, string agentBId, float durationOverride = -1f)
     {
-        // Start two recall animations concurrently and wait for the shared duration.
         var gc = GameController.I;
         var state = gc?.State;
         if (state == null)
@@ -633,15 +640,138 @@ public IEnumerator PlayVisualRecallTwo(string anomalyInstanceId, string agentAId
             yield break;
         }
 
-        float duration = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+        bool aCarry = IsDeadOrInsane(state, agentAId);
+        bool bCarry = IsDeadOrInsane(state, agentBId);
 
-        // Kick off both animations (non-blocking), then wait once.
+        // Rescue: exactly one of the two is dead/insane -> render a single "carry" token.
+        if (!string.IsNullOrEmpty(agentAId) && !string.IsNullOrEmpty(agentBId) && (aCarry ^ bCarry))
+        {
+            string carriedId = aCarry ? agentAId : agentBId;
+            string rescuerId = aCarry ? agentBId : agentAId;
+
+            float duration = durationOverride > 0f
+                ? durationOverride
+                : Mathf.Max(fallbackTravelSeconds, rescueReturnSeconds);
+
+            yield return PlayVisualCarryRecallOne(anomalyInstanceId, rescuerId, carriedId, duration);
+            yield break;
+        }
+
+        // Default: two separate recall tokens concurrently.
+        float d = durationOverride > 0f ? durationOverride : fallbackTravelSeconds;
+
         if (!string.IsNullOrEmpty(agentAId))
-            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentAId, duration));
+            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentAId, d));
         if (!string.IsNullOrEmpty(agentBId))
-            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentBId, duration));
+            StartCoroutine(PlayVisualRecallOne(anomalyInstanceId, agentBId, d));
 
-        yield return new WaitForSeconds(duration);
+        yield return new WaitForSeconds(d);
+    }
+
+    private static bool IsDeadOrInsane(Core.GameState state, string agentId)
+    {
+        if (state?.Agents == null || string.IsNullOrEmpty(agentId)) return false;
+        var ag = state.Agents.Find(a => a != null && a.Id == agentId);
+        return ag != null && (ag.IsDead || ag.IsInsane);
+    }
+
+    private IEnumerator PlayVisualCarryRecallOne(string anomalyInstanceId, string rescuerId, string carriedId, float duration)
+    {
+        var gc = GameController.I;
+        var state = gc?.State;
+
+        if (state == null)
+        {
+            yield return new WaitForSeconds(duration);
+            yield break;
+        }
+
+        if (!TryResolveTravelAnchors(state, anomalyInstanceId, out var baseLocal, out var anomLocal))
+        {
+            yield return new WaitForSeconds(duration);
+            yield break;
+        }
+
+        var rescuerSprite = ResolveAgentAvatarSprite(state, rescuerId);
+        var carriedSprite = ResolveAgentAvatarSprite(state, carriedId);
+
+        Color? rescuerTint = GetAgentTint(state, rescuerId);
+        Color? carriedTint = GetAgentTint(state, carriedId);
+
+        // Offset is driven by rescuerId so it remains stable.
+        Vector2 baseOffset = StableOffset(rescuerId, Mathf.Max(0f, baseSpawnRadius));
+        Vector2 anomOffset = StableOffset(rescuerId, 6f);
+
+        Vector2 startPos = anomLocal + anomOffset;
+        Vector2 endPos = baseLocal + baseOffset;
+
+        yield return AnimateCarryToken(
+            debugId: $"rescue_recall:{anomalyInstanceId}:{rescuerId}:{carriedId}",
+            startPos: startPos,
+            toLocal: endPos,
+            duration: Mathf.Max(0.01f, duration),
+            frontSprite: rescuerSprite,
+            frontTint: rescuerTint,
+            backSprite: carriedSprite,
+            backTint: carriedTint
+        );
+    }
+
+    private IEnumerator AnimateCarryToken(string debugId, Vector2 startPos, Vector2 toLocal, float duration, Sprite frontSprite, Color? frontTint, Sprite backSprite, Color? backTint)
+    {
+        if (!tokenLayer || !agentPrefab)
+        {
+            yield return new WaitForSeconds(duration);
+            yield break;
+        }
+
+        // Container so we can guarantee draw order (back then front), regardless of agentPrefab internals.
+        var container = new GameObject("CarryToken");
+        var rt = container.AddComponent<RectTransform>();
+        rt.SetParent(tokenLayer, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = startPos;
+
+        var backGO = Instantiate(agentPrefab, rt);
+        var frontGO = Instantiate(agentPrefab, rt);
+
+        backGO.transform.SetAsFirstSibling();
+        frontGO.transform.SetAsLastSibling();
+
+        SetupCarryVisual(backGO, backSprite, backTint, new Vector2(0f, rescueCarryBackOffsetY), rescueCarryBackScale);
+        SetupCarryVisual(frontGO, frontSprite, frontTint, Vector2.zero, 1f);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            float t = Mathf.Clamp01(elapsed / duration);
+            float smooth = Mathf.SmoothStep(0f, 1f, t);
+            rt.anchoredPosition = Vector2.Lerp(startPos, toLocal, smooth);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        rt.anchoredPosition = toLocal;
+        Destroy(container);
+    }
+
+    private static void SetupCarryVisual(GameObject tokenGO, Sprite sprite, Color? tint, Vector2 offset, float scale)
+    {
+        if (tokenGO == null) return;
+
+        var childRT = tokenGO.GetComponent<RectTransform>() ?? tokenGO.AddComponent<RectTransform>();
+        childRT.anchoredPosition = offset;
+        childRT.localScale = new Vector3(scale, scale, 1f);
+
+        var img = tokenGO.GetComponentInChildren<Image>(true) ?? tokenGO.GetComponent<Image>();
+        if (img != null)
+        {
+            if (sprite != null) img.sprite = sprite;
+            img.color = tint ?? Color.white;
+            img.raycastTarget = false;
+        }
     }
 
     private static Sprite[] _avatarPool;
