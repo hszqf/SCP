@@ -25,7 +25,7 @@ public sealed class HUDResourceAnimator : MonoBehaviour
     [SerializeField] private UIIconLibrary iconLibrary;
 
     [Header("Debug")]
-    [SerializeField] private bool debugLogs = true;
+    [SerializeField] private bool debugLogs = false;
 
     [Header("Playback Speed")]
     [Tooltip("Scale all HUD resource animations during playback. 1 = normal, 4 = 4x slower.")]
@@ -48,6 +48,7 @@ public sealed class HUDResourceAnimator : MonoBehaviour
     [SerializeField] private int coinBurstCount = 14;
     [SerializeField] private float neFlySeconds = 0.85f;
     [SerializeField] private int neBurstCount = 10;
+    [SerializeField, Min(0)] private int prewarmFlyIconCount = 24;
 
     private M6PlaybackTuning T => M6PlaybackTuning.I;
 
@@ -91,6 +92,8 @@ public sealed class HUDResourceAnimator : MonoBehaviour
     private Coroutine _neRollCo;
     private Coroutine _nePunchCo;
 
+    private readonly Queue<RectTransform> _flyIconPool = new();
+
     private void Awake()
     {
         if (I != null && I != this)
@@ -110,6 +113,8 @@ public sealed class HUDResourceAnimator : MonoBehaviour
 
         if (flyIconPrefab != null && flyIconPrefab.GetComponentInChildren<Image>(true) == null)
             Debug.LogError("[HUDResourceAnimator] flyIconPrefab must contain an Image.", this);
+
+        PrewarmFlyIcons();
     }
 
     private void OnDisable()
@@ -258,13 +263,10 @@ public sealed class HUDResourceAnimator : MonoBehaviour
         int n = Mathf.Max(1, count);
         for (int i = 0; i < n; i++)
         {
-            var go = Instantiate(flyIconPrefab, flyIconLayer);
-            go.name = "FlyIcon";
+            var rt = AcquireFlyIcon();
+            if (rt == null) continue;
 
-            var rt = go.transform as RectTransform;
-            if (rt == null) rt = go.GetComponent<RectTransform>();
-
-            var img = go.GetComponentInChildren<Image>(true);
+            var img = rt.GetComponentInChildren<Image>(true);
             if (img != null)
             {
                 img.enabled = true;
@@ -274,11 +276,10 @@ public sealed class HUDResourceAnimator : MonoBehaviour
             }
 
             // CanvasGroup force visible
-            var cg = go.GetComponent<CanvasGroup>();
+            var cg = rt.GetComponent<CanvasGroup>();
             if (cg != null) cg.alpha = 1f;
-
-            go.SetActive(true);
-            go.transform.SetAsLastSibling();
+            rt.gameObject.SetActive(true);
+            rt.transform.SetAsLastSibling();
 
             if (rt != null)
             {
@@ -351,7 +352,45 @@ public sealed class HUDResourceAnimator : MonoBehaviour
         }
         if (rt == null) yield break;
         rt.anchoredPosition = to;
-        Destroy(rt.gameObject);
+        ReleaseFlyIcon(rt);
+    }
+
+    private RectTransform AcquireFlyIcon()
+    {
+        while (_flyIconPool.Count > 0)
+        {
+            var pooled = _flyIconPool.Dequeue();
+            if (pooled != null)
+                return pooled;
+        }
+
+        if (flyIconPrefab == null || flyIconLayer == null) return null;
+
+        var go = Instantiate(flyIconPrefab, flyIconLayer);
+        go.name = "FlyIcon";
+        var rt = go.transform as RectTransform;
+        if (rt == null) rt = go.GetComponent<RectTransform>();
+        return rt;
+    }
+
+    private void ReleaseFlyIcon(RectTransform rt)
+    {
+        if (rt == null) return;
+        rt.gameObject.SetActive(false);
+        rt.SetParent(flyIconLayer, false);
+        _flyIconPool.Enqueue(rt);
+    }
+
+    private void PrewarmFlyIcons()
+    {
+        if (flyIconPrefab == null || flyIconLayer == null) return;
+        int n = Mathf.Max(0, prewarmFlyIconCount);
+        for (int i = 0; i < n; i++)
+        {
+            var rt = AcquireFlyIcon();
+            if (rt == null) break;
+            ReleaseFlyIcon(rt);
+        }
     }
 
     private void AddMoney(int delta)
