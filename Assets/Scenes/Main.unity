@@ -360,10 +360,11 @@ MonoBehaviour:
   autoFocusOrthoFromImpact: 1
   autoFocusMaxOrthoSize: 600
   allowAutoFocusZoomOnSubsequentAnomalies: 0
-  debugLogs: 1
   autoFocusPreferRange: 1
   rangeToOrthoScale: 1.33
   framePadding: 1.25
+  playbackDurationScale: 1
+  debugLogs: 1
 --- !u!1 &582351643
 GameObject:
   m_ObjectHideFlags: 0
@@ -535,6 +536,7 @@ GameObject:
   - component: {fileID: 689649544}
   - component: {fileID: 689649546}
   - component: {fileID: 689649547}
+  - component: {fileID: 689649548}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -598,6 +600,56 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83eda72c78f3a2e4989fb61e58f65fb0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapEntityRegistry
+--- !u!114 &689649548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 689649543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d9762e13370792469026a1b94ef7c37, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::M6PlaybackTuning
+  playbackSlowMo: 1
+  focusPanSeconds: 0.45
+  zoomSeconds: 0.55
+  focusOrthoMin: 400
+  autoFocusPreferRange: 1
+  rangeToOrthoScale: 1.33
+  autoFocusMaxOrthoSize: 600
+  framePadding: 1.25
+  agentCheckBeatSeconds: 0.55
+  agentPulseSeconds: 0.45
+  agentPulseScaleMul: 1.28
+  iconPulseSeconds: 0.35
+  iconPulseScaleMul: 1.12
+  cityPopLossStartDelaySeconds: 0.2
+  cityPopLossAnimSeconds: 0.55
+  perCityStartDelaySeconds: 0.5
+  coinBurstCount: 10
+  coinScatterRadius: 44
+  coinScatterSeconds: 0.18
+  coinFlySeconds: 1
+  coinPerIconStartDelaySeconds: 0.3
+  moneyRollSeconds: 0.85
+  moneyPunchScale: 1.15
+  moneyPunchSeconds: 0.22
+  neBurstCount: 10
+  neScatterRadius: 38
+  neScatterSeconds: 0.18
+  neFlySeconds: 0.85
+  nePerIconStartDelaySeconds: 0.03
+  neRollSeconds: 0.85
+  nePunchScale: 1.12
+  nePunchSeconds: 0.22
+  spawnFocusSeconds: 0.75
+  spawnHoldSeconds: 0.85
+  spawnFadeInSeconds: 0.35
+  ringExpandSeconds: 0.65
+  ringAlpha: 0.25
+  ringStartScale: 0.1
 --- !u!1 &817316637
 GameObject:
   m_ObjectHideFlags: 0

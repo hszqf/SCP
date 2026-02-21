@@ -1007,7 +1007,15 @@ MonoBehaviour:
   flyIconLayer: {fileID: 510197678252902861}
   flyIconPrefab: {fileID: 4258772121586447801}
   iconLibrary: {fileID: 11400000, guid: 69b0f2068c2edc74ebf98f675e3da0b6, type: 2}
+  debugLogs: 1
+  playbackTimeScale: 1
   numberRollSeconds: 0.45
+  burstIconScale: 1.6
+  burstIconMinSize: 48
+  showBurstText: 1
+  burstTextSeconds: 0.9
+  burstTextRise: 40
+  burstTextFontSize: 36
   coinFlySeconds: 0.65
   coinBurstCount: 6
   neFlySeconds: 0.65

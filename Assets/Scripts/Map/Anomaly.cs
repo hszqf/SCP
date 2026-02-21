@@ -35,6 +35,7 @@ public class Anomaly : MonoBehaviour
 
     // registration key actually registered in MapEntityRegistry
     private string _regKeyCanonical;
+    private Coroutine _spawnFxCo;
 
     public void Bind(string anomalyDefId, string anomalyInstanceId)
     {
@@ -273,7 +274,8 @@ public class Anomaly : MonoBehaviour
         float diameter = range * 2f;
         rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, diameter);
         rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, diameter);
-        rangeIndicator.color = new Color(1f, 0f, 0f, Mathf.Clamp01(rangeIndicatorAlpha));
+        float a = (M6PlaybackTuning.I != null) ? Mathf.Clamp01(M6PlaybackTuning.I.ringAlpha) : Mathf.Clamp01(rangeIndicatorAlpha);
+        rangeIndicator.color = new Color(1f, 0f, 0f, a);
         rangeIndicator.gameObject.SetActive(true);
         rangeIndicator.transform.SetAsFirstSibling();
     }
@@ -782,5 +784,91 @@ private static IEnumerator PulseGraphic(RectTransform rt, Graphic g, Color tint,
     if (g != null) g.color = baseColor;
 }
 
+
+
+
+    // ===== M6 StartDay Spawn Presentation =====
+    public void PlaySpawnPresentation()
+    {
+        EnsureRefs();
+        if (_spawnFxCo != null) StopCoroutine(_spawnFxCo);
+        _spawnFxCo = StartCoroutine(SpawnPresentationCoroutine());
+    }
+
+    private IEnumerator SpawnPresentationCoroutine()
+    {
+        var tuning = M6PlaybackTuning.I;
+        float slow = tuning != null ? Mathf.Max(0.1f, tuning.playbackSlowMo) : 1f;
+
+        float fadeSec = (tuning != null ? Mathf.Max(0.01f, tuning.spawnFadeInSeconds) : 0.35f) * slow;
+        float ringSec = (tuning != null ? Mathf.Max(0.01f, tuning.ringExpandSeconds) : 0.65f) * slow;
+        float ringStart = tuning != null ? Mathf.Clamp(tuning.ringStartScale, 0.01f, 1f) : 0.10f;
+
+        // Ensure ring exists & sized
+        UpdateRangeIndicator(_anomalyId);
+
+        // Prepare visuals
+        if (icon != null)
+        {
+            var c = icon.color;
+            icon.color = new Color(c.r, c.g, c.b, 0f);
+            icon.transform.localScale = Vector3.one * 0.92f;
+        }
+
+        if (rangeIndicator != null)
+        {
+            rangeIndicator.gameObject.SetActive(true);
+            var c = rangeIndicator.color;
+            rangeIndicator.color = new Color(c.r, c.g, c.b, 0f);
+            rangeIndicator.transform.localScale = Vector3.one * ringStart;
+        }
+
+        float dur = Mathf.Max(fadeSec, ringSec);
+        float t = 0f;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = Mathf.SmoothStep(0f, 1f, k);
+
+            if (icon != null)
+            {
+                float kf = Mathf.Clamp01(t / Mathf.Max(0.01f, fadeSec));
+                float sf = Mathf.SmoothStep(0f, 1f, kf);
+                var c0 = icon.color;
+                icon.color = new Color(c0.r, c0.g, c0.b, sf);
+                icon.transform.localScale = Vector3.Lerp(Vector3.one * 0.92f, Vector3.one, sf);
+            }
+
+            if (rangeIndicator != null)
+            {
+                float kr = Mathf.Clamp01(t / Mathf.Max(0.01f, ringSec));
+                float sr = Mathf.SmoothStep(0f, 1f, kr);
+
+                float targetA = (tuning != null) ? Mathf.Clamp01(tuning.ringAlpha) : Mathf.Clamp01(rangeIndicatorAlpha);
+                var c1 = rangeIndicator.color;
+                rangeIndicator.color = new Color(c1.r, c1.g, c1.b, Mathf.Lerp(0f, targetA, sr));
+                rangeIndicator.transform.localScale = Vector3.Lerp(Vector3.one * ringStart, Vector3.one, sr);
+            }
+
+            yield return null;
+        }
+
+        // finalize
+        if (icon != null)
+        {
+            var c = icon.color;
+            icon.color = new Color(c.r, c.g, c.b, 1f);
+            icon.transform.localScale = Vector3.one;
+        }
+
+        if (rangeIndicator != null)
+        {
+            float targetA = (tuning != null) ? Mathf.Clamp01(tuning.ringAlpha) : Mathf.Clamp01(rangeIndicatorAlpha);
+            var c = rangeIndicator.color;
+            rangeIndicator.color = new Color(c.r, c.g, c.b, targetA);
+            rangeIndicator.transform.localScale = Vector3.one;
+        }
+    }
 
 }

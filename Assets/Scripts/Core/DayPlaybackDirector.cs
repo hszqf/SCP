@@ -1,4 +1,5 @@
 using Core;
+using Data;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,6 +30,10 @@ public class DayPlaybackDirector : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool debugLogs = true;
+
+    private M6PlaybackTuning T => M6PlaybackTuning.I;
+    private float _activeSlowMo = 1f;
+
 
     [Header("M6 Range Impact")]
 
@@ -69,9 +74,91 @@ public class DayPlaybackDirector : MonoBehaviour
     }
 
     
+
+    // ===== M6 StartDay: New anomaly presentation =====
+    public void PlayStartDaySpawns(List<string> newAnomalyInstanceIds)
+    {
+        if (newAnomalyInstanceIds == null || newAnomalyInstanceIds.Count == 0) return;
+        if (_co != null) return; // do not overlap with EndDay playback
+        _co = StartCoroutine(PlayStartDaySpawnCoroutine(newAnomalyInstanceIds));
+    }
+
+    private IEnumerator PlayStartDaySpawnCoroutine(List<string> newIds)
+    {
+        var camDir = DayPlaybackCameraDirector.I;
+        if (camDir == null) { _co = null; yield break; }
+
+        var t = T;
+        _activeSlowMo = (t != null) ? Mathf.Max(0.1f, t.playbackSlowMo) : Mathf.Max(0.1f, playbackSlowMo);
+
+        float focusSec = (t != null) ? Mathf.Max(0.01f, t.spawnFocusSeconds) : 0.75f;
+        float holdSec = (t != null) ? Mathf.Max(0f, t.spawnHoldSeconds) : 0.85f;
+
+        bool finished = false;
+        try
+        {
+            DispatchAnimationSystem.I?.SetExternalInteractionLocked(true);
+            HUD.I?.SetControlsInteractable(false);
+
+            camDir.ResetFocusState();
+            camDir.CaptureBaseIfNeeded();
+            camDir.SetPlaybackDurationScale(_activeSlowMo);
+
+            var s = GameController.I != null ? GameController.I.State : null;
+
+            // deterministic order: by instanceId
+            var ordered = newIds.Where(x => !string.IsNullOrEmpty(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+
+            if (debugLogs) Debug.Log($"[M6][StartDayFX] begin count={ordered.Count} slowMo={_activeSlowMo:0.##}", this);
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                string instId = ordered[i];
+
+                float range = 0f;
+                if (s != null)
+                {
+                    var anom = Core.DispatchSystem.FindAnomaly(s, instId);
+                    if (anom != null)
+                    {
+                        var reg = DataRegistry.Instance;
+                        if (reg != null && !string.IsNullOrEmpty(anom.AnomalyDefId) && reg.AnomaliesById.TryGetValue(anom.AnomalyDefId, out var def) && def != null)
+                            range = def.range;
+                    }
+                }
+
+                camDir.ResetFocusState();
+                yield return camDir.EnterFocusAuto(instId, range, null, focusSec);
+
+                if (MapEntityRegistry.I != null && MapEntityRegistry.I.TryGetAnomalyView(instId, out var view) && view != null)
+                {
+                    view.PlaySpawnPresentation();
+                }
+                else if (debugLogs)
+                {
+                    Debug.LogWarning($"[M6][StartDayFX] anomaly view not found instId={instId}", this);
+                }
+
+                if (holdSec > 0f) yield return new WaitForSeconds(ScaleSeconds(holdSec));
+                yield return camDir.ReturnToBase();
+            }
+
+            finished = true;
+        }
+        finally
+        {
+            if (!finished && debugLogs) Debug.LogWarning("[M6][StartDayFX] aborted. forcing unlock.", this);
+
+            camDir.ForceToBaseImmediate();
+            HUD.I?.SetControlsInteractable(true);
+            DispatchAnimationSystem.I?.SetExternalInteractionLocked(false);
+            _co = null;
+        }
+    }
+
 private float ScaleSeconds(float seconds)
 {
-    return Mathf.Max(0f, seconds) * Mathf.Max(0.1f, playbackSlowMo);
+    return Mathf.Max(0f, seconds) * Mathf.Max(0.1f, _activeSlowMo);
 }
 
 private IEnumerator PlayCoroutine(Core.DayResolutionPlan plan, Action onFinished)
@@ -83,6 +170,22 @@ private IEnumerator PlayCoroutine(Core.DayResolutionPlan plan, Action onFinished
 
     try
     {
+        // Pull knobs from M6PlaybackTuning (single source of truth)
+        var t = T;
+        _activeSlowMo = (t != null) ? Mathf.Max(0.1f, t.playbackSlowMo) : Mathf.Max(0.1f, playbackSlowMo);
+        if (t != null)
+        {
+            defaultFocusSeconds = Mathf.Max(0.01f, t.spawnFocusSeconds);
+            agentCheckBeatSeconds = Mathf.Max(0.01f, t.agentCheckBeatSeconds);
+            agentPulseSeconds = Mathf.Max(0.01f, t.agentPulseSeconds);
+            agentPulseScaleMul = Mathf.Max(1f, t.agentPulseScaleMul);
+            iconPulseSeconds = Mathf.Max(0.01f, t.iconPulseSeconds);
+            iconPulseScaleMul = Mathf.Max(1f, t.iconPulseScaleMul);
+            cityPopLossStartDelaySeconds = Mathf.Max(0f, t.cityPopLossStartDelaySeconds);
+            cityPopLossAnimSeconds = Mathf.Max(0.01f, t.cityPopLossAnimSeconds);
+            perCityStartDelaySeconds = Mathf.Max(0f, t.perCityStartDelaySeconds);
+        }
+
         // Global lock: no interactions during playback (HUD click gated, map click gated).
         DispatchAnimationSystem.I?.SetExternalInteractionLocked(true);
         HUD.I?.SetControlsInteractable(false);
@@ -90,12 +193,12 @@ private IEnumerator PlayCoroutine(Core.DayResolutionPlan plan, Action onFinished
         // Init camera + HUD resource snapshot (visual-only, no GameState mutation).
         camDir?.ResetFocusState();
         camDir?.CaptureBaseIfNeeded();
-        camDir?.SetPlaybackDurationScale(Mathf.Max(0.1f, playbackSlowMo));
+        camDir?.SetPlaybackDurationScale(_activeSlowMo);
 
         var s0 = GameController.I?.State;
         if (hudRes != null && s0 != null)
         {
-            hudRes.SetPlaybackTimeScale(Mathf.Max(0.1f, playbackSlowMo));
+            hudRes.SetPlaybackTimeScale(_activeSlowMo);
             hudRes.BeginPlaybackSnapshot(s0.Money, s0.NegEntropy);
         }
 
@@ -106,7 +209,7 @@ private IEnumerator PlayCoroutine(Core.DayResolutionPlan plan, Action onFinished
         var events = plan.Events;
 
         if (debugLogs && events != null)
-            Debug.Log($"[M6][Play] Begin events={events.Count} day={plan.Day} slowMo={playbackSlowMo:0.##}", this);
+            Debug.Log($"[M6][Play] Begin events={events.Count} day={plan.Day} slowMo={_activeSlowMo:0.##}", this);
 
         if (events != null)
         {

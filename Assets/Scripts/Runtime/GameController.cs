@@ -24,6 +24,8 @@ public class GameController : MonoBehaviour
     private System.Random _rng;
     private bool _initialized;
 
+    private readonly List<string> _startDayNewAnomalyIds = new List<string>();
+
     [Header("Debug Seed (same seed => same run)")]
     [SerializeField] private int seed = 12345;
 
@@ -275,8 +277,31 @@ public class GameController : MonoBehaviour
                 return;
             }
 
+            // Capture anomalies before generation (instanceId)
+            gc._startDayNewAnomalyIds.Clear();
+            var before = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (state.Anomalies != null)
+            {
+                for (int i = 0; i < state.Anomalies.Count; i++)
+                {
+                    var a = state.Anomalies[i];
+                    if (a != null && !string.IsNullOrEmpty(a.Id)) before.Add(a.Id);
+                }
+            }
+
             // ✅ DayStart: generate scheduled anomalies for current day (Sim-free)
             var rep = Core.AnomalySpawnSystem.GenerateScheduled(state, gc._rng, registry, state.Day);
+
+            // Collect newly spawned anomalies (instanceId)
+            if (state.Anomalies != null)
+            {
+                for (int i = 0; i < state.Anomalies.Count; i++)
+                {
+                    var a = state.Anomalies[i];
+                    if (a == null || string.IsNullOrEmpty(a.Id)) continue;
+                    if (!before.Contains(a.Id)) gc._startDayNewAnomalyIds.Add(a.Id);
+                }
+            }
             if (!string.IsNullOrEmpty(rep.Warning))
                 result?.Log(rep.Warning);
 
@@ -292,7 +317,14 @@ public class GameController : MonoBehaviour
         {
             gc.Notify();
             gc.RefreshMapNodes();
-            result?.Log("[DayStart] RefreshNotify executed");
+
+            // M6: present newly spawned anomalies (focus + appear + range ring)
+            if (DayPlaybackDirector.I != null && gc._startDayNewAnomalyIds != null && gc._startDayNewAnomalyIds.Count > 0)
+            {
+                DayPlaybackDirector.I.PlayStartDaySpawns(gc._startDayNewAnomalyIds);
+            }
+
+            result?.Log($"[DayStart] RefreshNotify executed (newAnoms={gc._startDayNewAnomalyIds.Count})");
         }
     }
     // ===== END DayFlow: StartDay =====

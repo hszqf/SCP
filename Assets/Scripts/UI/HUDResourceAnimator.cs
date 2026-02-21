@@ -6,8 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// M6: HUD resource feedback (fly icons + rolling numbers).
-/// - Strong references only: missing bindings should error at Awake.
-/// - During playback, values are visual-only (do NOT write GameState).
+/// Strong references only.
 /// </summary>
 public sealed class HUDResourceAnimator : MonoBehaviour
 {
@@ -25,52 +24,72 @@ public sealed class HUDResourceAnimator : MonoBehaviour
 
     [SerializeField] private UIIconLibrary iconLibrary;
 
-    
-
     [Header("Debug")]
     [SerializeField] private bool debugLogs = true;
-[Header("Playback Speed")]
-[Tooltip("Scale all HUD resource animations during end-day playback. 1 = normal, 2 = 2x slower.")]
-[Min(0.1f)]
-[SerializeField] private float playbackTimeScale = 1f;
 
-[Header("Config")]
-    [SerializeField] private float numberRollSeconds = 0.45f;
+    [Header("Playback Speed")]
+    [Tooltip("Scale all HUD resource animations during playback. 1 = normal, 4 = 4x slower.")]
+    [Min(0.1f)]
+    [SerializeField] private float playbackTimeScale = 1f;
 
-[Header("Burst Visual")]
-[SerializeField] private float burstIconScale = 1.6f;
-[SerializeField] private float burstIconMinSize = 48f;
+    // Fallback config (overridden by M6PlaybackTuning if present)
+    [Header("Fallback Config (overridden by M6PlaybackTuning)")]
+    [SerializeField] private float numberRollSeconds = 0.85f;
 
-[SerializeField] private bool showBurstText = true;
-[SerializeField] private float burstTextSeconds = 0.9f;
-[SerializeField] private float burstTextRise = 40f;
-[SerializeField] private float burstTextFontSize = 36f;
+    [SerializeField] private float burstIconScale = 1.6f;
+    [SerializeField] private float burstIconMinSize = 48f;
 
-    [Header("Money")]
-    [SerializeField] private float coinFlySeconds = 0.65f;
-    [SerializeField] private int coinBurstCount = 6;
+    [SerializeField] private bool showBurstText = true;
+    [SerializeField] private float burstTextSeconds = 0.9f;
+    [SerializeField] private float burstTextRise = 40f;
+    [SerializeField] private float burstTextFontSize = 36f;
 
-    [Header("NegEntropy")]
-    [SerializeField] private float neFlySeconds = 0.65f;
-    [SerializeField] private int neBurstCount = 6;
+    [SerializeField] private float coinFlySeconds = 0.90f;
+    [SerializeField] private int coinBurstCount = 14;
+    [SerializeField] private float neFlySeconds = 0.85f;
+    [SerializeField] private int neBurstCount = 10;
 
-    public float CoinFlySeconds => coinFlySeconds;
-    public float CoinFlySecondsScaled => coinFlySeconds * Mathf.Max(0.1f, playbackTimeScale);
+    private M6PlaybackTuning T => M6PlaybackTuning.I;
 
-    public void SetPlaybackTimeScale(float scale)
-    {
-        playbackTimeScale = Mathf.Max(0.1f, scale);
-    }
+    private float MoneyRollSecondsBase => T != null ? T.moneyRollSeconds : numberRollSeconds;
+    private float NeRollSecondsBase => T != null ? T.neRollSeconds : numberRollSeconds;
+
+    private int CoinBurstCount => T != null ? Mathf.Max(1, T.coinBurstCount) : Mathf.Max(1, coinBurstCount);
+    private int NeBurstCount => T != null ? Mathf.Max(1, T.neBurstCount) : Mathf.Max(1, neBurstCount);
+
+    private float CoinScatterRadius => T != null ? Mathf.Max(0f, T.coinScatterRadius) : 44f;
+    private float CoinScatterSecondsBase => T != null ? Mathf.Max(0.01f, T.coinScatterSeconds) : 0.18f;
+    private float CoinFlySecondsBase => T != null ? Mathf.Max(0.01f, T.coinFlySeconds) : coinFlySeconds;
+
+    /**
+     * For sequencing in DayPlaybackDirector: an estimate of the per-coin fly duration after applying playbackTimeScale.
+     * This is intentionally a simple scalar (not the whole burst duration).
+     */
+    public float CoinFlySecondsScaled => CoinFlySecondsBase * playbackTimeScale;
+
+    private float CoinPerIconDelayBase => T != null ? Mathf.Max(0f, T.coinPerIconStartDelaySeconds) : 0.03f;
+
+    private float NeScatterRadius => T != null ? Mathf.Max(0f, T.neScatterRadius) : 38f;
+    private float NeScatterSecondsBase => T != null ? Mathf.Max(0.01f, T.neScatterSeconds) : 0.18f;
+    private float NeFlySecondsBase => T != null ? Mathf.Max(0.01f, T.neFlySeconds) : neFlySeconds;
+    private float NePerIconDelayBase => T != null ? Mathf.Max(0f, T.nePerIconStartDelaySeconds) : 0.03f;
+
+    private float MoneyPunchScale => T != null ? Mathf.Max(1f, T.moneyPunchScale) : 1.12f;
+    private float MoneyPunchSecondsBase => T != null ? Mathf.Max(0.01f, T.moneyPunchSeconds) : 0.18f;
+    private float NePunchScale => T != null ? Mathf.Max(1f, T.nePunchScale) : 1.10f;
+    private float NePunchSecondsBase => T != null ? Mathf.Max(0.01f, T.nePunchSeconds) : 0.18f;
 
     private bool _inPlayback;
 
     private int _moneyDisplay;
     private int _moneyTarget;
     private Coroutine _moneyRollCo;
+    private Coroutine _moneyPunchCo;
 
     private int _neDisplay;
     private int _neTarget;
     private Coroutine _neRollCo;
+    private Coroutine _nePunchCo;
 
     private void Awake()
     {
@@ -89,21 +108,12 @@ public sealed class HUDResourceAnimator : MonoBehaviour
         Require(flyIconPrefab, nameof(flyIconPrefab));
         Require(iconLibrary, nameof(iconLibrary));
 
-        if (debugLogs)
-        {
-            var canvas = flyIconLayer != null ? flyIconLayer.GetComponentInParent<Canvas>() : null;
-            Debug.Log($"[M6][HUD] Awake ok. canvas={(canvas!=null?canvas.name:"null")} renderMode={(canvas!=null?canvas.renderMode.ToString():"null")} worldCam={(canvas!=null && canvas.worldCamera!=null?canvas.worldCamera.name:"null")} flyLayer={(flyIconLayer!=null?flyIconLayer.name:"null")}", this);
-        }
-
         if (flyIconPrefab != null && flyIconPrefab.GetComponentInChildren<Image>(true) == null)
-        {
             Debug.LogError("[HUDResourceAnimator] flyIconPrefab must contain an Image.", this);
-        }
     }
 
     private void OnDisable()
     {
-        // Prevent coroutines from trying to move destroyed RectTransforms.
         StopAllCoroutines();
     }
 
@@ -118,25 +128,26 @@ public sealed class HUDResourceAnimator : MonoBehaviour
         Debug.LogError($"[HUDResourceAnimator] Missing binding: {field}");
     }
 
-    // ---------- Playback snapshot ----------
+    public void SetPlaybackTimeScale(float scale)
+    {
+        playbackTimeScale = Mathf.Max(0.1f, scale);
+    }
 
     public void BeginPlaybackSnapshot(int money, int negEntropy)
     {
         _inPlayback = true;
-        if (debugLogs) Debug.Log($"[M6][HUD] BeginPlaybackSnapshot money={money} ne={negEntropy}", this);
-
         _moneyDisplay = _moneyTarget = Mathf.Max(0, money);
         _neDisplay = _neTarget = Mathf.Max(0, negEntropy);
-
         ApplyMoneyText(_moneyDisplay);
         ApplyNegEntropyText(_neDisplay);
+
+        if (debugLogs) Debug.Log($"[M6][HUD] BeginPlaybackSnapshot money={money} ne={negEntropy}", this);
     }
 
     public void EndPlaybackSnapshot()
     {
         _inPlayback = false;
         if (debugLogs) Debug.Log($"[M6][HUD] EndPlaybackSnapshot moneyDisp={_moneyDisplay} moneyTarget={_moneyTarget} neDisp={_neDisplay} neTarget={_neTarget}", this);
-        // After commit, HUD.Refresh() will overwrite texts via OnStateChanged.
     }
 
     // ---------- Public API called by playback ----------
@@ -144,18 +155,29 @@ public sealed class HUDResourceAnimator : MonoBehaviour
     public void PlayMoneyBurst(Vector3 sourceWorldPos, int deltaMoney, Camera worldCamera)
     {
         if (debugLogs)
-            Debug.Log($"[M6][HUD][MoneyBurst] delta={deltaMoney} inPlayback={_inPlayback} iconLib={(iconLibrary!=null)} worldCam={(worldCamera!=null?worldCamera.name:"null")} src=({sourceWorldPos.x:0.##},{sourceWorldPos.y:0.##})", this);
+            Debug.Log($"[M6][HUD][MoneyBurst] delta={deltaMoney} inPlayback={_inPlayback} coinSprite={(iconLibrary!=null?iconLibrary.coinSprite!=null:false)} src=({sourceWorldPos.x:0.##},{sourceWorldPos.y:0.##})", this);
 
         if (!_inPlayback || deltaMoney == 0) return;
-        if (iconLibrary == null) return;
+        if (iconLibrary == null || iconLibrary.coinSprite == null)
+        {
+            Debug.LogError("[M6][HUD] Missing iconLibrary.coinSprite - cannot render coins.", this);
+            return;
+        }
+
+        float scatterSec = CoinScatterSecondsBase * playbackTimeScale;
+        float flySec = CoinFlySecondsBase * playbackTimeScale;
+        float perIconDelay = CoinPerIconDelayBase * playbackTimeScale;
 
         StartCoroutine(PlayBurstCoroutine(
             sourceWorldPos,
             worldCamera,
             moneyIconAnchor,
             iconLibrary.coinSprite,
-            Mathf.Max(1, coinBurstCount),
-            Mathf.Max(0.01f, coinFlySeconds) * Mathf.Max(0.1f, playbackTimeScale),
+            CoinBurstCount,
+            CoinScatterRadius,
+            scatterSec,
+            flySec,
+            perIconDelay,
             $"+{deltaMoney}",
             new Color(1f, 0.92f, 0.25f, 1f)
         ));
@@ -166,96 +188,50 @@ public sealed class HUDResourceAnimator : MonoBehaviour
     public void PlayNegEntropyBurst(Vector3 sourceWorldPos, int deltaNE, Camera worldCamera)
     {
         if (debugLogs)
-            Debug.Log($"[M6][HUD][NEBurst] delta={deltaNE} inPlayback={_inPlayback} iconLib={(iconLibrary!=null)} worldCam={(worldCamera!=null?worldCamera.name:"null")} src=({sourceWorldPos.x:0.##},{sourceWorldPos.y:0.##})", this);
+            Debug.Log($"[M6][HUD][NEBurst] delta={deltaNE} inPlayback={_inPlayback} neSprite={(iconLibrary!=null?iconLibrary.negEntropySprite!=null:false)} src=({sourceWorldPos.x:0.##},{sourceWorldPos.y:0.##})", this);
+
         if (!_inPlayback || deltaNE == 0) return;
-        if (iconLibrary == null) return;
+        if (iconLibrary == null || iconLibrary.negEntropySprite == null)
+        {
+            Debug.LogError("[M6][HUD] Missing iconLibrary.negEntropySprite - cannot render NE.", this);
+            return;
+        }
+
+        float scatterSec = NeScatterSecondsBase * playbackTimeScale;
+        float flySec = NeFlySecondsBase * playbackTimeScale;
+        float perIconDelay = NePerIconDelayBase * playbackTimeScale;
 
         StartCoroutine(PlayBurstCoroutine(
             sourceWorldPos,
             worldCamera,
             negEntropyIconAnchor,
             iconLibrary.negEntropySprite,
-            Mathf.Max(1, neBurstCount),
-            Mathf.Max(0.01f, neFlySeconds) * Mathf.Max(0.1f, playbackTimeScale),
+            NeBurstCount,
+            NeScatterRadius,
+            scatterSec,
+            flySec,
+            perIconDelay,
             $"+{deltaNE}",
-            new Color(0.45f, 0.95f, 1f, 1f)
+            new Color(0.40f, 0.95f, 0.95f, 1f)
         ));
 
         AddNegEntropy(deltaNE);
     }
 
-    // ---------- Internals ----------
+    // ---------- Internal visuals ----------
 
-    private void AddMoney(int delta)
-    {
-        _moneyTarget = Mathf.Max(0, _moneyTarget + delta);
-        if (_moneyRollCo == null)
-            _moneyRollCo = StartCoroutine(RollIntCoroutine(
-                getter: () => _moneyDisplay,
-                setter: v => { _moneyDisplay = v; ApplyMoneyText(v); },
-                targetGetter: () => _moneyTarget,
-                seconds: numberRollSeconds * Mathf.Max(0.1f, playbackTimeScale),
-                onDone: () => _moneyRollCo = null
-            ));
-    }
-
-    private void AddNegEntropy(int delta)
-    {
-        _neTarget = Mathf.Max(0, _neTarget + delta);
-        if (_neRollCo == null)
-            _neRollCo = StartCoroutine(RollIntCoroutine(
-                getter: () => _neDisplay,
-                setter: v => { _neDisplay = v; ApplyNegEntropyText(v); },
-                targetGetter: () => _neTarget,
-                seconds: numberRollSeconds * Mathf.Max(0.1f, playbackTimeScale),
-                onDone: () => _neRollCo = null
-            ));
-    }
-
-    private void ApplyMoneyText(int v)
-    {
-        if (moneyText != null) moneyText.text = $"$ {v}";
-    }
-
-    private void ApplyNegEntropyText(int v)
-    {
-        if (negEntropyText != null) negEntropyText.text = $"NE {v}";
-    }
-
-    private static IEnumerator RollIntCoroutine(Func<int> getter, Action<int> setter, Func<int> targetGetter, float seconds, Action onDone)
-    {
-        // If target changes mid-roll, keep rolling until stable.
-        float minSeconds = Mathf.Max(0.01f, seconds);
-
-        while (true)
-        {
-            int from = getter();
-            int to = targetGetter();
-            if (from == to) break;
-
-            float t = 0f;
-            while (t < minSeconds)
-            {
-                t += Time.deltaTime;
-                float k = Mathf.Clamp01(t / minSeconds);
-                float s = Mathf.SmoothStep(0f, 1f, k);
-                int cur = Mathf.RoundToInt(Mathf.Lerp(from, to, s));
-                setter(cur);
-                yield return null;
-
-                // target changed: restart segment
-                if (to != targetGetter()) break;
-            }
-
-            // snap to current target and re-evaluate (in case target changed)
-            setter(targetGetter());
-            yield return null;
-        }
-
-        onDone?.Invoke();
-    }
-
-    private IEnumerator PlayBurstCoroutine(Vector3 sourceWorldPos, Camera worldCamera, RectTransform targetAnchor, Sprite sprite, int count, float flySeconds, string popText, Color popColor)
+    private IEnumerator PlayBurstCoroutine(
+        Vector3 sourceWorldPos,
+        Camera worldCamera,
+        RectTransform targetAnchor,
+        Sprite sprite,
+        int count,
+        float scatterRadius,
+        float scatterSeconds,
+        float flySeconds,
+        float perIconStartDelay,
+        string popText,
+        Color popColor)
     {
         if (flyIconLayer == null || targetAnchor == null || flyIconPrefab == null)
         {
@@ -263,63 +239,100 @@ public sealed class HUDResourceAnimator : MonoBehaviour
             yield break;
         }
 
-
-        // Convert source world pos to screen, then to flyLayer local.
         if (!TryWorldToFlyLayerLocal(sourceWorldPos, worldCamera, out var fromLocal))
         {
-            if (debugLogs) Debug.Log($"[M6][HUD][Burst] abort WorldToFlyLayerLocal failed", this);
+            if (debugLogs) Debug.Log("[M6][HUD][Burst] abort WorldToFlyLayerLocal failed", this);
             yield break;
         }
         if (!TryRectToFlyLayerLocal(targetAnchor, out var toLocal))
         {
-            if (debugLogs) Debug.Log($"[M6][HUD][Burst] abort RectToFlyLayerLocal failed", this);
+            if (debugLogs) Debug.Log("[M6][HUD][Burst] abort RectToFlyLayerLocal failed", this);
             yield break;
         }
 
         if (debugLogs)
-            Debug.Log($"[M6][HUD][Burst] count={count} flySeconds={flySeconds:0.##} from=({fromLocal.x:0.##},{fromLocal.y:0.##}) to=({toLocal.x:0.##},{toLocal.y:0.##})", this);
-
+            Debug.Log($"[M6][HUD][Burst] count={count} scatter={scatterSeconds:0.##} fly={flySeconds:0.##} from=({fromLocal.x:0.##},{fromLocal.y:0.##}) to=({toLocal.x:0.##},{toLocal.y:0.##})", this);
 
         SpawnBurstText(fromLocal, popText, popColor);
 
-        // Deterministic offsets.
         int n = Mathf.Max(1, count);
         for (int i = 0; i < n; i++)
         {
             var go = Instantiate(flyIconPrefab, flyIconLayer);
+            go.name = "FlyIcon";
+
             var rt = go.transform as RectTransform;
             if (rt == null) rt = go.GetComponent<RectTransform>();
 
-var img = go.GetComponentInChildren<Image>(true);
-if (img != null)
-{
-    img.enabled = true;
-    img.raycastTarget = false;
-    img.color = Color.white;
-    img.sprite = sprite;
-}
+            var img = go.GetComponentInChildren<Image>(true);
+            if (img != null)
+            {
+                img.enabled = true;
+                img.raycastTarget = false;
+                img.color = Color.white;
+                img.sprite = sprite;
+            }
 
-// Make sure it's visible even if prefab defaults are odd.
-go.SetActive(true);
-go.transform.SetAsLastSibling();
+            // CanvasGroup force visible
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg != null) cg.alpha = 1f;
 
-if (rt != null)
-{
-    if (rt.rect.width < 1f || rt.rect.height < 1f)
-        rt.sizeDelta = new Vector2(burstIconMinSize, burstIconMinSize);
-    rt.localScale = Vector3.one * burstIconScale;
-}
+            go.SetActive(true);
+            go.transform.SetAsLastSibling();
 
+            if (rt != null)
+            {
+                if (rt.rect.width < 1f || rt.rect.height < 1f)
+                    rt.sizeDelta = new Vector2(burstIconMinSize, burstIconMinSize);
+                rt.localScale = Vector3.one * burstIconScale;
+                rt.anchoredPosition = fromLocal;
+            }
 
+            // Deterministic scatter offsets (ring distribution).
             float angle = (n == 1) ? 0f : (i * (Mathf.PI * 2f / n));
-            float r = Mathf.Min(28f, 10f + n * 1.2f);
+            float r = Mathf.Max(0f, scatterRadius);
             var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r;
 
-            rt.anchoredPosition = fromLocal + offset;
-            StartCoroutine(FlyOne(rt, fromLocal + offset, toLocal, flySeconds));
+            float delay = perIconStartDelay * i;
+            StartCoroutine(ScatterThenFly(rt, fromLocal, offset, scatterSeconds, toLocal, flySeconds, delay));
         }
 
         yield return null;
+    }
+
+    private IEnumerator ScatterThenFly(RectTransform rt, Vector2 from, Vector2 scatterOffset, float scatterSeconds, Vector2 to, float flySeconds, float delay)
+    {
+        if (rt == null) yield break;
+        if (delay > 0f)
+        {
+            float dt = 0f;
+            while (dt < delay)
+            {
+                if (rt == null) yield break;
+                dt += Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        // Scatter (jump out)
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, scatterSeconds);
+        Vector2 p0 = from;
+        Vector2 p1 = from + scatterOffset;
+        while (t < dur)
+        {
+            if (rt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = Mathf.SmoothStep(0f, 1f, k);
+            rt.anchoredPosition = Vector2.Lerp(p0, p1, s);
+            yield return null;
+        }
+        if (rt == null) yield break;
+        rt.anchoredPosition = p1;
+
+        // Fly to HUD
+        yield return FlyOne(rt, p1, to, flySeconds);
     }
 
     private IEnumerator FlyOne(RectTransform rt, Vector2 from, Vector2 to, float seconds)
@@ -327,107 +340,188 @@ if (rt != null)
         if (rt == null) yield break;
         float t = 0f;
         float dur = Mathf.Max(0.01f, seconds);
-
         while (t < dur)
         {
             if (rt == null) yield break;
             t += Time.deltaTime;
             float k = Mathf.Clamp01(t / dur);
             float s = Mathf.SmoothStep(0f, 1f, k);
-
-            // rt might be destroyed if HUD gets rebuilt / scene reload happens mid-flight.
-            if (rt == null) yield break;
             rt.anchoredPosition = Vector2.Lerp(from, to, s);
             yield return null;
         }
-
         if (rt == null) yield break;
         rt.anchoredPosition = to;
         Destroy(rt.gameObject);
     }
 
-private void SpawnBurstText(Vector2 fromLocal, string text, Color color)
-{
-    if (!showBurstText) return;
-    if (string.IsNullOrEmpty(text)) return;
-    if (flyIconLayer == null) return;
-
-    var go = new GameObject("BurstText", typeof(RectTransform), typeof(TextMeshProUGUI));
-    var rt = (RectTransform)go.transform;
-    rt.SetParent(flyIconLayer, false);
-    rt.anchoredPosition = fromLocal + new Vector2(0f, 18f);
-    go.transform.SetAsLastSibling();
-
-    var tmp = go.GetComponent<TextMeshProUGUI>();
-    tmp.text = text;
-    tmp.fontSize = burstTextFontSize;
-    tmp.color = color;
-    tmp.raycastTarget = false;
-    tmp.alignment = TextAlignmentOptions.Center;
-
-    StartCoroutine(RiseFadeText(tmp, rt, burstTextSeconds * Mathf.Max(0.1f, playbackTimeScale), burstTextRise));
-}
-
-private static IEnumerator RiseFadeText(TextMeshProUGUI tmp, RectTransform rt, float seconds, float rise)
-{
-    if (tmp == null || rt == null) yield break;
-
-    Color c0 = tmp.color;
-    Vector2 p0 = rt.anchoredPosition;
-
-    float t = 0f;
-    float dur = Mathf.Max(0.01f, seconds);
-
-    while (t < dur)
+    private void AddMoney(int delta)
     {
-        if (tmp == null || rt == null) yield break;
+        _moneyTarget = Mathf.Max(0, _moneyTarget + delta);
+        if (_moneyRollCo != null) StopCoroutine(_moneyRollCo);
+        _moneyRollCo = StartCoroutine(RollMoneyCoroutine(MoneyRollSecondsBase * playbackTimeScale));
 
-        t += Time.deltaTime;
-        float k = Mathf.Clamp01(t / dur);
-        float s = Mathf.SmoothStep(0f, 1f, k);
-
-        rt.anchoredPosition = p0 + Vector2.up * (rise * s);
-        tmp.color = new Color(c0.r, c0.g, c0.b, Mathf.Lerp(c0.a, 0f, s));
-
-        yield return null;
+        if (_moneyPunchCo != null) StopCoroutine(_moneyPunchCo);
+        _moneyPunchCo = StartCoroutine(PunchText(moneyText != null ? moneyText.rectTransform : null, MoneyPunchScale, MoneyPunchSecondsBase * playbackTimeScale));
     }
 
-    if (rt != null) Destroy(rt.gameObject);
-}
+    private void AddNegEntropy(int delta)
+    {
+        _neTarget = Mathf.Max(0, _neTarget + delta);
+        if (_neRollCo != null) StopCoroutine(_neRollCo);
+        _neRollCo = StartCoroutine(RollNegEntropyCoroutine(NeRollSecondsBase * playbackTimeScale));
+
+        if (_nePunchCo != null) StopCoroutine(_nePunchCo);
+        _nePunchCo = StartCoroutine(PunchText(negEntropyText != null ? negEntropyText.rectTransform : null, NePunchScale, NePunchSecondsBase * playbackTimeScale));
+    }
+
+    private IEnumerator RollMoneyCoroutine(float seconds)
+    {
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, seconds);
+        int from = _moneyDisplay;
+        int to = _moneyTarget;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = Mathf.SmoothStep(0f, 1f, k);
+            _moneyDisplay = Mathf.RoundToInt(Mathf.Lerp(from, to, s));
+            ApplyMoneyText(_moneyDisplay);
+            yield return null;
+        }
+        _moneyDisplay = to;
+        ApplyMoneyText(_moneyDisplay);
+    }
+
+    private IEnumerator RollNegEntropyCoroutine(float seconds)
+    {
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, seconds);
+        int from = _neDisplay;
+        int to = _neTarget;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = Mathf.SmoothStep(0f, 1f, k);
+            _neDisplay = Mathf.RoundToInt(Mathf.Lerp(from, to, s));
+            ApplyNegEntropyText(_neDisplay);
+            yield return null;
+        }
+        _neDisplay = to;
+        ApplyNegEntropyText(_neDisplay);
+    }
+
+    private static IEnumerator PunchText(RectTransform rt, float scaleMul, float seconds)
+    {
+        if (rt == null) yield break;
+        Vector3 s0 = rt.localScale;
+        Vector3 s1 = s0 * Mathf.Max(1f, scaleMul);
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, seconds);
+        while (t < dur)
+        {
+            if (rt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            // up then down
+            float tri = k < 0.5f ? (k / 0.5f) : (1f - (k - 0.5f) / 0.5f);
+            float s = Mathf.SmoothStep(0f, 1f, tri);
+            rt.localScale = Vector3.Lerp(s0, s1, s);
+            yield return null;
+        }
+        if (rt != null) rt.localScale = s0;
+    }
+
+    private void ApplyMoneyText(int value)
+    {
+        if (moneyText) moneyText.text = value.ToString();
+    }
+
+    private void ApplyNegEntropyText(int value)
+    {
+        if (negEntropyText) negEntropyText.text = value.ToString();
+    }
+
+    // ---------- Coordinate conversion helpers ----------
 
     private bool TryWorldToFlyLayerLocal(Vector3 worldPos, Camera worldCamera, out Vector2 local)
     {
         local = default;
-
-        // Determine screen point.
-        var cam = worldCamera != null ? worldCamera : Camera.main;
-        if (cam == null)
-        {
-            Debug.LogError("[HUDResourceAnimator] No camera available for WorldToScreenPoint.", this);
-            return false;
-        }
-
-        Vector2 screen = cam.WorldToScreenPoint(worldPos);
-
-        // Determine camera for flyLayer's canvas.
         var canvas = flyIconLayer != null ? flyIconLayer.GetComponentInParent<Canvas>() : null;
-        var layerCam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) ? canvas.worldCamera : null;
+        if (canvas == null) return false;
 
-        bool ok = RectTransformUtility.ScreenPointToLocalPointInRectangle(flyIconLayer, screen, layerCam, out local);
-        if (debugLogs)
-            Debug.Log($"[M6][HUD][WorldToFly] ok={ok} worldCam={(cam!=null?cam.name:"null")} screen=({screen.x:0.##},{screen.y:0.##}) layerCam={(layerCam!=null?layerCam.name:"null")} local=({local.x:0.##},{local.y:0.##})", this);
-        return ok;
+        if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            var screen = worldCamera != null ? (Vector2)worldCamera.WorldToScreenPoint(worldPos) : (Vector2)Camera.main.WorldToScreenPoint(worldPos);
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(flyIconLayer, screen, null, out local);
+        }
+        else
+        {
+            var cam = canvas.worldCamera;
+            if (cam == null) cam = worldCamera;
+            if (cam == null) cam = Camera.main;
+            var screen = cam.WorldToScreenPoint(worldPos);
+            return RectTransformUtility.ScreenPointToLocalPointInRectangle(flyIconLayer, screen, cam, out local);
+        }
     }
 
     private bool TryRectToFlyLayerLocal(RectTransform target, out Vector2 local)
     {
         local = default;
         if (flyIconLayer == null || target == null) return false;
-
         var canvas = flyIconLayer.GetComponentInParent<Canvas>();
-        var cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay) ? canvas.worldCamera : null;
+        if (canvas == null) return false;
 
-        Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, target.position);
+        Vector3 world = target.TransformPoint(target.rect.center);
+
+        Camera cam = null;
+        if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            cam = canvas.worldCamera;
+
+        var screen = RectTransformUtility.WorldToScreenPoint(cam, world);
         return RectTransformUtility.ScreenPointToLocalPointInRectangle(flyIconLayer, screen, cam, out local);
+    }
+
+    private void SpawnBurstText(Vector2 fromLocal, string text, Color color)
+    {
+        if (!showBurstText) return;
+        if (string.IsNullOrEmpty(text)) return;
+        if (flyIconLayer == null) return;
+
+        var go = new GameObject("BurstText", typeof(RectTransform), typeof(TextMeshProUGUI));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(flyIconLayer, false);
+        rt.anchoredPosition = fromLocal + new Vector2(0f, 18f);
+        go.transform.SetAsLastSibling();
+
+        var tmp = go.GetComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = burstTextFontSize;
+        tmp.color = color;
+        tmp.raycastTarget = false;
+        tmp.alignment = TextAlignmentOptions.Center;
+
+        StartCoroutine(RiseFadeText(tmp, rt, burstTextSeconds * playbackTimeScale, burstTextRise));
+    }
+
+    private static IEnumerator RiseFadeText(TextMeshProUGUI tmp, RectTransform rt, float seconds, float rise)
+    {
+        if (tmp == null || rt == null) yield break;
+        Color c0 = tmp.color;
+        Vector2 p0 = rt.anchoredPosition;
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, seconds);
+        while (t < dur)
+        {
+            if (tmp == null || rt == null) yield break;
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / dur);
+            float s = Mathf.SmoothStep(0f, 1f, k);
+            rt.anchoredPosition = p0 + Vector2.up * (rise * s);
+            tmp.color = new Color(c0.r, c0.g, c0.b, Mathf.Lerp(c0.a, 0f, s));
+            yield return null;
+        }
+        if (rt != null) Destroy(rt.gameObject);
     }
 }
