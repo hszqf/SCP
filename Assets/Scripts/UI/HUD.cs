@@ -42,9 +42,17 @@ public class HUD : MonoBehaviour
 
     public void SetControlsInteractable(bool enabled)
     {
-        // Keep EndDay clickable; OnEndDayClicked gates while playback/locks.
-        if (endDayButton) endDayButton.interactable = true;
-        if (recruitButton) recruitButton.interactable = enabled;
+        if (endDayButton)
+        {
+            endDayButton.interactable = enabled;
+            endDayButton.gameObject.SetActive(enabled);
+        }
+
+        if (recruitButton)
+        {
+            recruitButton.interactable = enabled;
+            recruitButton.gameObject.SetActive(enabled);
+        }
     }
 
     private void OnDisable()
