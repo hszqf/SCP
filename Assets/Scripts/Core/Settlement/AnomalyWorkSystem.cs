@@ -67,7 +67,12 @@ namespace Settlement
                     ApplyPhaseWork(state, anom, def, AssignmentSlot.Operate, opArrived, sink);
 
                     int dNE = SettlementUtil.CalcNegEntropyDelta_FromRoster(state, anom, opArrived, registry);
-                    if (dNE > 0) state.NegEntropy += dNE;
+                    if (dNE > 0)
+                    {
+                        state.NegEntropy += dNE;
+                        // M6: immediate per-anomaly burst for HUD (visual-only).
+                        sink?.Add(Core.DayEvent.NegEntropyBurst(anom.Id, anom.MapPos, dNE));
+                    }
                     break;
             }
         }

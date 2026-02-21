@@ -930,6 +930,7 @@ GameObject:
   - component: {fileID: 510197678252902861}
   - component: {fileID: 4259171659804489257}
   - component: {fileID: 6884090147384211870}
+  - component: {fileID: 4655867746829661343}
   m_Layer: 0
   m_Name: HUD
   m_TagString: Untagged
@@ -983,9 +984,34 @@ MonoBehaviour:
   dayText: {fileID: 8859252836214148483}
   moneyText: {fileID: 6667375915443029515}
   panicText: {fileID: 1634375958347031390}
+  negEntropyText: {fileID: 2839788252342334915}
   debugText: {fileID: 1329140030878947302}
   endDayButton: {fileID: 780750136854631078}
   recruitButton: {fileID: 7995241649854128429}
+--- !u!114 &4655867746829661343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4258772121586447801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071172c42455cf4cb66eb7c96abdd25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HUDResourceAnimator
+  moneyText: {fileID: 6667375915443029515}
+  negEntropyText: {fileID: 2839788252342334915}
+  moneyIconAnchor: {fileID: 6283479849954399406}
+  negEntropyIconAnchor: {fileID: 943599490060993017}
+  flyIconLayer: {fileID: 510197678252902861}
+  flyIconPrefab: {fileID: 4258772121586447801}
+  iconLibrary: {fileID: 11400000, guid: 69b0f2068c2edc74ebf98f675e3da0b6, type: 2}
+  numberRollSeconds: 0.45
+  coinFlySeconds: 0.65
+  coinBurstCount: 6
+  neFlySeconds: 0.65
+  neBurstCount: 6
 --- !u!1 &4316429007806604704
 GameObject:
   m_ObjectHideFlags: 0

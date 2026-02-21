@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b23b4cfb25903042841c535dbfd6c65, type: 3}
+  m_Name: UIIconLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::UIIconLibrary
+  coinSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
+  negEntropySprite: {fileID: 1675887702, guid: 5f02161aecf55544d8f1a8ff9785cf9c, type: 3}

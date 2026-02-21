@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Core;
 using Data;
@@ -703,5 +704,83 @@ public class Anomaly : MonoBehaviour
             image.raycastTarget = false;
         }
     }
+
+// ---------------- M6 Playback FX ----------------
+
+private readonly Dictionary<string, Coroutine> _agentPulseCos = new Dictionary<string, Coroutine>(System.StringComparer.Ordinal);
+private Coroutine _iconPulseCo;
+
+public void PlaybackPulseAgent(string agentId, Color tint, float seconds, float scaleMul)
+{
+    if (!isActiveAndEnabled) return;
+    if (string.IsNullOrEmpty(agentId)) return;
+    if (agentGridRoot == null) return;
+
+    Image img = null;
+    for (int i = 0; i < agentGridRoot.childCount; i++)
+    {
+        var t = agentGridRoot.GetChild(i);
+        if (t == null) continue;
+        if (t.name == $"Avatar_{agentId}")
+        {
+            img = t.GetComponent<Image>();
+            break;
+        }
+    }
+
+    if (img == null)
+        return;
+
+    if (_agentPulseCos.TryGetValue(agentId, out var co) && co != null)
+        StopCoroutine(co);
+
+    _agentPulseCos[agentId] = StartCoroutine(PulseGraphic(img.rectTransform, img, tint, seconds, scaleMul));
+}
+
+public void PlaybackPulseIcon(Color tint, float seconds, float scaleMul)
+{
+    if (!isActiveAndEnabled) return;
+    if (icon == null) return;
+
+    if (_iconPulseCo != null)
+        StopCoroutine(_iconPulseCo);
+
+    _iconPulseCo = StartCoroutine(PulseGraphic(icon.rectTransform, icon, tint, seconds, scaleMul));
+}
+
+private static IEnumerator PulseGraphic(RectTransform rt, Graphic g, Color tint, float seconds, float scaleMul)
+{
+    if (rt == null || g == null) yield break;
+
+    float dur = Mathf.Max(0.01f, seconds);
+    float half = dur * 0.5f;
+
+    var baseScale = rt.localScale;
+    var peakScale = baseScale * Mathf.Max(1f, scaleMul);
+
+    var baseColor = g.color;
+
+    float t = 0f;
+    while (t < dur)
+    {
+        if (rt == null || g == null) yield break;
+
+        t += Time.deltaTime;
+        float k = Mathf.Clamp01(t / dur);
+
+        // triangle wave 0->1->0
+        float w = (k <= 0.5f) ? (k / 0.5f) : ((1f - k) / 0.5f);
+        float s = Mathf.SmoothStep(0f, 1f, w);
+
+        rt.localScale = Vector3.Lerp(baseScale, peakScale, s);
+        g.color = Color.Lerp(baseColor, tint, s);
+
+        yield return null;
+    }
+
+    if (rt != null) rt.localScale = baseScale;
+    if (g != null) g.color = baseColor;
+}
+
 
 }

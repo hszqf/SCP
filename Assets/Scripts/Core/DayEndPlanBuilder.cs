@@ -60,7 +60,7 @@ namespace Core
 
             // Keep original order semantics:
             // CityEconomy -> BaseRecovery -> Cleanup -> PhaseCompletionRecall
-            Settlement.CityEconomySystem.Apply(null, shadow, null);
+            Settlement.CityEconomySystem.Apply(null, shadow, null, new ListDayEventSink(plan.Events));
             Settlement.BaseRecoverySystem.Apply(null, shadow, null);
             Settlement.SettlementCleanupSystem.Apply(null, shadow, null);
 
@@ -80,7 +80,22 @@ namespace Core
 
             FillPatchFromShadow(plan.Patch, shadow);
 
-            Debug.Log($"[M5][Plan] day={plan.Day} events={plan.Events.Count} hash={ComputeEventsHash(plan.Events)}");
+                        {
+                int moneyBurstCount = 0;
+                int moneyBurstTotal = 0;
+                for (int ii = 0; ii < plan.Events.Count; ii++)
+                {
+                    var ev = plan.Events[ii];
+                    if (ev.Type == DayEventType.CityMoneyBurst)
+                    {
+                        moneyBurstCount++;
+                        moneyBurstTotal += ev.MoneyDelta;
+                    }
+                }
+                Debug.Log($"[M6][Plan][Summary] CityMoneyBurst count={moneyBurstCount} totalDelta={moneyBurstTotal}");
+            }
+
+Debug.Log($"[M5][Plan] day={plan.Day} events={plan.Events.Count} hash={ComputeEventsHash(plan.Events)}");
             return plan;
         }
 
