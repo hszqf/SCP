@@ -621,31 +621,31 @@ MonoBehaviour:
   autoFocusMaxOrthoSize: 600
   framePadding: 1.25
   agentCheckBeatSeconds: 0.55
-  agentPulseSeconds: 0.45
-  agentPulseScaleMul: 1.28
-  iconPulseSeconds: 0.35
-  iconPulseScaleMul: 1.12
+  agentPulseSeconds: 0.5
+  agentPulseScaleMul: 2
+  iconPulseSeconds: 0.5
+  iconPulseScaleMul: 2
   cityPopLossStartDelaySeconds: 0.2
   cityPopLossAnimSeconds: 0.55
   perCityStartDelaySeconds: 0.5
-  coinBurstCount: 10
-  coinScatterRadius: 44
-  coinScatterSeconds: 0.18
+  coinBurstCount: 3
+  coinScatterRadius: 10
+  coinScatterSeconds: 0.3
   coinFlySeconds: 1
   coinPerIconStartDelaySeconds: 0.3
-  moneyRollSeconds: 0.85
-  moneyPunchScale: 1.15
-  moneyPunchSeconds: 0.22
-  neBurstCount: 10
-  neScatterRadius: 38
-  neScatterSeconds: 0.18
-  neFlySeconds: 0.85
-  nePerIconStartDelaySeconds: 0.03
-  neRollSeconds: 0.85
-  nePunchScale: 1.12
-  nePunchSeconds: 0.22
-  spawnFocusSeconds: 0.75
-  spawnHoldSeconds: 0.85
+  moneyRollSeconds: 1
+  moneyPunchScale: 1.5
+  moneyPunchSeconds: 0.3
+  neBurstCount: 1
+  neScatterRadius: 10
+  neScatterSeconds: 0.3
+  neFlySeconds: 1
+  nePerIconStartDelaySeconds: 0.3
+  neRollSeconds: 1
+  nePunchScale: 15
+  nePunchSeconds: 0.3
+  spawnFocusSeconds: 1
+  spawnHoldSeconds: 1
   spawnFadeInSeconds: 0.35
   ringExpandSeconds: 0.65
   ringAlpha: 0.25
