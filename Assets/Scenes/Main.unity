@@ -629,17 +629,17 @@ MonoBehaviour:
   cityPopLossAnimSeconds: 0.55
   perCityStartDelaySeconds: 0.5
   coinBurstCount: 3
-  coinScatterRadius: 10
-  coinScatterSeconds: 0.3
-  coinFlySeconds: 1
+  coinScatterRadius: 30
+  coinScatterSeconds: 0.1
+  coinFlySeconds: 0.6
   coinPerIconStartDelaySeconds: 0.3
   moneyRollSeconds: 1
   moneyPunchScale: 1.5
   moneyPunchSeconds: 0.3
   neBurstCount: 1
-  neScatterRadius: 10
-  neScatterSeconds: 0.3
-  neFlySeconds: 1
+  neScatterRadius: 30
+  neScatterSeconds: 0.1
+  neFlySeconds: 0.6
   nePerIconStartDelaySeconds: 0.3
   neRollSeconds: 1
   nePunchScale: 15
