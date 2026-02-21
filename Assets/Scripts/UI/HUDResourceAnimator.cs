@@ -279,7 +279,8 @@ public sealed class HUDResourceAnimator : MonoBehaviour
             {
                 img.enabled = true;
                 img.raycastTarget = false;
-                img.color = Color.white;
+                var c = img.color;
+                img.color = new Color(c.r, c.g, c.b, 1f);
                 img.sprite = sprite;
             }
 
