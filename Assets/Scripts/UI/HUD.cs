@@ -42,9 +42,17 @@ public class HUD : MonoBehaviour
 
     public void SetControlsInteractable(bool enabled)
     {
-        // Keep EndDay clickable; OnEndDayClicked gates while playback/locks.
-        if (endDayButton) endDayButton.interactable = true;
-        if (recruitButton) recruitButton.interactable = enabled;
+        if (endDayButton)
+        {
+            endDayButton.interactable = enabled;
+            endDayButton.gameObject.SetActive(enabled);
+        }
+
+        if (recruitButton)
+        {
+            recruitButton.interactable = enabled;
+            recruitButton.gameObject.SetActive(enabled);
+        }
     }
 
     private void OnDisable()
@@ -134,9 +142,9 @@ public class HUD : MonoBehaviour
 
         var s = GameController.I.State;
         if (dayText) dayText.text = $"Day {s.Day}";
-        if (moneyText) moneyText.text = $"$ {s.Money}";
+        if (moneyText) moneyText.text = s.Money.ToString();
         if (panicText) panicText.text = $"WorldPanic {s.WorldPanic:0.##}";
-        if (negEntropyText) negEntropyText.text = $"NE {s.NegEntropy}";
+        if (negEntropyText) negEntropyText.text = s.NegEntropy.ToString();
 
         if (debugText)
         {
