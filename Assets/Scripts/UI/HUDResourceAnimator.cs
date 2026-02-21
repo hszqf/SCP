@@ -195,7 +195,7 @@ public sealed class HUDResourceAnimator : MonoBehaviour
             new Color(1f, 0.92f, 0.25f, 1f)
         ));
 
-        AddMoney(deltaMoney);
+        StartCoroutine(DelayAddMoney(deltaMoney, scatterSec + flySec));
     }
 
     public void PlayNegEntropyBurst(Vector3 sourceWorldPos, int deltaNE, Camera worldCamera)
@@ -228,10 +228,26 @@ public sealed class HUDResourceAnimator : MonoBehaviour
             new Color(0.40f, 0.95f, 0.95f, 1f)
         ));
 
-        AddNegEntropy(deltaNE);
+        StartCoroutine(DelayAddNegEntropy(deltaNE, scatterSec + flySec));
     }
 
     // ---------- Internal visuals ----------
+
+    private IEnumerator DelayAddMoney(int delta, float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSeconds(delaySeconds);
+
+        AddMoney(delta);
+    }
+
+    private IEnumerator DelayAddNegEntropy(int delta, float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSeconds(delaySeconds);
+
+        AddNegEntropy(delta);
+    }
 
     private IEnumerator PlayBurstCoroutine(
         Vector3 sourceWorldPos,
