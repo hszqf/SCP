@@ -1005,7 +1005,7 @@ MonoBehaviour:
   moneyIconAnchor: {fileID: 6283479849954399406}
   negEntropyIconAnchor: {fileID: 943599490060993017}
   flyIconLayer: {fileID: 510197678252902861}
-  flyIconPrefab: {fileID: 4258772121586447801}
+  flyIconPrefab: {fileID: 2952217083825609983, guid: feb36a30bccfe134c9d1196ce4752ce4, type: 3}
   iconLibrary: {fileID: 11400000, guid: 69b0f2068c2edc74ebf98f675e3da0b6, type: 2}
   debugLogs: 1
   playbackTimeScale: 1
@@ -1020,6 +1020,7 @@ MonoBehaviour:
   coinBurstCount: 6
   neFlySeconds: 0.65
   neBurstCount: 6
+  prewarmFlyIconCount: 24
 --- !u!1 &4316429007806604704
 GameObject:
   m_ObjectHideFlags: 0

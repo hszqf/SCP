@@ -114,8 +114,6 @@ public sealed class HUDResourceAnimator : MonoBehaviour
 
         if (flyIconPrefab != null && flyIconPrefab.GetComponentInChildren<Image>(true) == null)
             Debug.LogError("[HUDResourceAnimator] flyIconPrefab must contain an Image.", this);
-        if (ReferenceEquals(flyIconPrefab, gameObject))
-            Debug.LogError("[HUDResourceAnimator] flyIconPrefab cannot reference HUD root itself. Please bind a dedicated icon template/prefab.", this);
 
         PrewarmFlyIcons();
     }
@@ -375,13 +373,7 @@ public sealed class HUDResourceAnimator : MonoBehaviour
                 return pooled;
         }
 
-        if (flyIconLayer == null) return null;
-
-        if (!IsFlyIconPrefabValid())
-        {
-            Debug.LogError("[HUDResourceAnimator] Invalid flyIconPrefab binding. Please bind a dedicated fly-icon prefab with an Image component.", this);
-            return null;
-        }
+        if (flyIconPrefab == null || flyIconLayer == null) return null;
 
         var go = Instantiate(flyIconPrefab, flyIconLayer);
         go.name = "FlyIcon";
