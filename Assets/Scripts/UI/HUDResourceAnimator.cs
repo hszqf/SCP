@@ -134,6 +134,13 @@ public sealed class HUDResourceAnimator : MonoBehaviour
         Debug.LogError($"[HUDResourceAnimator] Missing binding: {field}");
     }
 
+    private bool IsFlyIconPrefabValid()
+    {
+        if (flyIconPrefab == null) return false;
+        if (ReferenceEquals(flyIconPrefab, gameObject)) return false;
+        return flyIconPrefab.GetComponentInChildren<Image>(true) != null;
+    }
+
     public void SetPlaybackTimeScale(float scale)
     {
         playbackTimeScale = Mathf.Max(0.1f, scale);
